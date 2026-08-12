@@ -59,6 +59,76 @@ const MIN_TIMEOUT_SECONDS = 60;
 const MAX_TIMEOUT_SECONDS = 12 * 60 * 60;
 const MAX_STORED_LOG_LINES = 160;
 
+const LOCAL_AGENT_ENV_ALLOWLIST = [
+  'PATH',
+  'PATHEXT',
+  'SystemRoot',
+  'WINDIR',
+  'HOME',
+  'USERPROFILE',
+  'USER',
+  'LOGNAME',
+  'SHELL',
+  'COMSPEC',
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  'LANG',
+  'LANGUAGE',
+  'LC_ALL',
+  'LC_CTYPE',
+  'TERM',
+  'COLORTERM',
+  'NO_COLOR',
+  'FORCE_COLOR',
+  'XDG_CONFIG_HOME',
+  'XDG_CACHE_HOME',
+  'XDG_DATA_HOME',
+  'CODEX_HOME',
+  'CLAUDE_CONFIG_DIR',
+  'SSL_CERT_FILE',
+  'SSL_CERT_DIR',
+  'NODE_EXTRA_CA_CERTS',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'ALL_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'all_proxy',
+  'no_proxy',
+] as const;
+
+/**
+ * Local coding agents run with an explicit environment instead of inheriting
+ * every secret owned by the Next.js process. A provider receives only its own
+ * optional API credential; cached CLI authentication remains available via
+ * HOME/XDG/CODEX_HOME/CLAUDE_CONFIG_DIR.
+ */
+export function buildLocalAgentEnvironment(
+  provider: LocalRunnerProvider,
+  source: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = {
+    NODE_ENV: source.NODE_ENV ?? 'production',
+  };
+  for (const key of LOCAL_AGENT_ENV_ALLOWLIST) {
+    const value = source[key];
+    if (value !== undefined) environment[key] = value;
+  }
+
+  const providerKeys =
+    provider === 'claude'
+      ? ['ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL']
+      : ['OPENAI_API_KEY', 'OPENAI_BASE_URL'];
+  for (const key of providerKeys) {
+    const value = source[key];
+    if (value !== undefined) environment[key] = value;
+  }
+
+  return environment;
+}
+
 function readBoolean(value: string | undefined): boolean {
   return value === '1' || value?.toLowerCase() === 'true' || value?.toLowerCase() === 'yes';
 }
@@ -424,7 +494,7 @@ export async function runLocalAgentSession(
 
   const child = spawn(config.command, args, {
     cwd: config.cwd,
-    env: process.env,
+    env: buildLocalAgentEnvironment(config.provider),
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });

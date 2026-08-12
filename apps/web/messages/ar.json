@@ -4138,19 +4138,19 @@
       "generatedWithAi": "أُنشئ بالذكاء الاصطناعي",
       "ariaLabel": "محتوى مُنشأ بالذكاء الاصطناعي. {detail}",
       "tooltipTitle": "مخرجات مُنشأة بالذكاء الاصطناعي",
-      "disclosure": "إفصاح المادة 50 من قانون الذكاء الاصطناعي للاتحاد الأوروبي. انظر <link>بطاقات النماذج</link>."
+      "disclosure": "معلومات شفافية الذكاء الاصطناعي. انظر <link>بطاقات نماذج الذكاء الاصطناعي</link>."
     },
     "disclosure": {
       "title": "أنت على وشك التفاعل مع الذكاء الاصطناعي",
       "description": "تستخدم بعض ميزات TaskNebula نماذج ذكاء اصطناعي من جهات خارجية لإنشاء النصوص والاقتراحات والملخصات. قبل المتابعة، يُرجى قراءة ما يعنيه ذلك بالنسبة لك.",
       "whatRunsTitle": "ما الذي يعمل في مساحة عملك",
-      "rightsTitle": "حقوقك",
-      "rightLabelled": "كل مخرجات الذكاء الاصطناعي موسومة بـ<label>أُنشئ بالذكاء الاصطناعي</label>.",
-      "rightReview": "يمكنك مراجعة أي اقتراح للذكاء الاصطناعي ورفضه قبل تطبيقه.",
-      "rightDisable": "يمكن لمسؤولي مساحة العمل تعطيل أي ميزة ذكاء اصطناعي في الإعدادات ← شفافية الذكاء الاصطناعي.",
-      "rightRetention": "تُحفَظ المدخلات/المخرجات وفقًا لسياسة الاحتفاظ في بطاقة النموذج ولا تُباع أبدًا.",
+      "rightsTitle": "ما يمكن أن تتوقعه",
+      "rightLabelled": "في TaskNebula، تحمل المخرجات المدعومة التي تم إنشاؤها بواسطة الذكاء الاصطناعي والتي يواجهها المستخدم التسمية <label>أُنشئ بالذكاء الاصطناعي</label>.",
+      "rightReview": "تظل إجراءات الكتابة الخاضعة للموافقة قيد المعاينة حتى يوافق عليها الشخص المعتمد.",
+      "rightDisable": "يمكن لمسؤولي مساحة العمل إدارة ميزات الذكاء الاصطناعي المدعومة في الإعدادات → شفافية الذكاء الاصطناعي.",
+      "rightRetention": "تصف البطاقات النموذجية معالجة البيانات الموثقة والاحتفاظ بها؛ قد تختلف إعدادات الموفر النشط والنشر.",
       "modelCardsLine": "اقرأ <link>بطاقات النماذج الكاملة</link> لكل ميزة، بما في ذلك هوية النموذج والبيانات المُرسَلة والاحتفاظ.",
-      "versionLine": "إصدار الإفصاح {version}. مطلوب بموجب المادة 50 من قانون الذكاء الاصطناعي للاتحاد الأوروبي.",
+      "versionLine": "إصدار إشعار الشفافية {version}.",
       "acknowledge": "فهمت، تابِع"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "شفافية الذكاء الاصطناعي",
-      "subtitle": "إفصاحات إلزامية لكل ميزة ذكاء اصطناعي في مساحة العمل هذه. مطلوبة بموجب <link>المادة 50 من قانون الذكاء الاصطناعي للاتحاد الأوروبي</link> (سارية في 2026-08-02)."
+      "subtitle": "معلومات شفافية المنتج لميزات الذكاء الاصطناعي المتوفرة في مساحة العمل هذه. انظر <link>بطاقات نماذج الذكاء الاصطناعي</link>."
     },
     "oversight": {
       "title": "وضعية الإشراف البشري",
-      "description": "يتحكم في ما إذا كان يمكن تطبيق مخرجات الذكاء الاصطناعي تلقائيًا أو يجب دائمًا مراجعتها من قبل إنسان قبل تطبيقها على بيانات مساحة العمل.",
+      "description": "يتحكم في ما إذا كانت إجراءات الذكاء الاصطناعي المدعومة القادرة على الكتابة مؤهلة للتطبيق التلقائي أو تظل في المعاينة للمراجعة البشرية.",
       "reviewRequiredLabel": "المراجعة مطلوبة (موصى به)",
       "autoApplyLabel": "التطبيق التلقائي",
-      "reviewRequiredDescription": "يُوضع كل اقتراح للذكاء الاصطناعي في قائمة انتظار للموافقة البشرية الصريحة قبل تعديل أي بيانات لمساحة العمل. تُعاين اقتراحات الفرز، ولا تُطبَّق أبدًا.",
-      "autoApplyDescription": "قد تطبّق الميزات التي تدعم ذلك مخرجات الذكاء الاصطناعي عالية الثقة دون مراجعة بشرية صريحة. لا يزال سجلّ التدقيق يسجّل كل إجراء.",
+      "reviewRequiredDescription": "تظل إجراءات الذكاء الاصطناعي المدعومة القادرة على الكتابة قيد المعاينة حتى يوافق عليها الشخص المعتمد.",
+      "autoApplyDescription": "تكون الإجراءات المدعومة مؤهلة للتطبيق التلقائي فقط عندما تسمح عناصر التحكم المنفصلة في الكتابة والموافقة بذلك أيضًا؛ وإلا فإنها تظل في المعاينة.",
       "toggleAria": "تبديل وضعية الإشراف البشري"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "البيانات المُرسَلة",
       "retentionLabel": "الاحتفاظ",
       "readModelCard": "اقرأ بطاقة النموذج الكاملة",
-      "footer": "<strong>{userFacing}</strong> من {total} ميزات موجّهة للمستخدم ويجب أن تحمل شارة <em>أُنشئ بالذكاء الاصطناعي</em> وفقًا للمادة 50."
+      "footer": "<strong>{userFacing}</strong> من {total} الميزات الموثقة تنتج مخرجات للمستخدمين. في TaskNebula، يحمل الإخراج المدعوم الذي تم إنشاؤه بواسطة الذكاء الاصطناعي التسمية <em>أُنشئ بالذكاء الاصطناعي</em>."
     },
     "import": {
       "metaTitle": "استيراد المهام · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "إغلاق قائمة التنقل",
         "items": {
           "features": "الميزات",
-          "compare": "مقارنة",
           "selfHost": "استضافة ذاتية",
           "faq": "الأسئلة الشائعة"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Or self-host in two commands",
         "quickstartAria": "Self-host quickstart commands",
         "copyQuickstart": "Copy self-host quickstart",
-        "selfHostMeta": "Free forever self-hosted · Three containers: Postgres, Redis, one web image",
+        "selfHostMeta": "مجاني دائمًا عند الاستضافة الذاتية · حزمة Compose صغيرة تضم Postgres وRedis والويب والخدمات الاختيارية",
         "demoPill": "Interactive demo below",
         "chips": {
           "cmdk": "Cmd+K everywhere",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Features",
-          "compare": "Compare",
           "selfHost": "Self-host",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI spec",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "يشغّل أمر واحد حزمة Compose صغيرة. تُحفَظ البيانات الأساسية في Postgres، ويمكن تصديرها عبر pg_dump، ولا يرسل النظام بيانات إلى الخارج افتراضيًا — بلا ارتهان لمورّد.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "الاستضافة الذاتية هي المسار الافتراضي. يكفي Docker لتشغيل حزمة Compose صغيرة تضم Postgres 16 مع pgvector وRedis 7 وصورة الويب neuraparse/tasknebula وأي خدمات مضمّنة أو اختيارية تفعّلها. تُشغَّل الترحيلات عند البدء، ويعمل GET /api/health كنقطة فحص، ويفتح الإعداد السريع على localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "المتعقّب الأساسي — المشكلات واللوحات ودورات العمل والمستندات والبحث وREST API ومواصفة OpenAPI — قابل للاستضافة الذاتية. لا يزال تسجيل الدخول عبر OAuth يحتاج إلى محوّل قاعدة بيانات، لذا استخدم تسجيل الدخول ببيانات الاعتماد حاليًا. تم توصيل التعاون اللحظي عبر Docker/Compose، لكن النشر يحتاج إلى عنوان URL يمكن الوصول إليه واختبار دخان حي. لا تزال ميزات AI وMCP تجريبية. نتابع الفجوات في docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "العودة إلى TaskNebula",
-    "disclosureBadge": "إفصاح بموجب المادة 50 من قانون EU AI Act",
+    "disclosureBadge": "معلومات شفافية الذكاء الاصطناعي",
     "title": "بطاقات نماذج الذكاء الاصطناعي",
-    "intro": "تنشر TaskNebula ميزات الذكاء الاصطناعي التالية للمستخدمين النهائيين. ولكل ميزة، نوضّح الغرض المقصود، وهوية النموذج، والبيانات المُرسَلة في كل استدعاء، وسياسة الاحتفاظ، وموقفنا الافتراضي بشأن الإشراف البشري. هذه الصفحة سجلّ شفافية عام وينطبق على جميع عمليات نشر TaskNebula. إصدار الإفصاح <version></version>.",
-    "lastReviewed": "آخر مراجعة 2026-05-14. يبدأ إنفاذ اللائحة في 2026-08-02.",
+    "intro": "تصف هذه الصفحة ميزات الذكاء الاصطناعي الموثقة في TaskNebula والتكوين الافتراضي. قد تختلف النماذج الفعلية ومعالجة البيانات والاحتفاظ بها وضوابط المراجعة حسب مساحة العمل والنشر؛ قم بتأكيد الإعدادات النشطة مع المسؤول لديك. إصدار إشعار الشفافية <version></version>.",
+    "lastReviewed": "آخر مراجعة 2026-08-12. تنطبق المادة 50 من اللائحة (الاتحاد الأوروبي) 2024/1689 اعتبارًا من 2026-08-02.",
     "onThisPage": "في هذه الصفحة",
     "model": "النموذج",
     "provider": "المزوّد",
@@ -6778,7 +6670,53 @@
     "footerContact": "هل لديك أسئلة حول شفافية الذكاء الاصطناعي، أو حقوق أصحاب البيانات، أو بطاقات النماذج هذه؟ راسلنا عبر <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "معلومات شفافية المنتج لميزات TaskNebula AI، بما في ذلك الغرض والإعدادات الافتراضية التي تم تكوينها ومعالجة البيانات وعناصر التحكم في المراجعة."
+    },
+    "dataSent": "البيانات المستخدمة",
+    "retention": "معالجة البيانات والاحتفاظ بها",
+    "features": {
+      "draft": {
+        "name": "مسودة عنصر عمل المشروع",
+        "summary": "ينشئ مسودات مشكلة قابلة للتحرير من موجه النص الحر.",
+        "purpose": "يساعد الشخص على تحويل فكرة تقريبية أو تقرير إلى مسودات قضايا منظمة تظل قابلة للتحرير قبل الإنشاء.",
+        "dataSent": "المطالبة واسم المشروع وأنواع المشكلات المتاحة والأولويات المستخدمة لإعداد المسودة.",
+        "retention": "TaskNebula لا يفرض حاليًا انتهاء الصلاحية التلقائي للسجلات ذات الصلة التي يديرها الوكيل. يعتمد الاحتفاظ من جانب الموفر على الموفر النشط."
+      },
+      "assist": {
+        "name": "مساعد عناصر عمل المشروع",
+        "summary": "يلخص أو يعيد كتابة أو يقترح الخطوات التالية أو يقترح تسميات لمشكلة ما.",
+        "purpose": "يساعد الشخص على تحسين محتوى المشكلة مع الحفاظ على وضوح تطبيق الاقتراح.",
+        "dataSent": "عنوان المشكلة ووصفها بالإضافة إلى التصنيفات أو التعليقات الأخيرة التي يتطلبها الإجراء المحدد.",
+        "retention": "TaskNebula لا يفرض حاليًا انتهاء الصلاحية التلقائي للسجلات ذات الصلة التي يديرها الوكيل. يعتمد الاحتفاظ من جانب الموفر على الموفر النشط."
+      },
+      "triage": {
+        "name": "الفرز المتراكم",
+        "summary": "يقترح الأولوية المحدودة وتغييرات التسمية لمشكلات التراكم المؤهلة.",
+        "purpose": "يساعد القائم على الفرز البشري على مراجعة الأعمال المتراكمة على دفعات؛ تظل عمليات التشغيل الخاضعة للموافقة بمثابة معاينات.",
+        "dataSent": "يتم تضمين مفاتيح المشكلات المتراكمة والعناوين والأوصاف والأولويات والتسميات وتواريخ الاستحقاق في سياق التخطيط المحدد.",
+        "retention": "TaskNebula لا يفرض حاليًا انتهاء الصلاحية التلقائي للسجلات ذات الصلة التي يديرها الوكيل. يعتمد الاحتفاظ من جانب الموفر على الموفر النشط."
+      },
+      "ask": {
+        "name": "سؤال وجواب في اللوحة الجانبية للذكاء الاصطناعي",
+        "summary": "يجيب على الأسئلة من قضايا المنظمة أو المشروع والوثائق التي تم استردادها للطلب الحالي.",
+        "purpose": "يوفر إجابات للقراءة فقط، مقتبسة من سياق TaskNebula المتاح للمتصل.",
+        "dataSent": "تم استرداد السؤال والإصدار المحدود أو مقتطفات المستند للمؤسسة المحددة والمشروع الاختياري.",
+        "retention": "يتم الاحتفاظ بحالة المحادثة في ذاكرة المتصفح لجلسة الصفحة الحالية ولا يمكن استئنافها. يعتمد الاحتفاظ من جانب الموفر على الموفر النشط."
+      },
+      "summary": {
+        "name": "توليد الملخص",
+        "summary": "ينتج ملخصات عند الطلب حيث تتوفر الميزة.",
+        "purpose": "يساعد الشخص على مسح محتوى TaskNebula المحدد دون استبدال المادة المصدر.",
+        "dataSent": "المحتوى المحدد بشكل صريح للتلخيص وبيانات تعريف النطاق التي يتطلبها الطلب.",
+        "retention": "لا يتم حاليًا فرض انتهاء صلاحية تلقائي خاص بالميزات. يعتمد الاحتفاظ من جانب الموفر على الموفر النشط."
+      },
+      "embedding": {
+        "name": "تمثيلات ناقلات البحث الدلالي",
+        "summary": "ينشئ تضمينات متجهة لفهرسة البحث الدلالي التي تم تكوينها.",
+        "purpose": "يعمل على تحسين عملية الاسترجاع من خلال تمثيل النص المصدر المحدد كمتجه بحث.",
+        "dataSent": "النص المصدر المحدد والمعرفات المطلوبة لمعالجة مهمة التضمين وتخزينها.",
+        "retention": "تستخدم عمليات تضمين الإصدارات والتعليقات والمشروعات مراجع مرتبطة بالتتالي. يجب على المشغلين التحقق من التنظيف لكل نوع محتوى وموفر ممكنين."
+      }
     }
   },
   "presence": {

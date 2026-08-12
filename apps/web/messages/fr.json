@@ -4138,19 +4138,19 @@
       "generatedWithAi": "Généré avec l'IA",
       "ariaLabel": "Contenu généré par IA. {detail}",
       "tooltipTitle": "Sortie générée par IA",
-      "disclosure": "Divulgation au titre de l'article 50 du règlement européen sur l'IA. Voir les <link>fiches de modèle</link>."
+      "disclosure": "Informations sur la transparence de l'IA. Voir <link>Fiches des modèles d'IA</link>."
     },
     "disclosure": {
       "title": "Vous êtes sur le point d'interagir avec l'IA",
       "description": "Certaines fonctionnalités de TaskNebula utilisent des modèles d'IA tiers pour générer du texte, des suggestions et des résumés. Avant de continuer, veuillez lire ce que cela signifie pour vous.",
       "whatRunsTitle": "Ce qui s'exécute dans votre espace de travail",
-      "rightsTitle": "Vos droits",
-      "rightLabelled": "Chaque sortie IA est étiquetée <label>Généré avec l'IA</label>.",
-      "rightReview": "Vous pouvez examiner et rejeter toute suggestion IA avant qu'elle ne soit appliquée.",
-      "rightDisable": "Les administrateurs de l'espace de travail peuvent désactiver toute fonctionnalité IA dans Paramètres → Transparence de l'IA.",
-      "rightRetention": "Les entrées/sorties sont conservées conformément à la politique de conservation de la fiche de modèle et ne sont jamais vendues.",
+      "rightsTitle": "À quoi vous pouvez vous attendre",
+      "rightLabelled": "Dans TaskNebula, la sortie générée par l’IA destinée à l’utilisateur porte l’étiquette <label>Généré avec l'IA</label>.",
+      "rightReview": "Les actions d'écriture soumises à approbation restent en aperçu jusqu'à ce qu'un humain autorisé les approuve.",
+      "rightDisable": "Les administrateurs de l'espace de travail peuvent gérer les fonctionnalités d'IA prises en charge dans Paramètres → Transparence de l'IA.",
+      "rightRetention": "Les cartes modèles décrivent le traitement et la conservation des données documentées ; Le fournisseur actif et les paramètres de déploiement peuvent varier.",
       "modelCardsLine": "Lisez les <link>fiches de modèle complètes</link> pour chaque fonctionnalité, y compris l'identité du modèle, les données envoyées et la conservation.",
-      "versionLine": "Version de divulgation {version}. Requise par l'article 50 du règlement européen sur l'IA.",
+      "versionLine": "Notice de transparence version {version}.",
       "acknowledge": "Je comprends, continuer"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "Transparence de l'IA",
-      "subtitle": "Divulgations obligatoires pour chaque fonctionnalité IA de cet espace de travail. Requises par l'<link>article 50 du règlement européen sur l'IA</link> (en vigueur le 02/08/2026)."
+      "subtitle": "Informations sur la transparence du produit pour les fonctionnalités d'IA disponibles dans cet espace de travail. Voir <link>Fiches des modèles d'IA</link>."
     },
     "oversight": {
       "title": "Posture de supervision humaine",
-      "description": "Détermine si les sorties IA peuvent être appliquées automatiquement ou doivent toujours être examinées par un humain avant d'être appliquées aux données de l'espace de travail.",
+      "description": "Contrôle si les actions d'IA compatibles en écriture prises en charge sont éligibles pour une application automatique ou restent en aperçu pour examen humain.",
       "reviewRequiredLabel": "Vérification requise (recommandé)",
       "autoApplyLabel": "Application automatique",
-      "reviewRequiredDescription": "Chaque suggestion IA est mise en file d'attente pour une approbation humaine explicite avant toute modification des données de l'espace de travail. Les suggestions de triage sont prévisualisées, jamais appliquées.",
-      "autoApplyDescription": "Les fonctionnalités qui le prennent en charge peuvent appliquer des sorties IA à forte confiance sans vérification humaine explicite. Le journal d'audit enregistre toujours chaque action.",
+      "reviewRequiredDescription": "Les actions d'IA compatibles en écriture prises en charge restent en aperçu jusqu'à ce qu'un humain autorisé les approuve.",
+      "autoApplyDescription": "Les actions prises en charge sont éligibles pour une application automatique uniquement lorsque des contrôles d'écriture et d'approbation distincts le permettent également ; sinon, ils restent en aperçu.",
       "toggleAria": "Basculer la posture de supervision humaine"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Données envoyées",
       "retentionLabel": "Conservation",
       "readModelCard": "Lire la fiche de modèle complète",
-      "footer": "<strong>{userFacing}</strong> des {total} fonctionnalités sont destinées aux utilisateurs et doivent porter le badge <em>Généré avec l'IA</em> conformément à l'article 50."
+      "footer": "<strong>{userFacing}</strong> des {total} fonctionnalités documentées produisent une sortie pour les utilisateurs. Dans TaskNebula, la sortie générée par l’IA prise en charge porte l’étiquette <em>Généré avec l'IA</em>."
     },
     "import": {
       "metaTitle": "Importer des tickets · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Fermer le menu de navigation",
         "items": {
           "features": "Fonctionnalités",
-          "compare": "Comparer",
           "selfHost": "Auto-héberger",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Ou auto-hébergez en deux commandes",
         "quickstartAria": "Commandes de démarrage rapide pour auto-hébergement",
         "copyQuickstart": "Copier le démarrage rapide d’auto-hébergement",
-        "selfHostMeta": "Gratuit à vie en auto-hébergement · Trois conteneurs : Postgres, Redis, une image web",
+        "selfHostMeta": "Gratuit à vie en auto-hébergement · Petite stack Compose avec Postgres, Redis, le web et des services optionnels",
         "demoPill": "Démo interactive ci-dessous",
         "chips": {
           "cmdk": "Cmd+K partout",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Fonctionnalités",
-          "compare": "Comparer",
           "selfHost": "Auto-héberger",
           "faq": "FAQ",
           "openapiSpec": "Spécification OpenAPI",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Auto-héberger",
         "title": "Votre travail. Votre serveur. Vos données.",
-        "description": "Trois conteneurs et une commande. Tout vit dans votre Postgres, l’export n’est qu’à un pg_dump, et rien ne téléphone à la maison — pas de verrouillage fournisseur par conception.",
+        "description": "Une commande lance une petite stack Compose. Les données principales résident dans Postgres, un pg_dump suffit pour les exporter et rien ne communique vers l’extérieur par défaut — sans verrouillage fournisseur.",
         "cards": {
           "postgres": {
             "title": "Un Postgres, une image web",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Comparer",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "Les quatre sont des outils capables. Voici exactement où TaskNebula diffère — ouvert par défaut, à héberger chez vous, natif IA. Rien de plus, rien de moins.",
-        "tableAria": "Tableau de comparaison des fonctionnalités",
-        "tableCaption": "Comparaison des fonctionnalités entre TaskNebula, Jira, Linear et Plane. Chaque cellule est marquée Oui, Partiel ou Non, suivie d’un court détail.",
-        "featureHeader": "Fonctionnalité",
-        "marks": {
-          "yes": "Oui",
-          "partial": "Partiel",
-          "no": "Non"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Les détails fournisseurs reflètent la documentation publique et les pages tarifaires de juin 2026 et peuvent changer. Jira est une marque d’Atlassian, Linear de Linear Orbit et Plane de Plane Software — tous sont de solides produits, aucun n’est affilié à TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Questions franches, réponses directes.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Puis-je l’auto-héberger ?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "L’auto-hébergement est la voie par défaut. Avec Docker, lancez une petite stack Compose comprenant Postgres 16 avec pgvector, Redis 7, l’image web neuraparse/tasknebula et les services inclus ou optionnels que vous activez. Les migrations s’exécutent au démarrage, GET /api/health sert de point de contrôle et le démarrage rapide s’ouvre sur localhost:3000."
           },
           "aiKeys": {
             "question": "Ai-je besoin des fonctions IA ? Puis-je utiliser mes propres clés ?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Est-il prêt pour la production ?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Le tracker principal — tickets, tableaux, sprints, documents, recherche, REST API et spécification OpenAPI — est auto-hébergeable. La connexion OAuth nécessite encore un adaptateur de base de données ; utilisez donc l’authentification par identifiants pour le moment. La collaboration en temps réel est câblée dans Docker/Compose, mais votre déploiement requiert encore une URL accessible et un smoke test réel. AI et MCP restent en preview. Nous suivons les écarts dans docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Qui peut voir mes données ?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Retour à TaskNebula",
-    "disclosureBadge": "Divulgation au titre de l'article 50 de l'EU AI Act",
+    "disclosureBadge": "Informations sur la transparence de l'IA",
     "title": "Fiches des modèles d'IA",
-    "intro": "TaskNebula met les fonctionnalités d'IA suivantes à la disposition des utilisateurs finaux. Pour chacune, nous publions la finalité prévue, l'identité du modèle, les données envoyées à chaque appel, la politique de conservation et notre posture par défaut en matière de supervision humaine. Cette page constitue un registre public de transparence et s'applique à tous les déploiements de TaskNebula. Version de divulgation <version></version>.",
-    "lastReviewed": "Dernière révision le 2026-05-14. L'application de la réglementation débute le 2026-08-02.",
+    "intro": "Cette page décrit les fonctionnalités d'IA documentées et la configuration par défaut de TaskNebula. Les modèles réels, la gestion des données, la conservation et les contrôles de révision peuvent varier selon l'espace de travail et le déploiement ; confirmez les paramètres actifs auprès de votre administrateur. Avis de transparence version <version></version>.",
+    "lastReviewed": "Dernière révision le 2026-08-12. L'article 50 du règlement (UE) 2024/1689 s'applique à partir du 02/08/2026.",
     "onThisPage": "Sur cette page",
     "model": "Modèle",
     "provider": "Fournisseur",
@@ -6778,7 +6670,53 @@
     "footerContact": "Des questions sur la transparence de l'IA, les droits des personnes concernées ou ces fiches de modèles ? Écrivez à <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Informations sur la transparence du produit pour les fonctionnalités de TaskNebula AI, y compris l'objectif, les paramètres par défaut configurés, la gestion des données et les contrôles de révision."
+    },
+    "dataSent": "Données utilisées",
+    "retention": "Traitement et conservation des données",
+    "features": {
+      "draft": {
+        "name": "Brouillon d'élément de travail du projet",
+        "summary": "Crée des brouillons de problèmes modifiables à partir d’une invite en texte libre.",
+        "purpose": "Aide une personne à transformer une idée approximative ou un rapport en brouillons de problèmes structurés qui restent modifiables avant la création.",
+        "dataSent": "L'invite, le nom du projet et les types de problèmes et priorités disponibles utilisés pour préparer le brouillon.",
+        "retention": "TaskNebula n'applique pas actuellement l'expiration automatique pour les enregistrements exécutés par un agent associés. La rétention côté fournisseur dépend du fournisseur actif."
+      },
+      "assist": {
+        "name": "Assistant d'éléments de travail de projet",
+        "summary": "Résume, réécrit, suggère les prochaines étapes ou suggère des étiquettes pour un problème.",
+        "purpose": "Aide une personne à améliorer le contenu du problème tout en gardant l'application de la suggestion explicite.",
+        "dataSent": "Le titre et la description du problème ainsi que les étiquettes ou les commentaires récents requis par l'action sélectionnée.",
+        "retention": "TaskNebula n'applique pas actuellement l'expiration automatique pour les enregistrements exécutés par un agent associés. La rétention côté fournisseur dépend du fournisseur actif."
+      },
+      "triage": {
+        "name": "Triage des arriérés",
+        "summary": "Propose des changements de priorité et d’étiquette limités pour les problèmes d’arriéré éligibles.",
+        "purpose": "Aide un trieur humain à examiner un arriéré par lots ; Les exécutions soumises à l'approbation restent des aperçus.",
+        "dataSent": "Clés, titres, descriptions, priorités, étiquettes et dates d'échéance des problèmes en attente inclus dans le contexte de planification limité.",
+        "retention": "TaskNebula n'applique pas actuellement l'expiration automatique pour les enregistrements exécutés par un agent associés. La rétention côté fournisseur dépend du fournisseur actif."
+      },
+      "ask": {
+        "name": "Questions et réponses sur le panneau latéral IA",
+        "summary": "Répond aux questions liées aux problèmes d'organisation ou de projet et aux documents récupérés pour la demande en cours.",
+        "purpose": "Fournit des réponses citées en lecture seule à partir du contexte TaskNebula disponibles pour l'appelant.",
+        "dataSent": "La question et le problème limité ou les extraits de document récupérés pour l'organisation sélectionnée et le projet facultatif.",
+        "retention": "L'état de la conversation est conservé dans la mémoire du navigateur pour la session de page en cours et ne peut pas être repris. La rétention côté fournisseur dépend du fournisseur actif."
+      },
+      "summary": {
+        "name": "Génération de résumé",
+        "summary": "Produit des résumés à la demande lorsque la fonctionnalité est disponible.",
+        "purpose": "Aide une personne à analyser le contenu TaskNebula sélectionné sans remplacer le matériel source.",
+        "dataSent": "Le contenu explicitement sélectionné pour le résumé et les métadonnées de portée requises par la demande.",
+        "retention": "Aucune expiration automatique spécifique à une fonctionnalité n'est actuellement appliquée. La rétention côté fournisseur dépend du fournisseur actif."
+      },
+      "embedding": {
+        "name": "Représentations vectorielles de recherche sémantique",
+        "summary": "Crée des intégrations vectorielles pour l'indexation de recherche sémantique configurée.",
+        "purpose": "Améliore la récupération en représentant le texte source sélectionné comme vecteur de recherche.",
+        "dataSent": "Texte source sélectionné et identifiants requis pour traiter et stocker le travail d'intégration.",
+        "retention": "Les intégrations de problèmes, de commentaires et de projets utilisent des références liées en cascade. Les opérateurs doivent vérifier le nettoyage pour chaque type de contenu et fournisseur activé."
+      }
     }
   },
   "presence": {

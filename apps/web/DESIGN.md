@@ -206,6 +206,58 @@ response, and recovery remain predictable:
 - Layout does not flash, jump, clip, or replace real geometry with an unrelated
   skeleton.
 
+## Operational flow contracts
+
+The UI must expose the same gates that the backend enforces. A configuration
+control is unfinished when it only stores metadata or changes presentation.
+
+### Workflow transition
+
+```text
+current state
+  -> allowed edge
+    -> condition and validator
+      -> role and approval policy
+        -> atomic transition
+          -> post-action and history
+            -> retry, recovery, or stable end state
+```
+
+- Every status mutation—single edit, board drag, bulk action, automation, and
+  agent webhook—uses the same transition decision.
+- A forbidden edge cannot be made to work through a different UI surface.
+- Pending approval, validation failure, partial failure, recovery, and final
+  state are visibly distinct.
+- Editing a transition and reloading must preserve every enforced property; a
+  field shown only in local UI state is not a feature.
+
+### Agent mutation
+
+```text
+scope and policy
+  -> bounded plan or preview
+    -> attributable proposed effects
+      -> human approval when required
+        -> idempotent atomic apply
+          -> evidence and audit
+            -> review, retry, revert, cancel, or end
+```
+
+- Before approval, a write-capable run produces zero project mutations.
+- Source scope, model/config revision, budget, run/step identity, review state,
+  and proposed effects remain attributable.
+- Apply, retry, timeout, cancellation, and double submission cannot duplicate
+  an effect.
+- “Generated,” “approved,” “applied,” “rejected,” “failed,” and “reverted” are
+  different states, not one success-colored badge.
+- Research output distinguishes retrieved sources, cited claims, unresolved
+  claims, and human review. Workspace RAG must not be labeled deep research
+  unless it has the complete multi-step provenance flow.
+
+The runtime maturity and termination contract live in
+[`docs/AGENT_RUNTIME.md`](../../docs/AGENT_RUNTIME.md). Product surfaces must
+not imply that a planned durability or approval stage is already wired.
+
 ## Anti-slop acceptance bar
 
 A product surface is ready only when all applicable checks pass:

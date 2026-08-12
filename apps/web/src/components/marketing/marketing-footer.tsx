@@ -10,7 +10,6 @@ const columns: Array<{ titleKey: string; links: FooterLink[] }> = [
     titleKey: 'product',
     links: [
       { labelKey: 'features', href: '#board' },
-      { labelKey: 'compare', href: '#compare' },
       { labelKey: 'selfHost', href: '#self-host' },
       { labelKey: 'faq', href: '#faq' },
     ],

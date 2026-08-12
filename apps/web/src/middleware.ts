@@ -76,7 +76,7 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Public auth routes (un-localized for now; see lib/i18n/MIGRATION.md).
+  // Public auth routes remain outside the locale-prefixed app route group.
   const publicAuthRoutes = [
     '/auth/signin',
     '/auth/signup',

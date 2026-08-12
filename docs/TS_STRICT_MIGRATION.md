@@ -1,129 +1,73 @@
-# TypeScript Strict Migration
+# TypeScript strictness migration
 
-**Task:** QUAL-21 — TS strict null checks + `any` cleanup
-**Last updated:** 2026-05-14
+**Tracking:** QUAL-21 · **Verified:** 2026-08-12
 
-This document tracks the incremental rollout of stricter TypeScript compiler
-options across the TaskNebula monorepo. The goal is to land one flag per
-iteration, fix or temporarily exempt the surfacing errors, and revisit until
-every package runs the full strict surface.
+The shared base config enables `strict`, `noUncheckedIndexedAccess`, and
+`exactOptionalPropertyTypes`. Package-level exceptions keep the tree green
+while older code is migrated.
 
-## Current baseline
+## Current configuration
 
-`packages/config/tsconfig.base.json` already enables:
+| Workspace                | `exactOptionalPropertyTypes` | Contract                                                  |
+| ------------------------ | ---------------------------- | --------------------------------------------------------- |
+| `@tasknebula/types`      | on                           | Beachhead; new shared types satisfy exact optional shapes |
+| `@tasknebula/web`        | temporarily off              | Migrate affected files without adding `any`/suppression   |
+| `@tasknebula/db`         | temporarily off              | Resolve Drizzle insert/update optional-vs-null shapes     |
+| `@tasknebula/mcp-server` | temporarily off              | Migrate MCP SDK payload/build shapes                      |
 
-- `"strict": true` — bundles `noImplicitAny`, `strictNullChecks`,
-  `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`,
-  `noImplicitThis`, `useUnknownInCatchVariables`, `alwaysStrict`.
-- `"noUncheckedIndexedAccess": true` — every `arr[i]` / `obj[key]` returns
-  `T | undefined`, forcing the caller to narrow.
-- `"exactOptionalPropertyTypes": true` — **newly enabled in this iteration**.
-  `foo?: string` no longer accepts `{ foo: undefined }`; you must omit the
-  property or widen the type to `foo?: string | undefined`.
+The opt-outs live in each workspace `tsconfig.json` with a QUAL-21 comment.
+Do not copy an opt-out to another package or turn the base flag off.
 
-The base flag is inherited by every package. Two packages currently opt out
-while their codebases are migrated:
+## Correct migration patterns
 
-| Package         | `exactOptionalPropertyTypes` | Surfacing errors | Notes |
-| --------------- | ---------------------------- | ---------------- | ----- |
-| `@tasknebula/config`  | n/a (no source) | — | — |
-| `@tasknebula/types`   | **on**          | 0 | Beachhead. New types must satisfy the strict shape. |
-| `@tasknebula/db`      | off             | 2 | drizzle-orm insert types use `T \| null`, not `T \| undefined`. |
-| `@tasknebula/web`     | off             | 146 | Largest surface; needs file-by-file migration. |
+With exact optional properties, `foo?: string` means the property may be
+absent; it does not automatically mean `{ foo: undefined }` is accepted.
 
-Per-package opt-outs live in each package's `tsconfig.json` with a `QUAL-21`
-comment pointing back here.
-
-## Rollout plan
-
-### Priority order for future flags
-
-Pick **one** flag per iteration. Run `pnpm type-check`, log new error counts,
-fix small files properly, suppress the rest with a file-level marker, then
-move on.
-
-1. ~~`noUncheckedIndexedAccess`~~ — already on as of the initial commit.
-2. ~~`exactOptionalPropertyTypes`~~ — **enabled in base this iteration**; off
-   in `@tasknebula/db` and `@tasknebula/web` until the surfacing errors are
-   fixed.
-3. `noPropertyAccessFromIndexSignature` — forces `obj["key"]` instead of
-   `obj.key` for index-signature types. Low-impact; mostly cosmetic.
-4. `noImplicitOverride` — requires `override` keyword on subclass methods.
-   Negligible impact in this codebase (few classes).
-5. `useUnknownInCatchVariables` — already on via `strict: true`. Verify no
-   `// @ts-expect-error` workarounds remain.
-6. Finally, retire the ~325 `any` casts. ESLint
-   (`@typescript-eslint/no-explicit-any`) should flip from `warn` to `error`
-   once the count is below ~50.
-
-### Per-iteration workflow
-
-1. **Enable the flag** in `packages/config/tsconfig.base.json`.
-2. **Run** `pnpm type-check` and capture the error count per package.
-3. **Fix 1-2 small files properly** — no `any` casts, no `@ts-expect-error`
-   shortcuts. Demonstrate the migration pattern for downstream callers.
-4. **Mark high-error files** with the standard header so future contributors
-   know the file is queued for migration:
-   ```ts
-   // QUAL-21 TS-strict-migration: file untouched intentionally;
-   // surfaces N errors under `<flag>`. See docs/TS_STRICT_MIGRATION.md.
-   ```
-5. **Opt out a package** (rather than commenting every file) when the error
-   count exceeds ~50. Add the flag explicitly with `false` and a `QUAL-21`
-   comment in that package's `tsconfig.json`.
-6. **Verify CI** — `pnpm type-check` must exit 0 before merging.
-
-### Migration pattern for `exactOptionalPropertyTypes`
-
-The most common surfacing error is:
+Prefer omission when the value is absent:
 
 ```ts
-interface Foo { bar?: string }
-const foo: Foo = { bar: maybeUndefined }; // TS2375 under exactOptional
+interface Input {
+  label?: string;
+}
+
+const input: Input = {
+  ...(maybeLabel !== undefined ? { label: maybeLabel } : {}),
+};
 ```
 
-Three legitimate fixes (in order of preference):
+Widen to `label?: string | undefined` only when an explicitly present
+`undefined` value is part of the real runtime/API contract. Narrow before
+assignment when absence is invalid.
 
-1. **Conditional spread** — keeps the runtime shape correct, doesn't widen the
-   interface:
-   ```ts
-   const foo: Foo = {
-     ...(maybeUndefined !== undefined ? { bar: maybeUndefined } : {}),
-   };
-   ```
-2. **Widen the interface** when callers genuinely want to pass `undefined`:
-   ```ts
-   interface Foo { bar?: string | undefined }
-   ```
-3. **Narrow at the call site** with a guard before the assignment.
+Do not “fix” errors with `any`, broad casts, `@ts-ignore`, or by weakening a
+domain type. For Drizzle, distinguish nullable SQL columns (`null`) from an
+omitted update value (`undefined`).
 
-Examples of the conditional-spread pattern landed in this iteration:
+## Tranche workflow
 
-- `apps/web/src/lib/performance.ts` — `recordMetric` builds the `metric`
-  object with a conditional `metadata` spread.
-- `apps/web/src/lib/email/sender.ts` — `sendEmail` returns the success result
-  with a conditional `messageId` spread.
+1. Select one workspace or a coherent group of marked files.
+2. Temporarily enable `exactOptionalPropertyTypes` for that workspace and run
+   its type-check to capture a fresh error inventory. Do not rely on a dated
+   count in documentation.
+3. Fix call sites and types according to runtime semantics.
+4. Run focused tests plus workspace/repo type-check and lint.
+5. Remove obsolete `QUAL-21 TS-strict-migration` file headers as files become
+   clean.
+6. Remove the workspace opt-out only when its full type-check succeeds with the
+   flag inherited from the base config.
 
-## Files marked for follow-up (top of `exactOptionalPropertyTypes` queue)
+If a large tranche must stay queued, the only accepted file marker is:
 
-| File                                                                       | Errors |
-| -------------------------------------------------------------------------- | ------ |
-| `apps/web/src/lib/agents/engine.ts`                                        | 8 |
-| `apps/web/src/components/docs/docs-shell.tsx`                              | 8 |
-| `apps/web/src/lib/chat/server.ts`                                          | 7 |
-| `apps/web/src/components/layout/app-sidebar.tsx`                           | 5 |
-| `apps/web/src/lib/chat/microphone.ts`                                      | 4 |
-| `apps/web/src/components/settings/project-ai-agents.tsx`                   | 4 |
-| `apps/web/src/lib/admin/system-settings.ts`                                | 3 |
-| `apps/web/src/components/notifications/notifications-inbox-shell.tsx`      | 3 |
-| `apps/web/src/components/kanban/kanban-board.tsx`                          | 3 |
-| `packages/db/src/utils/audit-logger.ts`                                    | 2 |
+```ts
+// QUAL-21 TS-strict-migration: exact optional properties pending.
+// See docs/TS_STRICT_MIGRATION.md.
+```
 
-Re-enable `exactOptionalPropertyTypes` in `apps/web/tsconfig.json` and
-`packages/db/tsconfig.json` once the per-file errors are resolved.
+Do not embed an error count in the marker; counts drift with unrelated type
+changes.
 
-## CI
+## Completion
 
-`pnpm type-check` exits 0 with the current configuration. Future agents
-working on this migration should re-run after each change and update the
-table above.
+QUAL-21 is complete when no workspace overrides
+`exactOptionalPropertyTypes`, repo type-check/lint/tests pass, and remaining
+explicit `any` usage has a separately justified domain boundary or is removed.

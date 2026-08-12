@@ -15,12 +15,24 @@ export type SidecarEntity =
   | { kind: 'page'; id: string; title: string }
   | { kind: 'workspace'; name: string };
 
+export interface SidecarCitation {
+  type: 'issue' | 'doc';
+  id: string;
+  key: string;
+  title: string;
+  snippet: string;
+  url?: string;
+  occurrence: number;
+}
+
 export interface SidecarMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   /** Optional chain-of-thought style trace, surfaced when "Show thinking" is on. */
   thinking?: string;
+  citations?: SidecarCitation[];
+  unresolvedCitations?: string[];
   createdAt: number;
 }
 

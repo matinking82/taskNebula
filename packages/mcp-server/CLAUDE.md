@@ -8,7 +8,7 @@ Root guide: `/CLAUDE.md`. Transports: stdio (`src/stdio.ts`) and HTTP (`src/http
 ```bash
 pnpm build        # tsc -p tsconfig.build.json
 pnpm start        # node ./bin/tasknebula-mcp.mjs (stdio)
-pnpm test         # jest (43 tests live in src/__tests__)
+pnpm test         # Jest
 pnpm type-check && pnpm lint
 ```
 
@@ -20,14 +20,14 @@ get-my-workload. Plus resources (`src/resources.ts`) and prompts (`src/prompts.t
 `src/server.ts`. REST calls go through `src/client.ts`; auth resolution in `src/auth.ts`
 (`TASKNEBULA_API_URL` + `TASKNEBULA_API_KEY` env).
 
-## Gotchas (audit, June 2026)
+## Current limitations (verified August 2026)
 
 - **Auth caveat — tools 401 until fixed**: the web REST API does not yet accept API keys (no route
   consumes the `api_keys` table; everything uses session cookies via `await auth()`). Every tool call
   fails with 401 until an API-key resolver lands in `apps/web` route auth. Don't "fix" this inside the
   MCP package — the gap is server-side.
-- **Not published to npm**: `npx @tasknebula/mcp-server` 404s despite README instructions. Version 0.1.0,
-  publish pending.
-- Real API keys are prefixed `sk_live_` (README's `tnk_` is wrong); some tool contracts drift from the
+- **Not published to npm**: use the source build instructions in `README.md`;
+  publication is gated on end-to-end auth and install smoke tests.
+- Real API keys are prefixed `sk_live_`; some tool contracts drift from the
   REST API (priority enums, `subtask` type not creatable server-side, `link_pr` shape) — verify against
   `apps/web/src/app/api/issues/route.ts` before changing tool schemas.

@@ -4204,19 +4204,19 @@
       "generatedWithAi": "Generat cu AI",
       "ariaLabel": "Conținut generat de AI. {detail}",
       "tooltipTitle": "Ieșire generată de AI",
-      "disclosure": "Dezvăluire conform Articolului 50 din Legea UE privind AI. Vezi <link>fișele de model</link>."
+      "disclosure": "Informații despre transparența AI. Vezi <link>Fișe ale modelelor AI</link>."
     },
     "disclosure": {
       "title": "Ești pe cale să interacționezi cu AI",
       "description": "Unele funcționalități TaskNebula folosesc modele AI terțe pentru a genera text, sugestii și rezumate. Înainte de a continua, te rugăm să citești ce înseamnă asta pentru tine.",
       "whatRunsTitle": "Ce rulează în spațiul tău de lucru",
-      "rightsTitle": "Drepturile tale",
-      "rightLabelled": "Fiecare ieșire AI este etichetată <label>Generat cu AI</label>.",
-      "rightReview": "Poți revizui și respinge orice sugestie AI înainte de a fi aplicată.",
-      "rightDisable": "Administratorii spațiului de lucru pot dezactiva orice funcționalitate AI în Setări → Transparență AI.",
-      "rightRetention": "Intrările/ieșirile sunt păstrate conform politicii de retenție din fișa de model și niciodată vândute.",
+      "rightsTitle": "La ce te poti astepta",
+      "rightLabelled": "În TaskNebula, ieșirea compatibilă generată de AI orientată spre utilizator poartă eticheta <label>Generat cu AI</label>.",
+      "rightReview": "Acțiunile de scriere bazate pe aprobare rămân în previzualizare până când un om autorizat le aprobă.",
+      "rightDisable": "Administratorii spațiului de lucru pot gestiona funcțiile AI acceptate în Setări → AI Transparency.",
+      "rightRetention": "Cardurile model descriu manipularea și păstrarea datelor documentate; furnizorul activ și setările de implementare pot varia.",
       "modelCardsLine": "Citește <link>fișele de model complete</link> pentru fiecare funcționalitate, inclusiv identitatea modelului, datele trimise și retenția.",
-      "versionLine": "Versiune dezvăluire {version}. Necesară de Articolul 50 din Legea UE privind AI.",
+      "versionLine": "Aviz de transparență versiunea {version}.",
       "acknowledge": "Am înțeles, continuă"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "Transparență AI",
-      "subtitle": "Dezvăluiri obligatorii pentru fiecare funcționalitate AI din acest spațiu de lucru. Necesare de <link>Articolul 50 din Legea UE privind AI</link> (în vigoare din 2026-08-02)."
+      "subtitle": "Informații despre transparența produsului pentru funcțiile AI disponibile în acest spațiu de lucru. Vezi <link>Fișe ale modelelor AI</link>."
     },
     "oversight": {
       "title": "Postura de supraveghere umană",
-      "description": "Controlează dacă ieșirile AI pot fi aplicate automat sau trebuie întotdeauna revizuite de un om înainte de a fi aplicate datelor spațiului de lucru.",
+      "description": "Controlează dacă acțiunile AI capabile de scriere acceptate sunt eligibile pentru aplicarea automată sau rămân în previzualizare pentru examinare umană.",
       "reviewRequiredLabel": "Revizuire necesară (recomandat)",
       "autoApplyLabel": "Aplicare automată",
-      "reviewRequiredDescription": "Fiecare sugestie AI este pusă în coadă pentru aprobare umană explicită înainte ca vreo dată a spațiului de lucru să fie modificată. Sugestiile de triere sunt previzualizate, niciodată aplicate.",
-      "autoApplyDescription": "Funcționalitățile care o acceptă pot aplica ieșiri AI de încredere ridicată fără revizuire umană explicită. Jurnalul de audit înregistrează totuși fiecare acțiune.",
+      "reviewRequiredDescription": "Acțiunile AI capabile de scriere acceptate rămân în previzualizare până când un om autorizat le aprobă.",
+      "autoApplyDescription": "Acțiunile acceptate sunt eligibile pentru aplicarea automată numai atunci când controalele separate de scriere și aprobare permit acest lucru; altfel rămân în previzualizare.",
       "toggleAria": "Comută postura de supraveghere umană"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Date trimise",
       "retentionLabel": "Retenție",
       "readModelCard": "Citește fișa de model completă",
-      "footer": "<strong>{userFacing}</strong> din {total} funcționalități sunt orientate către utilizator și trebuie să poarte insigna <em>Generat cu AI</em> conform Articolului 50."
+      "footer": "<strong>{userFacing}</strong> din {total} caracteristici documentate produc rezultate pentru utilizatori. În TaskNebula, ieșirea compatibilă generată de AI poartă eticheta <em>Generat cu AI</em>."
     },
     "import": {
       "metaTitle": "Importă probleme · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Chiudi il menu di navigazione",
         "items": {
           "features": "Funzionalità",
-          "compare": "Confronta",
           "selfHost": "Self-host",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Oppure self-host in due comandi",
         "quickstartAria": "Comandi rapidi per self-hosting",
         "copyQuickstart": "Copia quickstart self-host",
-        "selfHostMeta": "Gratis per sempre in self-hosting · Tre container: Postgres, Redis, una web image",
+        "selfHostMeta": "Gratuit pentru totdeauna cu găzduire proprie · Stack Compose mic cu Postgres, Redis, web și servicii opționale",
         "demoPill": "Demo interattiva qui sotto",
         "chips": {
           "cmdk": "Cmd+K ovunque",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Funzionalità",
-          "compare": "Confronta",
           "selfHost": "Self-host",
           "faq": "FAQ",
           "openapiSpec": "Specifica OpenAPI",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Il tuo lavoro. Il tuo server. I tuoi dati.",
-        "description": "Tre container e un comando. Tutto vive nel tuo Postgres, esportare è a un pg_dump di distanza e nulla telefona a casa: niente vendor lock-in per design.",
+        "description": "O singură comandă pornește un stack Compose mic. Datele principale rămân în Postgres, exportul necesită doar un pg_dump, iar implicit nimic nu trimite date în exterior — fără dependență de furnizor.",
         "cards": {
           "postgres": {
             "title": "Un Postgres, una web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Confronta",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "Tutti e quattro sono strumenti validi. Qui vedi esattamente dove TaskNebula differisce: aperto di default, tuo da ospitare, AI-native. Niente di più, niente di meno.",
-        "tableAria": "Tabella di confronto funzionalità",
-        "tableCaption": "Confronto delle funzionalità tra TaskNebula, Jira, Linear e Plane. Ogni cella è marcata Sì, Parziale o No, seguita da un breve dettaglio.",
-        "featureHeader": "Funzionalità",
-        "marks": {
-          "yes": "Sì",
-          "partial": "Parziale",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "I dettagli dei vendor riflettono documentazione pubblica e pagine prezzi a giugno 2026 e possono cambiare. Jira è un marchio di Atlassian, Linear di Linear Orbit e Plane di Plane Software: sono tutti prodotti solidi, nessuno affiliato a TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Găzduirea proprie este calea implicită. Cu Docker pornești un stack Compose mic cu Postgres 16 și pgvector, Redis 7, imaginea web neuraparse/tasknebula și serviciile incluse sau opționale pe care le activezi. Migrările rulează la pornire, GET /api/health este endpointul de verificare, iar pornirea rapidă se deschide la localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Trackerul principal — probleme, panouri, sprinturi, documente, căutare, REST API și specificația OpenAPI — poate fi găzduit local. Autentificarea OAuth necesită încă un adaptor de bază de date, așa că folosește deocamdată autentificarea cu credențiale. Colaborarea în timp real este conectată prin Docker/Compose, dar implementarea ta are încă nevoie de un URL accesibil și de un smoke test real. AI și MCP rămân în preview. Urmărim lipsurile în docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Înapoi la TaskNebula",
-    "disclosureBadge": "Notificare conform Articolului 50 din EU AI Act",
+    "disclosureBadge": "Informații despre transparența AI",
     "title": "Fișe ale modelelor AI",
-    "intro": "TaskNebula pune la dispoziția utilizatorilor finali următoarele funcții AI. Pentru fiecare publicăm scopul prevăzut, identitatea modelului, datele trimise la fiecare apel, politica de păstrare a datelor și poziția noastră implicită privind supravegherea umană. Această pagină este o evidență publică de transparență și se aplică tuturor implementărilor TaskNebula. Versiunea notificării <version></version>.",
-    "lastReviewed": "Ultima revizuire: 2026-05-14. Aplicarea reglementării începe la 2026-08-02.",
+    "intro": "Această pagină descrie caracteristicile AI documentate ale TaskNebula și configurația implicită. Modelele reale, gestionarea datelor, păstrarea și controalele de revizuire pot varia în funcție de spațiul de lucru și de implementare; confirmați setările active cu administratorul dvs. Versiunea notificării de transparență <version></version>.",
+    "lastReviewed": "Ultima revizuire 2026-08-12. Articolul 50 din Regulamentul (UE) 2024/1689 se aplică din 2026-08-02.",
     "onThisPage": "Pe această pagină",
     "model": "Model",
     "provider": "Furnizor",
@@ -6778,7 +6670,53 @@
     "footerContact": "Aveți întrebări despre transparența AI, drepturile persoanelor vizate sau aceste fișe ale modelelor? Trimiteți un e-mail la <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Informații despre transparența produsului pentru caracteristicile TaskNebula AI, inclusiv scopul, setările implicite configurate, gestionarea datelor și controalele de revizuire."
+    },
+    "dataSent": "Date utilizate",
+    "retention": "Tratarea și păstrarea datelor",
+    "features": {
+      "draft": {
+        "name": "Proiectul articolului de lucru",
+        "summary": "Creează schițe editabile de probleme dintr-o solicitare de text liber.",
+        "purpose": "Ajută o persoană să transforme o idee brută sau un raport în schițe structurate ale problemelor care rămân editabile înainte de creare.",
+        "dataSent": "Promptul, numele proiectului și tipurile de probleme disponibile și prioritățile utilizate pentru pregătirea schiței.",
+        "retention": "TaskNebula nu impune în prezent expirarea automată pentru înregistrările asociate executate de agent. Reținerea din partea furnizorului depinde de furnizorul activ."
+      },
+      "assist": {
+        "name": "Asistent proiect pentru obiecte de lucru",
+        "summary": "Rezumă, rescrie, sugerează pașii următori sau sugerează etichete pentru o problemă.",
+        "purpose": "Ajută o persoană să îmbunătățească conținutul problemei, păstrând în același timp aplicarea explicită a sugestiei.",
+        "dataSent": "Titlul și descrierea problemei plus etichetele sau comentariile recente solicitate de acțiunea selectată.",
+        "retention": "TaskNebula nu impune în prezent expirarea automată pentru înregistrările asociate executate de agent. Reținerea din partea furnizorului depinde de furnizorul activ."
+      },
+      "triage": {
+        "name": "Triajul backlog",
+        "summary": "Propune priorități limitate și modificări ale etichetei pentru problemele eligibile ale restanțelor.",
+        "purpose": "Ajută un triager uman să revizuiască un restanțe în loturi; rundele cu aprobarea rămân previzualizări.",
+        "dataSent": "Cheile, titlurile, descrierile, prioritățile, etichetele și termenele scadente sunt incluse în contextul de planificare limitată.",
+        "retention": "TaskNebula nu impune în prezent expirarea automată pentru înregistrările asociate executate de agent. Reținerea din partea furnizorului depinde de furnizorul activ."
+      },
+      "ask": {
+        "name": "Panoul lateral AI Q și A",
+        "summary": "Răspunde la întrebările de la problemele organizației sau ale proiectului și documentele preluate pentru cererea curentă.",
+        "purpose": "Oferă răspunsuri citate numai în citire din contextul TaskNebula disponibil apelantului.",
+        "dataSent": "Întrebarea și problema delimitată sau fragmentele de document preluate pentru organizația selectată și proiectul opțional.",
+        "retention": "Starea conversației este păstrată în memoria browserului pentru sesiunea curentă a paginii și nu poate fi reluată. Reținerea din partea furnizorului depinde de furnizorul activ."
+      },
+      "summary": {
+        "name": "Generare rezumat",
+        "summary": "Produce rezumate la cerere acolo unde funcția este disponibilă.",
+        "purpose": "Ajută o persoană să scaneze conținutul TaskNebula selectat fără a înlocui materialul sursă.",
+        "dataSent": "Conținutul selectat în mod explicit pentru rezumat și metadatele domeniului cerute de solicitare.",
+        "retention": "În prezent, nu este aplicată nicio expirare automată specifică funcției. Reținerea din partea furnizorului depinde de furnizorul activ."
+      },
+      "embedding": {
+        "name": "Reprezentări vectoriale de căutare semantică",
+        "summary": "Creează înglobări vectoriale pentru indexarea configurată de căutare semantică.",
+        "purpose": "Îmbunătățește regăsirea prin reprezentarea textului sursă selectat ca vector de căutare.",
+        "dataSent": "Textul sursă selectat și identificatorii necesari pentru procesarea și stocarea jobului de încorporare.",
+        "retention": "Înglobările de emisiuni, comentarii și proiecte utilizează referințe legate în cascadă. Operatorii trebuie să verifice curățarea pentru fiecare tip de conținut și furnizor activat."
+      }
     }
   },
   "presence": {

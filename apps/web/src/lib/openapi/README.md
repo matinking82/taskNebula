@@ -89,8 +89,8 @@ pnpm --filter @tasknebula/web openapi:gen
    git add apps/web/public/openapi.json
    ```
 
-   CI runs `pnpm openapi:gen` and a snapshot test that fails if the
-   generated file is stale — both must be green before merge.
+   CI runs `pnpm --filter @tasknebula/web openapi:check`, which regenerates the
+   spec and fails on a tracked diff.
 
 ## Conventions
 

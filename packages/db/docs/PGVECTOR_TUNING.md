@@ -2,16 +2,16 @@
 
 This document describes the parameters used by the
 `content_embeddings_embedding_hnsw_idx` index introduced in
-[`0028_pgvector_hnsw_content_embeddings.sql`](../drizzle/0028_pgvector_hnsw_content_embeddings.sql),
+[`0051_pgvector_hnsw_content_embeddings.sql`](../drizzle/0051_pgvector_hnsw_content_embeddings.sql),
 and how to tune them for the TaskNebula semantic search workload.
 
-The index is declared in TypeScript at
-[`packages/db/src/schema/semantic-search.ts`](../src/schema/semantic-search.ts):
+The index is created explicitly by the hand-written migration:
 
-```ts
-embeddingHnswIdx: index('content_embeddings_embedding_hnsw_idx')
-  .using('hnsw', table.embedding.op('vector_cosine_ops'))
-  .with({ m: 16, ef_construction: 64 }),
+```sql
+CREATE INDEX IF NOT EXISTS "content_embeddings_embedding_hnsw_idx"
+  ON "content_embeddings"
+  USING hnsw ("embedding" vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
 ```
 
 ## Why HNSW
@@ -32,10 +32,10 @@ embeddings we store, HNSW gives:
 These are baked into the index at `CREATE INDEX` / `REINDEX` time and can
 only be changed by rebuilding.
 
-| Parameter         | Value | What it controls                                           | Tradeoff |
-|-------------------|-------|------------------------------------------------------------|----------|
-| `m`               | 16    | Max graph degree per node (bidirectional links).           | Higher `m` -> better recall + more memory + slower build. 16 is pgvector's recommended default for general use. |
-| `ef_construction` | 64    | Candidate list size during insert; quality of the graph.   | Higher -> better-built graph + slower inserts. 64 keeps single-row inserts cheap during embedding ingestion. |
+| Parameter         | Value | What it controls                                         | Tradeoff                                                                                                        |
+| ----------------- | ----- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `m`               | 16    | Max graph degree per node (bidirectional links).         | Higher `m` -> better recall + more memory + slower build. 16 is pgvector's recommended default for general use. |
+| `ef_construction` | 64    | Candidate list size during insert; quality of the graph. | Higher -> better-built graph + slower inserts. 64 keeps single-row inserts cheap during embedding ingestion.    |
 
 ### When to rebuild
 
@@ -74,7 +74,7 @@ const rows = await withEfSearch(db, 80, async (tx) =>
     FROM content_embeddings
     ORDER BY embedding <=> ${queryEmbedding}
     LIMIT 20
-  `),
+  `)
 );
 ```
 
@@ -88,13 +88,13 @@ The default value (when no explicit value is passed) is read from the
 
 ### Choosing a value
 
-| `ef_search` | Typical recall@10 | Latency profile          | Use case                           |
-|-------------|-------------------|--------------------------|------------------------------------|
-| 20          | ~0.85             | Fastest                  | Suggest-as-you-type, low SLO       |
-| 40 (default)| ~0.95             | Fast                     | Standard search UI                 |
-| 80          | ~0.98             | ~2x default              | "Power search" / advanced filters  |
-| 200         | ~0.995            | ~4-5x default            | Backfills, eval jobs               |
-| 1000        | ~exact            | Approaches seq scan      | Eval baselines only                |
+| `ef_search`  | Typical recall@10 | Latency profile     | Use case                          |
+| ------------ | ----------------- | ------------------- | --------------------------------- |
+| 20           | ~0.85             | Fastest             | Suggest-as-you-type, low SLO      |
+| 40 (default) | ~0.95             | Fast                | Standard search UI                |
+| 80           | ~0.98             | ~2x default         | "Power search" / advanced filters |
+| 200          | ~0.995            | ~4-5x default       | Backfills, eval jobs              |
+| 1000         | ~exact            | Approaches seq scan | Eval baselines only               |
 
 These numbers are illustrative — measure on your own corpus.
 
@@ -134,8 +134,8 @@ content_embeddings`.
 
 ## Quick reference
 
-| Knob                  | Where                                                          | Reload required |
-|-----------------------|----------------------------------------------------------------|-----------------|
-| `m`                   | Migration / schema                                             | REINDEX         |
-| `ef_construction`     | Migration / schema                                             | REINDEX         |
-| `hnsw.ef_search`      | `withEfSearch` helper / `PGVECTOR_EF_SEARCH` env               | Per transaction |
+| Knob              | Where                                            | Reload required |
+| ----------------- | ------------------------------------------------ | --------------- |
+| `m`               | Migration / schema                               | REINDEX         |
+| `ef_construction` | Migration / schema                               | REINDEX         |
+| `hnsw.ef_search`  | `withEfSearch` helper / `PGVECTOR_EF_SEARCH` env | Per transaction |

@@ -4138,19 +4138,19 @@
       "generatedWithAi": "Δημιουργήθηκε με AI",
       "ariaLabel": "Περιεχόμενο που δημιουργήθηκε από AI. {detail}",
       "tooltipTitle": "Έξοδος που δημιουργήθηκε από AI",
-      "disclosure": "Γνωστοποίηση κατά το Άρθρο 50 της Πράξης AI της ΕΕ. Δείτε τις <link>κάρτες μοντέλων</link>."
+      "disclosure": "Πληροφορίες διαφάνειας AI. Δείτε <link>Κάρτες Μοντέλων AI</link>."
     },
     "disclosure": {
       "title": "Πρόκειται να αλληλεπιδράσετε με AI",
       "description": "Ορισμένες λειτουργίες του TaskNebula χρησιμοποιούν μοντέλα AI τρίτων για τη δημιουργία κειμένου, προτάσεων και συνόψεων. Πριν συνεχίσετε, διαβάστε τι σημαίνει αυτό για εσάς.",
       "whatRunsTitle": "Τι εκτελείται στον χώρο εργασίας σας",
-      "rightsTitle": "Τα δικαιώματά σας",
-      "rightLabelled": "Κάθε έξοδος AI επισημαίνεται <label>Δημιουργήθηκε με AI</label>.",
-      "rightReview": "Μπορείτε να ελέγξετε και να απορρίψετε οποιαδήποτε πρόταση AI πριν εφαρμοστεί.",
-      "rightDisable": "Οι διαχειριστές χώρου εργασίας μπορούν να απενεργοποιήσουν οποιαδήποτε λειτουργία AI στις Ρυθμίσεις → Διαφάνεια AI.",
-      "rightRetention": "Οι είσοδοι/έξοδοι διατηρούνται σύμφωνα με την πολιτική διατήρησης της κάρτας μοντέλου και δεν πωλούνται ποτέ.",
+      "rightsTitle": "Τι μπορείτε να περιμένετε",
+      "rightLabelled": "Στο TaskNebula, η υποστηριζόμενη έξοδος που δημιουργείται από το AI που αντιμετωπίζει ο χρήστης φέρει την ετικέτα <label>Δημιουργήθηκε με AI</label>.",
+      "rightReview": "Οι ενέργειες εγγραφής που καλύπτονται από έγκριση παραμένουν σε προεπισκόπηση μέχρι να τις εγκρίνει ένας εξουσιοδοτημένος άνθρωπος.",
+      "rightDisable": "Οι διαχειριστές του χώρου εργασίας μπορούν να διαχειρίζονται υποστηριζόμενες λειτουργίες AI στις Ρυθμίσεις → Διαφάνεια AI.",
+      "rightRetention": "Οι κάρτες μοντέλων περιγράφουν τεκμηριωμένο χειρισμό και διατήρηση δεδομένων. Οι ρυθμίσεις ενεργού παρόχου και ανάπτυξης ενδέχεται να διαφέρουν.",
       "modelCardsLine": "Διαβάστε τις <link>πλήρεις κάρτες μοντέλων</link> για κάθε λειτουργία, συμπεριλαμβανομένης της ταυτότητας μοντέλου, των δεδομένων που αποστέλλονται και της διατήρησης.",
-      "versionLine": "Έκδοση γνωστοποίησης {version}. Απαιτείται από το Άρθρο 50 της Πράξης AI της ΕΕ.",
+      "versionLine": "Έκδοση ειδοποίησης διαφάνειας {version}.",
       "acknowledge": "Κατανοώ, συνέχεια"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "Διαφάνεια AI",
-      "subtitle": "Υποχρεωτικές γνωστοποιήσεις για κάθε λειτουργία AI σε αυτόν τον χώρο εργασίας. Απαιτείται από το <link>Άρθρο 50 της Πράξης AI της ΕΕ</link> (σε ισχύ από 2026-08-02)."
+      "subtitle": "Πληροφορίες διαφάνειας προϊόντος για λειτουργίες τεχνητής νοημοσύνης που είναι διαθέσιμες σε αυτόν τον χώρο εργασίας. Δείτε <link>Κάρτες Μοντέλων AI</link>."
     },
     "oversight": {
       "title": "Στάση ανθρώπινης εποπτείας",
-      "description": "Ελέγχει αν οι έξοδοι AI μπορούν να εφαρμόζονται αυτόματα ή πρέπει πάντα να ελέγχονται από άνθρωπο πριν εφαρμοστούν σε δεδομένα χώρου εργασίας.",
+      "description": "Ελέγχει εάν οι υποστηριζόμενες ενέργειες τεχνητής νοημοσύνης με δυνατότητα εγγραφής είναι κατάλληλες για αυτόματη εφαρμογή ή παραμένουν σε προεπισκόπηση για ανθρώπινη αναθεώρηση.",
       "reviewRequiredLabel": "Απαιτείται έλεγχος (προτεινόμενο)",
       "autoApplyLabel": "Αυτόματη εφαρμογή",
-      "reviewRequiredDescription": "Κάθε πρόταση AI μπαίνει σε ουρά για ρητή ανθρώπινη έγκριση πριν τροποποιηθεί οποιοδήποτε δεδομένο χώρου εργασίας. Οι προτάσεις διαλογής προεπισκοπούνται, δεν εφαρμόζονται ποτέ.",
-      "autoApplyDescription": "Οι λειτουργίες που το υποστηρίζουν μπορούν να εφαρμόζουν εξόδους AI υψηλής βεβαιότητας χωρίς ρητό ανθρώπινο έλεγχο. Το αρχείο ελέγχου εξακολουθεί να καταγράφει κάθε ενέργεια.",
+      "reviewRequiredDescription": "Οι υποστηριζόμενες ενέργειες τεχνητής νοημοσύνης με δυνατότητα εγγραφής παραμένουν σε προεπισκόπηση μέχρι να τις εγκρίνει ένας εξουσιοδοτημένος άνθρωπος.",
+      "autoApplyDescription": "Οι υποστηριζόμενες ενέργειες είναι κατάλληλες για αυτόματη εφαρμογή μόνο όταν το επιτρέπουν και χωριστά στοιχεία ελέγχου εγγραφής και έγκρισης. διαφορετικά παραμένουν σε προεπισκόπηση.",
       "toggleAria": "Εναλλαγή στάσης ανθρώπινης εποπτείας"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Δεδομένα που αποστέλλονται",
       "retentionLabel": "Διατήρηση",
       "readModelCard": "Διαβάστε την πλήρη κάρτα μοντέλου",
-      "footer": "<strong>{userFacing}</strong> από {total} λειτουργίες είναι ορατές στον χρήστη και πρέπει να φέρουν το σήμα <em>Δημιουργήθηκε με AI</em> σύμφωνα με το Άρθρο 50."
+      "footer": "<strong>{userFacing}</strong> από {total} τεκμηριωμένες δυνατότητες παράγουν αποτελέσματα για τους χρήστες. Στο TaskNebula, η υποστηριζόμενη έξοδος που δημιουργείται από AI φέρει την ετικέτα <em>Δημιουργήθηκε με AI</em>."
     },
     "import": {
       "metaTitle": "Εισαγωγή ζητημάτων · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Close navigation menu",
         "items": {
           "features": "Features",
-          "compare": "Compare",
           "selfHost": "Self-host",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Or self-host in two commands",
         "quickstartAria": "Self-host quickstart commands",
         "copyQuickstart": "Copy self-host quickstart",
-        "selfHostMeta": "Free forever self-hosted · Three containers: Postgres, Redis, one web image",
+        "selfHostMeta": "Δωρεάν για πάντα με αυτοφιλοξενία · Μικρή στοίβα Compose με Postgres, Redis, web και προαιρετικές υπηρεσίες",
         "demoPill": "Interactive demo below",
         "chips": {
           "cmdk": "Cmd+K everywhere",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Features",
-          "compare": "Compare",
           "selfHost": "Self-host",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI spec",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "Μία εντολή εκκινεί μια μικρή στοίβα Compose. Τα βασικά δεδομένα μένουν στο Postgres, η εξαγωγή απέχει ένα pg_dump και από προεπιλογή τίποτα δεν στέλνει δεδομένα προς τα έξω — χωρίς δέσμευση σε προμηθευτή.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Η αυτοφιλοξενία είναι η προεπιλεγμένη διαδρομή. Με Docker εκκινείτε μια μικρή στοίβα Compose με Postgres 16 και pgvector, Redis 7, το web image neuraparse/tasknebula και τις ενσωματωμένες ή προαιρετικές υπηρεσίες που ενεργοποιείτε. Οι migrations εκτελούνται στην εκκίνηση, το GET /api/health είναι το endpoint ελέγχου και το quickstart ανοίγει στο localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Ο βασικός tracker — ζητήματα, πίνακες, sprint, έγγραφα, αναζήτηση, REST API και προδιαγραφή OpenAPI — μπορεί να αυτοφιλοξενηθεί. Η σύνδεση OAuth χρειάζεται ακόμη database adapter, οπότε προς το παρόν χρησιμοποιήστε σύνδεση με διαπιστευτήρια. Η συνεργασία σε πραγματικό χρόνο έχει συνδεθεί μέσω Docker/Compose, αλλά η εγκατάστασή σας χρειάζεται προσβάσιμο URL και ζωντανό smoke test. Τα AI και MCP παραμένουν σε preview. Παρακολουθούμε τα κενά στο docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Επιστροφή στο TaskNebula",
-    "disclosureBadge": "Γνωστοποίηση κατά το Άρθρο 50 του EU AI Act",
+    "disclosureBadge": "Πληροφορίες διαφάνειας AI",
     "title": "Κάρτες Μοντέλων AI",
-    "intro": "Το TaskNebula αναπτύσσει τις ακόλουθες λειτουργίες AI για τους τελικούς χρήστες. Για κάθε μία, δημοσιεύουμε τον επιδιωκόμενο σκοπό, την ταυτότητα του μοντέλου, τα δεδομένα που αποστέλλονται σε κάθε κλήση, την πολιτική διατήρησης και την προεπιλεγμένη μας στάση ανθρώπινης εποπτείας. Αυτή η σελίδα αποτελεί δημόσιο αρχείο διαφάνειας και ισχύει για όλες τις αναπτύξεις του TaskNebula. Έκδοση γνωστοποίησης <version></version>.",
-    "lastReviewed": "Τελευταία αναθεώρηση 2026-05-14. Η εφαρμογή του κανονισμού ξεκινά στις 2026-08-02.",
+    "intro": "Αυτή η σελίδα περιγράφει τις τεκμηριωμένες δυνατότητες AI και τις προεπιλεγμένες ρυθμίσεις παραμέτρων του TaskNebula. Τα πραγματικά μοντέλα, ο χειρισμός δεδομένων, η διατήρηση και τα στοιχεία ελέγχου μπορεί να διαφέρουν ανάλογα με τον χώρο εργασίας και την ανάπτυξη. επιβεβαιώστε τις ενεργές ρυθμίσεις με τον διαχειριστή σας. Έκδοση ειδοποίησης διαφάνειας <version></version>.",
+    "lastReviewed": "Τελευταία αξιολόγηση 12-08-2026. Το άρθρο 50 του Κανονισμού (ΕΕ) 2024/1689 εφαρμόζεται από τις 2026-08-02.",
     "onThisPage": "Σε αυτή τη σελίδα",
     "model": "Μοντέλο",
     "provider": "Πάροχος",
@@ -6778,7 +6670,53 @@
     "footerContact": "Ερωτήσεις σχετικά με τη διαφάνεια AI, τα δικαιώματα των υποκειμένων των δεδομένων ή αυτές τις κάρτες μοντέλων; Στείλτε email στο <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Πληροφορίες διαφάνειας προϊόντος για λειτουργίες τεχνητής νοημοσύνης του TaskNebula, όπως ο σκοπός, οι διαμορφωμένες προεπιλογές, ο χειρισμός δεδομένων και τα στοιχεία ελέγχου ελέγχου."
+    },
+    "dataSent": "Δεδομένα που χρησιμοποιήθηκαν",
+    "retention": "Χειρισμός και διατήρηση δεδομένων",
+    "features": {
+      "draft": {
+        "name": "Σχέδιο εργασίας-αντικειμένου έργου",
+        "summary": "Δημιουργεί επεξεργάσιμα πρόχειρα ζητημάτων από μια προτροπή ελεύθερου κειμένου.",
+        "purpose": "Βοηθά ένα άτομο να μετατρέψει μια πρόχειρη ιδέα ή αναφορά σε δομημένα πρόχειρα ζητημάτων που παραμένουν επεξεργάσιμα πριν από τη δημιουργία.",
+        "dataSent": "Η προτροπή, το όνομα του έργου και οι διαθέσιμοι τύποι ζητημάτων και προτεραιότητες που χρησιμοποιούνται για την προετοιμασία του προσχέδιου.",
+        "retention": "Το TaskNebula δεν επιβάλλει επί του παρόντος αυτόματη λήξη για σχετικές εγγραφές που εκτελούνται από πράκτορα. Η διατήρηση από την πλευρά του παρόχου εξαρτάται από τον ενεργό πάροχο."
+      },
+      "assist": {
+        "name": "Βοηθός εργασίας-αντικειμένου έργου",
+        "summary": "Συνοψίζει, ξαναγράφει, προτείνει επόμενα βήματα ή προτείνει ετικέτες για ένα ζήτημα.",
+        "purpose": "Βοηθά ένα άτομο να βελτιώσει το περιεχόμενο του ζητήματος, ενώ διατηρεί σαφή την εφαρμογή της πρότασης.",
+        "dataSent": "Ο τίτλος και η περιγραφή του ζητήματος συν τις ετικέτες ή τα πρόσφατα σχόλια που απαιτούνται από την επιλεγμένη ενέργεια.",
+        "retention": "Το TaskNebula δεν επιβάλλει επί του παρόντος αυτόματη λήξη για σχετικές εγγραφές που εκτελούνται από πράκτορα. Η διατήρηση από την πλευρά του παρόχου εξαρτάται από τον ενεργό πάροχο."
+      },
+      "triage": {
+        "name": "Εκκρεμή Διαλογή",
+        "summary": "Προτείνει οριοθετημένες αλλαγές προτεραιότητας και ετικέτας για επιλέξιμα ζητήματα εκκρεμότητας.",
+        "purpose": "Βοηθά έναν άνθρωπο triager να επανεξετάσει ένα ανεκτέλεστο σε παρτίδες. Οι εκτελέσεις με περιορισμένη έγκριση παραμένουν προεπισκοπήσεις.",
+        "dataSent": "Τα κλειδιά, οι τίτλοι, οι περιγραφές, οι προτεραιότητες, οι ετικέτες και οι ημερομηνίες λήξης περιλαμβάνονται στο πλαίσιο οριοθετημένου προγραμματισμού.",
+        "retention": "Το TaskNebula δεν επιβάλλει επί του παρόντος αυτόματη λήξη για σχετικές εγγραφές που εκτελούνται από πράκτορα. Η διατήρηση από την πλευρά του παρόχου εξαρτάται από τον ενεργό πάροχο."
+      },
+      "ask": {
+        "name": "AI πλαϊνό πλαίσιο Q και A",
+        "summary": "Απαντάει σε ερωτήσεις από θέματα οργανισμού ή έργου και έγγραφα που ανακτήθηκαν για το τρέχον αίτημα.",
+        "purpose": "Παρέχει απαντήσεις μόνο για ανάγνωση, παρατιθέμενες από το πλαίσιο TaskNebula που είναι διαθέσιμες στον καλούντα.",
+        "dataSent": "Η ερώτηση και το περιορισμένο ζήτημα ή αποσπάσματα εγγράφου που ανακτήθηκαν για τον επιλεγμένο οργανισμό και το προαιρετικό έργο.",
+        "retention": "Η κατάσταση συνομιλίας διατηρείται στη μνήμη του προγράμματος περιήγησης για την τρέχουσα περίοδο λειτουργίας σελίδας και δεν είναι δυνατή η συνέχιση. Η διατήρηση από την πλευρά του παρόχου εξαρτάται από τον ενεργό πάροχο."
+      },
+      "summary": {
+        "name": "Σύνοψη Γενιά",
+        "summary": "Παράγει περιλήψεις κατ' απαίτηση όπου η δυνατότητα είναι διαθέσιμη.",
+        "purpose": "Βοηθά ένα άτομο να σαρώσει επιλεγμένο περιεχόμενο TaskNebula χωρίς να αντικαταστήσει το αρχικό υλικό.",
+        "dataSent": "Το περιεχόμενο που επιλέχθηκε ρητά για σύνοψη και τα μεταδεδομένα εμβέλειας που απαιτούνται από το αίτημα.",
+        "retention": "Επί του παρόντος, δεν επιβάλλεται αυτόματη λήξη για συγκεκριμένο χαρακτηριστικό. Η διατήρηση από την πλευρά του παρόχου εξαρτάται από τον ενεργό πάροχο."
+      },
+      "embedding": {
+        "name": "Διανυσματικές αναπαραστάσεις σημασιολογικής αναζήτησης",
+        "summary": "Δημιουργεί διανυσματικές ενσωματώσεις για διαμορφωμένη ευρετηρίαση σημασιολογικής αναζήτησης.",
+        "purpose": "Βελτιώνει την ανάκτηση αντιπροσωπεύοντας επιλεγμένο κείμενο πηγής ως διάνυσμα αναζήτησης.",
+        "dataSent": "Επιλεγμένο κείμενο προέλευσης και τα αναγνωριστικά που απαιτούνται για την επεξεργασία και αποθήκευση της εργασίας ενσωμάτωσης.",
+        "retention": "Οι ενσωματώσεις ζητημάτων, σχολίων και έργων χρησιμοποιούν αναφορές που συνδέονται με καταρράκτη. Οι χειριστές πρέπει να επαληθεύουν την εκκαθάριση για κάθε ενεργοποιημένο τύπο περιεχομένου και πάροχο."
+      }
     }
   },
   "presence": {

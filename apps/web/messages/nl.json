@@ -4138,19 +4138,19 @@
       "generatedWithAi": "Gegenereerd met AI",
       "ariaLabel": "Door AI gegenereerde inhoud. {detail}",
       "tooltipTitle": "Door AI gegenereerde uitvoer",
-      "disclosure": "Openbaarmaking volgens artikel 50 van de EU AI Act. Zie <link>modelkaarten</link>."
+      "disclosure": "AI-transparantie-informatie. Zie <link>AI-modelkaarten</link>."
     },
     "disclosure": {
       "title": "Je staat op het punt met AI te interageren",
       "description": "Sommige TaskNebula-functies gebruiken AI-modellen van derden om tekst, suggesties en samenvattingen te genereren. Lees voordat je doorgaat wat dat voor jou betekent.",
       "whatRunsTitle": "Wat er in je werkruimte draait",
-      "rightsTitle": "Jouw rechten",
-      "rightLabelled": "Elke AI-uitvoer is gelabeld als <label>Gegenereerd met AI</label>.",
-      "rightReview": "Je kunt elke AI-suggestie beoordelen en afwijzen voordat die wordt toegepast.",
-      "rightDisable": "Werkruimtebeheerders kunnen elke AI-functie uitschakelen in Instellingen → AI-transparantie.",
-      "rightRetention": "Invoer/uitvoer wordt bewaard volgens het bewaarbeleid op de modelkaart en wordt nooit verkocht.",
+      "rightsTitle": "Wat je kunt verwachten",
+      "rightLabelled": "In TaskNebula draagt de ondersteunde, door de gebruiker gerichte, door AI gegenereerde uitvoer het label <label>Gegenereerd met AI</label>.",
+      "rightReview": "Goedkeuringsgestuurde schrijfacties blijven in preview totdat een geautoriseerde persoon ze goedkeurt.",
+      "rightDisable": "Werkruimtebeheerders kunnen ondersteunde AI-functies beheren in Instellingen → AI-transparantie.",
+      "rightRetention": "Modelkaarten beschrijven gedocumenteerde gegevensverwerking en -retentie; actieve provider en implementatie-instellingen kunnen variëren.",
       "modelCardsLine": "Lees de <link>volledige modelkaarten</link> voor elke functie, inclusief modelidentiteit, verzonden gegevens en bewaring.",
-      "versionLine": "Openbaarmakingsversie {version}. Vereist door artikel 50 van de EU AI Act.",
+      "versionLine": "Transparantieverklaring versie {version}.",
       "acknowledge": "Ik begrijp het, doorgaan"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "AI-transparantie",
-      "subtitle": "Verplichte openbaarmakingen voor elke AI-functie in deze werkruimte. Vereist door <link>artikel 50 van de EU AI Act</link> (van kracht 2026-08-02)."
+      "subtitle": "Informatie over producttransparantie voor AI-functies die beschikbaar zijn in deze werkruimte. Zie <link>AI-modelkaarten</link>."
     },
     "oversight": {
       "title": "Houding voor menselijk toezicht",
-      "description": "Bepaalt of AI-uitvoer automatisch kan worden toegepast of altijd door een mens moet worden beoordeeld voordat die op werkruimtegegevens wordt toegepast.",
+      "description": "Bepaalt of ondersteunde AI-acties met schrijfmogelijkheid in aanmerking komen voor automatische toepassing of in preview blijven voor menselijke beoordeling.",
       "reviewRequiredLabel": "Beoordeling vereist (aanbevolen)",
       "autoApplyLabel": "Automatisch toepassen",
-      "reviewRequiredDescription": "Elke AI-suggestie wordt in de wachtrij gezet voor expliciete menselijke goedkeuring voordat er werkruimtegegevens worden gewijzigd. Triagesuggesties worden bekeken, nooit toegepast.",
-      "autoApplyDescription": "Functies die dit ondersteunen, mogen AI-uitvoer met hoge betrouwbaarheid toepassen zonder expliciete menselijke beoordeling. Het auditlogboek registreert nog steeds elke actie.",
+      "reviewRequiredDescription": "Ondersteunde, voor schrijven geschikte AI-acties blijven in preview totdat een geautoriseerde persoon ze goedkeurt.",
+      "autoApplyDescription": "Ondersteunde acties komen alleen in aanmerking voor automatische toepassing als afzonderlijke schrijf- en goedkeuringsbesturingselementen dit ook toestaan; anders blijven ze in preview.",
       "toggleAria": "Houding voor menselijk toezicht in-/uitschakelen"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Verzonden gegevens",
       "retentionLabel": "Bewaring",
       "readModelCard": "Volledige modelkaart lezen",
-      "footer": "<strong>{userFacing}</strong> van de {total} functies zijn gebruikersgericht en moeten volgens artikel 50 het label <em>Gegenereerd met AI</em> dragen."
+      "footer": "<strong>{userFacing}</strong> van {total} gedocumenteerde functies produceren output voor gebruikers. In TaskNebula draagt ​​de ondersteunde, door AI gegenereerde uitvoer het label <em>Gegenereerd met AI</em>."
     },
     "import": {
       "metaTitle": "Issues importeren · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Navigatiemenu sluiten",
         "items": {
           "features": "Functies",
-          "compare": "Vergelijken",
           "selfHost": "Zelf hosten",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Of host zelf met twee opdrachten",
         "quickstartAria": "Self-host quickstart-opdrachten",
         "copyQuickstart": "Self-host quickstart kopiëren",
-        "selfHostMeta": "Voor altijd gratis zelf gehost · Drie containers: Postgres, Redis, één web-image",
+        "selfHostMeta": "Voor altijd gratis bij zelfhosting · Kleine Compose-stack met Postgres, Redis, web en optionele diensten",
         "demoPill": "Interactieve demo hieronder",
         "chips": {
           "cmdk": "Cmd+K overal",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Functies",
-          "compare": "Vergelijken",
           "selfHost": "Zelf hosten",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI-specificatie",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "Eén opdracht start een kleine Compose-stack. Kerngegevens staan in Postgres, exporteren is slechts een pg_dump en standaard wordt niets naar buiten verzonden — zonder leveranciersafhankelijkheid.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Zelfhosting is de standaardroute. Met Docker start je een kleine Compose-stack met Postgres 16 en pgvector, Redis 7, de neuraparse/tasknebula-webimage en de meegeleverde of optionele diensten die je inschakelt. Migraties draaien bij het opstarten, GET /api/health is het controle-endpoint en de snelstart opent op localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "De kerntracker — issues, borden, sprints, documenten, zoeken, REST API en OpenAPI-specificatie — kan zelf worden gehost. OAuth-aanmelding heeft nog een databaseadapter nodig; gebruik voorlopig aanmelding met inloggegevens. Realtime samenwerking is aangesloten via Docker/Compose, maar je deployment heeft nog een bereikbare URL en een live smoke-test nodig. AI en MCP blijven preview. We volgen de hiaten in docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Terug naar TaskNebula",
-    "disclosureBadge": "Openbaarmaking volgens EU AI Act Artikel 50",
+    "disclosureBadge": "AI-transparantie-informatie",
     "title": "AI-modelkaarten",
-    "intro": "TaskNebula stelt de volgende AI-functies beschikbaar aan eindgebruikers. Voor elke functie publiceren we het beoogde doel, de identiteit van het model, de gegevens die bij elke aanroep worden verzonden, het bewaarbeleid en onze standaardhouding ten aanzien van menselijk toezicht. Deze pagina is een openbaar transparantiedossier en is van toepassing op alle TaskNebula-implementaties. Openbaarmakingsversie <version></version>.",
-    "lastReviewed": "Laatst beoordeeld op 2026-05-14. Handhaving van de regelgeving begint op 2026-08-02.",
+    "intro": "Deze pagina beschrijft de gedocumenteerde AI-functies en standaardconfiguratie van TaskNebula. Werkelijke modellen, gegevensverwerking, bewaring en beoordelingscontroles kunnen variëren per werkruimte en implementatie; bevestig de actieve instellingen bij uw beheerder. Transparantieverklaring versie <version></version>.",
+    "lastReviewed": "Laatst beoordeeld op 12-08-2026. Artikel 50 van Verordening (EU) 2024/1689 is van toepassing vanaf 2026-08-02.",
     "onThisPage": "Op deze pagina",
     "model": "Model",
     "provider": "Aanbieder",
@@ -6778,7 +6670,53 @@
     "footerContact": "Vragen over AI-transparantie, rechten van betrokkenen of deze modelkaarten? Mail naar <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Producttransparantie-informatie voor TaskNebula AI-functies, inclusief doel, geconfigureerde standaardinstellingen, gegevensverwerking en beoordelingsopties."
+    },
+    "dataSent": "Gebruikte gegevens",
+    "retention": "Gegevensverwerking en -bewaring",
+    "features": {
+      "draft": {
+        "name": "Concept van projectwerkitem",
+        "summary": "Creëert bewerkbare probleemconcepten op basis van een vrije-tekstprompt.",
+        "purpose": "Helpt iemand een ruw idee of rapport om te zetten in gestructureerde conceptversies van een probleem, die bewerkbaar blijven voordat ze worden gemaakt.",
+        "dataSent": "De prompt, projectnaam en beschikbare probleemtypen en prioriteiten die zijn gebruikt om het concept voor te bereiden.",
+        "retention": "TaskNebula dwingt momenteel geen automatische vervaldatum af voor gerelateerde agentrunrecords. Retentie aan de providerzijde is afhankelijk van de actieve provider."
+      },
+      "assist": {
+        "name": "Assistent projectwerkitem",
+        "summary": "Vat samen, herschrijft, stelt volgende stappen voor of stelt labels voor een probleem voor.",
+        "purpose": "Helpt iemand de inhoud van een probleem te verbeteren, terwijl de toepassing van de suggestie expliciet blijft.",
+        "dataSent": "De titel en beschrijving van het probleem, plus de labels of recente opmerkingen die vereist zijn voor de geselecteerde actie.",
+        "retention": "TaskNebula dwingt momenteel geen automatische vervaldatum af voor gerelateerde agentrunrecords. Retentie aan de providerzijde is afhankelijk van de actieve provider."
+      },
+      "triage": {
+        "name": "Triage van achterstanden",
+        "summary": "Stelt begrensde prioriteits- en labelwijzigingen voor voor in aanmerking komende achterstandsproblemen.",
+        "purpose": "Helpt een menselijke triager een achterstand in batches te beoordelen; goedkeuringsafhankelijke uitvoeringen blijven previews.",
+        "dataSent": "Sleutels voor achterstandsproblemen, titels, beschrijvingen, prioriteiten, labels en vervaldata opgenomen in de begrensde planningscontext.",
+        "retention": "TaskNebula dwingt momenteel geen automatische vervaldatum af voor gerelateerde agentrunrecords. Retentie aan de providerzijde is afhankelijk van de actieve provider."
+      },
+      "ask": {
+        "name": "AI zijpaneel Q en A",
+        "summary": "Beantwoordt vragen over organisatie- of projectkwesties en documenten die zijn opgehaald voor de huidige aanvraag.",
+        "purpose": "Biedt alleen-lezen, geciteerde antwoorden uit TaskNebula context die beschikbaar is voor de beller.",
+        "dataSent": "De vraag en het begrensde probleem of documentfragmenten die zijn opgehaald voor de geselecteerde organisatie en optioneel project.",
+        "retention": "De gespreksstatus wordt in het browsergeheugen bewaard voor de huidige paginasessie en kan niet worden hervat. Retentie aan de providerzijde is afhankelijk van de actieve provider."
+      },
+      "summary": {
+        "name": "Samenvatting Generatie",
+        "summary": "Produceert on-demand samenvattingen waar de functie beschikbaar is.",
+        "purpose": "Helpt iemand geselecteerde TaskNebula-inhoud te scannen zonder het bronmateriaal te vervangen.",
+        "dataSent": "De inhoud die expliciet is geselecteerd voor samenvatting en de metagegevens van het bereik die vereist zijn voor het verzoek.",
+        "retention": "Er wordt momenteel geen functiespecifieke automatische vervaldatum afgedwongen. Retentie aan de providerzijde is afhankelijk van de actieve provider."
+      },
+      "embedding": {
+        "name": "Semantische zoekvectorrepresentaties",
+        "summary": "Creëert vectorinsluitingen voor geconfigureerde semantische zoekindexering.",
+        "purpose": "Verbetert het ophalen door geselecteerde brontekst weer te geven als zoekvector.",
+        "dataSent": "Geselecteerde brontekst en de identificatiegegevens die nodig zijn om de insluitingstaak te verwerken en op te slaan.",
+        "retention": "Bij het insluiten van problemen, opmerkingen en projecten wordt gebruik gemaakt van cascadegekoppelde verwijzingen. Operators moeten het opschonen verifiëren voor elk ingeschakeld inhoudstype en elke provider."
+      }
     }
   },
   "presence": {

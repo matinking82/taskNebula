@@ -7,6 +7,7 @@ import {
   normalizeWorkspaceAgentSettings,
   resolveEffectiveProjectAgentSettings,
 } from '@/lib/agents/config';
+import { formatAgentProviderStatus } from '@/lib/agents/i18n';
 
 describe('agent config', () => {
   it('normalizes workspace settings safely — capabilities default OFF (opt-in)', () => {
@@ -64,16 +65,41 @@ describe('agent config', () => {
       },
     });
 
-    const effective = resolveEffectiveProjectAgentSettings(
-      workspace,
-      project,
-      { ...DEFAULT_SYSTEM_AGENT_CONTROL_SETTINGS, globalEnabled: true }
-    );
+    const effective = resolveEffectiveProjectAgentSettings(workspace, project, {
+      ...DEFAULT_SYSTEM_AGENT_CONTROL_SETTINGS,
+      globalEnabled: true,
+    });
 
     expect(effective.enabled).toBe(true);
     expect(effective.allowWriteActions).toBe(true);
+    expect(effective.aiOversight).toBe('review_required');
     expect(effective.capabilities.backlog_triage).toBe(true);
     expect(effective.capabilities.bulk_sprint_creation).toBe(false);
+  });
+
+  it('applies system auto-mode supervision only to autonomous execution', () => {
+    const workspace = normalizeWorkspaceAgentSettings({
+      enabled: true,
+      executionMode: 'manual',
+      requireApprovalForWrites: false,
+      aiOversight: 'auto',
+    });
+    const project = normalizeProjectAgentSettings({ enabled: true });
+    const system = {
+      ...DEFAULT_SYSTEM_AGENT_CONTROL_SETTINGS,
+      globalEnabled: true,
+      requireSupervisionForAutoMode: true,
+    };
+
+    const manual = resolveEffectiveProjectAgentSettings(workspace, project, system);
+    expect(manual.requireApprovalForWrites).toBe(false);
+
+    const automatic = resolveEffectiveProjectAgentSettings(
+      { ...workspace, executionMode: 'auto' },
+      project,
+      system
+    );
+    expect(automatic.requireApprovalForWrites).toBe(true);
   });
 
   it('reports OpenAI as not ready when the model is still a native placeholder', () => {
@@ -81,6 +107,31 @@ describe('agent config', () => {
 
     expect(readiness.ready).toBe(false);
     expect(readiness.summary).toContain('placeholder');
+  });
+
+  it('reports Anthropic as runnable when its model and credential are configured', () => {
+    const readiness = getAgentProviderReadiness('anthropic', 'claude-sonnet-4-6', {
+      configured: true,
+      source: 'workspace',
+      label: 'Workspace key',
+      updatedAt: null,
+    });
+
+    expect(readiness.ready).toBe(true);
+    expect(readiness.configured).toBe(true);
+  });
+
+  it('renders configured Anthropic as ready instead of an unavailable adapter', () => {
+    const translate = (key: string) => key;
+
+    expect(
+      formatAgentProviderStatus(translate, 'anthropic', 'claude-sonnet-4-6', {
+        ready: true,
+        configured: true,
+        source: 'workspace',
+        label: 'Workspace key',
+      })
+    ).toBe('agentShared.providerStatus.readyWorkspace');
   });
 
   it('builds actionable workspace issues when provider credentials are missing', () => {
@@ -102,7 +153,9 @@ describe('agent config', () => {
       systemControl: DEFAULT_SYSTEM_AGENT_CONTROL_SETTINGS,
     });
 
-    expect(issues.some((issue) => issue.code === 'provider_missing_credential' && issue.blocksRuns)).toBe(true);
+    expect(
+      issues.some((issue) => issue.code === 'provider_missing_credential' && issue.blocksRuns)
+    ).toBe(true);
   });
 
   it('blocks project runs when workspace provider setup is incomplete', () => {

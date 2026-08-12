@@ -11,7 +11,8 @@
  *                       (letters, digits, hyphens, underscores).
  *   - `[DOC-<id>]`      document page, where `<id>` is the page id.
  *
- * Citations that don't resolve back to a known source are dropped silently.
+ * Resolved citations and unresolved markers are exposed separately so clients
+ * can fail closed or display a grounding warning.
  * Order in the response is preserved (first appearance wins) so UI cards
  * mirror the reading order of the answer.
  */
@@ -117,15 +118,21 @@ export function extractCitationMarkers(answer: string): string[] {
 }
 
 /**
- * Best-effort check that every `[Source: ...]` claim in the answer was
- * grounded in a known citation. Returns the list of unresolved markers
+ * Check that every citation marker in the answer was grounded in a known
+ * source. Returns the list of unresolved markers
  * so the API can surface "hallucinated source" warnings instead of
  * silently dropping them.
  */
 export function findUnresolvedCitations(answer: string, sources: CitationSource[]): string[] {
-  const resolved = new Set(
-    parseCitations(answer, sources).map((c) => `[${c.type === 'issue' ? 'TN' : 'DOC'}-${c.key}]`)
-  );
+  const resolved = new Set<string>();
+  for (const source of sources) {
+    if (source.type === 'issue') {
+      resolved.add(`[TN-${source.key ?? source.id}]`);
+      continue;
+    }
+    resolved.add(`[DOC-${source.id}]`);
+    if (source.key) resolved.add(`[DOC-${source.key}]`);
+  }
   const unresolved: string[] = [];
   const seen = new Set<string>();
   for (const match of answer.matchAll(MARKER_REGEX)) {

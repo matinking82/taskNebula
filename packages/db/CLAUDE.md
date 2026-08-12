@@ -1,6 +1,6 @@
 # packages/db — Drizzle ORM schema & migrations
 
-Postgres + pgvector. ~113 tables across 53 schema files in `src/schema/` (re-exported from `index.ts`).
+Postgres + pgvector. Schema lives in `src/schema/` and is re-exported from `index.ts`.
 Root guide: `/CLAUDE.md`. Zero tests today — add coverage when you touch this package.
 
 ## Commands (run in packages/db)
@@ -16,8 +16,8 @@ pnpm type-check && pnpm lint
 
 ## Migration convention (IMPORTANT — overrides generic Drizzle docs)
 
-- `pnpm db:generate` (drizzle-kit generate) is **BROKEN**: snapshots in `drizzle/meta/` are frozen at `0012`.
-  Do not use it. Migrations `0013+` are **hand-written SQL** — that is the convention here.
+- There is intentionally no `db:generate` script: snapshots in `drizzle/meta/`
+  are frozen at `0012`. Migrations `0013+` are **hand-written SQL**.
 - Recipe: edit schema TS → hand-write `drizzle/NNNN_name.sql` → append an entry to `drizzle/meta/_journal.json`.
 - **Idempotency is required**: every statement must be safe to re-run — `CREATE TABLE IF NOT EXISTS`,
   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$`

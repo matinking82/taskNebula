@@ -52,6 +52,12 @@ jobs:
       - name: Verify web UI design contract
         run: pnpm ui:check
 
+      - name: Verify canonical documentation and links
+        run: pnpm docs:check
+
+      - name: Verify generated OpenAPI is current
+        run: pnpm --filter @tasknebula/web openapi:check
+
       - name: Type-check
         run: pnpm type-check
 

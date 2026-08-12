@@ -4204,19 +4204,19 @@
       "generatedWithAi": "สร้างด้วย AI",
       "ariaLabel": "เนื้อหาที่สร้างโดย AI {detail}",
       "tooltipTitle": "เอาต์พุตที่สร้างโดย AI",
-      "disclosure": "การเปิดเผยตามมาตรา 50 ของกฎหมาย AI สหภาพยุโรป ดู<link>การ์ดโมเดล</link>"
+      "disclosure": "ข้อมูลความโปร่งใสของ AI ดู <link>การ์ดโมเดล AI</link>."
     },
     "disclosure": {
       "title": "คุณกำลังจะโต้ตอบกับ AI",
       "description": "ฟีเจอร์บางอย่างของ TaskNebula ใช้โมเดล AI จากบุคคลที่สามเพื่อสร้างข้อความ คำแนะนำ และสรุป ก่อนดำเนินการต่อ กรุณาอ่านว่าสิ่งนี้หมายความว่าอย่างไรสำหรับคุณ",
       "whatRunsTitle": "อะไรที่รันในพื้นที่ทำงานของคุณ",
-      "rightsTitle": "สิทธิ์ของคุณ",
-      "rightLabelled": "เอาต์พุต AI ทุกรายการถูกระบุว่า<label>สร้างด้วย AI</label>",
-      "rightReview": "คุณสามารถตรวจสอบและปฏิเสธคำแนะนำ AI ใดก็ได้ก่อนที่จะนำไปใช้",
-      "rightDisable": "ผู้ดูแลพื้นที่ทำงานสามารถปิดใช้งานฟีเจอร์ AI ใดก็ได้ในการตั้งค่า → ความโปร่งใส AI",
-      "rightRetention": "อินพุต/เอาต์พุตถูกเก็บไว้ตามนโยบายการเก็บรักษาของการ์ดโมเดลและไม่เคยถูกขาย",
+      "rightsTitle": "สิ่งที่คุณคาดหวังได้",
+      "rightLabelled": "ใน TaskNebula เอาต์พุตที่สร้างโดย AI ที่ผู้ใช้เผชิญหน้าที่รองรับจะมีป้ายกำกับ <label>สร้างด้วย AI</label>",
+      "rightReview": "การดำเนินการเขียนที่ได้รับอนุมัติจะยังคงอยู่ในการแสดงตัวอย่างจนกว่าบุคคลที่ได้รับอนุญาตจะอนุมัติ",
+      "rightDisable": "ผู้ดูแลระบบ Workspace สามารถจัดการฟีเจอร์ AI ที่รองรับได้ในการตั้งค่า → ความโปร่งใสของ AI",
+      "rightRetention": "การ์ดโมเดลอธิบายการจัดการและการเก็บรักษาข้อมูลที่เป็นเอกสาร ผู้ให้บริการที่ใช้งานอยู่และการตั้งค่าการใช้งานอาจแตกต่างกันไป",
       "modelCardsLine": "อ่าน<link>การ์ดโมเดลฉบับเต็ม</link>สำหรับแต่ละฟีเจอร์ รวมถึงข้อมูลระบุโมเดล ข้อมูลที่ส่ง และการเก็บรักษา",
-      "versionLine": "การเปิดเผยเวอร์ชัน {version} จำเป็นตามมาตรา 50 ของกฎหมาย AI สหภาพยุโรป",
+      "versionLine": "ประกาศความโปร่งใส เวอร์ชัน {version}",
       "acknowledge": "ฉันเข้าใจแล้ว ดำเนินการต่อ"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "ความโปร่งใส AI",
-      "subtitle": "การเปิดเผยที่จำเป็นสำหรับทุกฟีเจอร์ AI ในพื้นที่ทำงานนี้ จำเป็นตาม<link>มาตรา 50 ของกฎหมาย AI สหภาพยุโรป</link> (มีผลบังคับใช้ 2026-08-02)"
+      "subtitle": "ข้อมูลความโปร่งใสของผลิตภัณฑ์สำหรับฟีเจอร์ AI ที่มีอยู่ในพื้นที่ทำงานนี้ ดู <link>การ์ดโมเดล AI</link>."
     },
     "oversight": {
       "title": "ท่าทีการกำกับดูแลโดยมนุษย์",
-      "description": "ควบคุมว่าเอาต์พุต AI สามารถนำไปใช้โดยอัตโนมัติได้หรือต้องได้รับการตรวจสอบโดยมนุษย์เสมอก่อนนำไปใช้กับข้อมูลพื้นที่ทำงาน",
+      "description": "ควบคุมว่าการดำเนินการ AI ที่สามารถเขียนได้ที่รองรับนั้นมีสิทธิ์สำหรับแอปพลิเคชันอัตโนมัติหรือคงอยู่ในการแสดงตัวอย่างเพื่อตรวจสอบโดยมนุษย์",
       "reviewRequiredLabel": "ต้องตรวจสอบ (แนะนำ)",
       "autoApplyLabel": "นำไปใช้อัตโนมัติ",
-      "reviewRequiredDescription": "คำแนะนำ AI ทุกรายการจะถูกจัดคิวเพื่อขออนุมัติจากมนุษย์อย่างชัดเจนก่อนที่ข้อมูลพื้นที่ทำงานใดๆ จะถูกเปลี่ยนแปลง คำแนะนำการคัดแยกจะแสดงตัวอย่าง ไม่เคยนำไปใช้",
-      "autoApplyDescription": "ฟีเจอร์ที่รองรับอาจนำเอาต์พุต AI ที่มีความเชื่อมั่นสูงไปใช้โดยไม่ต้องตรวจสอบโดยมนุษย์อย่างชัดเจน บันทึกการตรวจสอบยังคงบันทึกทุกการดำเนินการ",
+      "reviewRequiredDescription": "การดำเนินการ AI ที่สามารถเขียนที่รองรับจะยังคงอยู่ในการแสดงตัวอย่างจนกว่าบุคคลที่ได้รับอนุญาตจะอนุมัติ",
+      "autoApplyDescription": "การดำเนินการที่ได้รับการสนับสนุนมีสิทธิ์สำหรับแอปพลิเคชันอัตโนมัติเฉพาะเมื่อมีการอนุญาตการควบคุมการเขียนและการอนุมัติแยกต่างหาก มิฉะนั้นจะยังคงอยู่ในการแสดงตัวอย่าง",
       "toggleAria": "สลับท่าทีการกำกับดูแลโดยมนุษย์"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "ข้อมูลที่ส่ง",
       "retentionLabel": "การเก็บรักษา",
       "readModelCard": "อ่านการ์ดโมเดลฉบับเต็ม",
-      "footer": "<strong>{userFacing}</strong> จาก {total} ฟีเจอร์เป็นฟีเจอร์ที่ผู้ใช้เห็นและต้องแสดงป้าย <em>สร้างด้วย AI</em> ตามมาตรา 50"
+      "footer": "คุณลักษณะที่บันทึกไว้ <strong>{userFacing}</strong> จาก {total} จะสร้างเอาต์พุตสำหรับผู้ใช้ ใน TaskNebula เอาต์พุตที่สร้างโดย AI ที่รองรับจะมีป้ายกำกับ <em>สร้างด้วย AI</em>"
     },
     "import": {
       "metaTitle": "นำเข้างาน · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "ปิดเมนูนำทาง",
         "items": {
           "features": "ฟีเจอร์",
-          "compare": "เปรียบเทียบ",
           "selfHost": "โฮสต์เอง",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Or self-host in two commands",
         "quickstartAria": "Self-host quickstart commands",
         "copyQuickstart": "Copy self-host quickstart",
-        "selfHostMeta": "Free forever self-hosted · Three containers: Postgres, Redis, one web image",
+        "selfHostMeta": "ฟรีตลอดไปเมื่อโฮสต์เอง · สแต็ก Compose ขนาดเล็กพร้อม Postgres, Redis, เว็บ และบริการเสริม",
         "demoPill": "Interactive demo below",
         "chips": {
           "cmdk": "Cmd+K everywhere",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Features",
-          "compare": "Compare",
           "selfHost": "Self-host",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI spec",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "คำสั่งเดียวเริ่มสแต็ก Compose ขนาดเล็ก ข้อมูลหลักอยู่ใน Postgres ส่งออกได้ด้วย pg_dump และโดยค่าเริ่มต้นจะไม่มีการส่งข้อมูลออกภายนอก — ไม่ผูกติดกับผู้ให้บริการ",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "การโฮสต์เองเป็นแนวทางเริ่มต้น ใช้ Docker เพื่อเริ่มสแต็ก Compose ขนาดเล็กที่มี Postgres 16 และ pgvector, Redis 7, อิมเมจเว็บ neuraparse/tasknebula รวมถึงบริการที่ให้มาหรือบริการเสริมที่คุณเปิดใช้ การย้ายฐานข้อมูลทำงานตอนบูต, GET /api/health เป็น endpoint สำหรับตรวจสอบ และ quickstart เปิดที่ localhost:3000"
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "ตัวติดตามหลัก — issue, บอร์ด, sprint, เอกสาร, การค้นหา, REST API และข้อกำหนด OpenAPI — โฮสต์เองได้ การเข้าสู่ระบบ OAuth ยังต้องใช้ตัวเชื่อมฐานข้อมูล จึงควรใช้การยืนยันตัวตนด้วยข้อมูลรับรองไปก่อน การทำงานร่วมกันแบบเรียลไทม์เชื่อมผ่าน Docker/Compose แล้ว แต่ deployment ยังต้องมี URL ที่เข้าถึงได้และ live smoke test ส่วน AI และ MCP ยังเป็น preview เราติดตามช่องว่างไว้ใน docs/STATUS.md"
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "กลับไปยัง TaskNebula",
-    "disclosureBadge": "การเปิดเผยตามมาตรา 50 ของ EU AI Act",
+    "disclosureBadge": "ข้อมูลความโปร่งใสของ AI",
     "title": "การ์ดโมเดล AI",
-    "intro": "TaskNebula นำฟีเจอร์ AI ต่อไปนี้มาให้บริการแก่ผู้ใช้ปลายทาง สำหรับแต่ละฟีเจอร์ เราเผยแพร่วัตถุประสงค์การใช้งาน ข้อมูลระบุตัวตนของโมเดล ข้อมูลที่ส่งในทุกการเรียกใช้ นโยบายการเก็บรักษาข้อมูล และแนวทางการกำกับดูแลโดยมนุษย์ตามค่าเริ่มต้นของเรา หน้านี้เป็นบันทึกความโปร่งใสสาธารณะและมีผลบังคับใช้กับทุกการติดตั้ง TaskNebula เวอร์ชันการเปิดเผย <version></version>",
-    "lastReviewed": "ตรวจสอบล่าสุดเมื่อ 2026-05-14 การบังคับใช้กฎระเบียบจะเริ่มในวันที่ 2026-08-02",
+    "intro": "หน้านี้อธิบายคุณสมบัติ AI ที่บันทึกไว้ของ TaskNebula และการกำหนดค่าเริ่มต้น โมเดลที่แท้จริง การจัดการข้อมูล การเก็บรักษา และการควบคุมการตรวจสอบอาจแตกต่างกันไปตามพื้นที่ทำงานและการปรับใช้ ยืนยันการตั้งค่าที่ใช้งานกับผู้ดูแลระบบของคุณ ประกาศความโปร่งใสเวอร์ชัน <version></version>",
+    "lastReviewed": "ตรวจสอบครั้งล่าสุด 2026-08-12 มาตรา 50 ของข้อบังคับ (EU) 2024/1689 มีผลตั้งแต่วันที่ 08-08-2026",
     "onThisPage": "ในหน้านี้",
     "model": "โมเดล",
     "provider": "ผู้ให้บริการ",
@@ -6778,7 +6670,53 @@
     "footerContact": "มีคำถามเกี่ยวกับความโปร่งใสของ AI สิทธิของเจ้าของข้อมูล หรือการ์ดโมเดลเหล่านี้ใช่ไหม ส่งอีเมลถึง <link></link>",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "ข้อมูลความโปร่งใสของผลิตภัณฑ์สำหรับฟีเจอร์ TaskNebula AI รวมถึงวัตถุประสงค์ ค่าเริ่มต้นที่กำหนดค่าไว้ การจัดการข้อมูล และการควบคุมการตรวจสอบ"
+    },
+    "dataSent": "ข้อมูลที่ใช้",
+    "retention": "การจัดการและการเก็บรักษาข้อมูล",
+    "features": {
+      "draft": {
+        "name": "แบบร่างรายการงานโครงการ",
+        "summary": "สร้างฉบับร่างปัญหาที่แก้ไขได้จากพร้อมท์ข้อความอิสระ",
+        "purpose": "ช่วยให้บุคคลเปลี่ยนแนวคิดคร่าวๆ หรือรายงานเป็นฉบับร่างปัญหาที่มีโครงสร้างซึ่งยังคงแก้ไขได้ก่อนที่จะสร้าง",
+        "dataSent": "พรอมต์ ชื่อโครงการ และประเภทปัญหาและลำดับความสำคัญที่มีอยู่ซึ่งใช้ในการเตรียมร่าง",
+        "retention": "TaskNebula ในปัจจุบันไม่บังคับใช้การหมดอายุอัตโนมัติสำหรับเรกคอร์ดที่เรียกใช้ตัวแทนที่เกี่ยวข้อง การรักษาฝั่งผู้ให้บริการขึ้นอยู่กับผู้ให้บริการที่ใช้งานอยู่"
+      },
+      "assist": {
+        "name": "ผู้ช่วยรายการงานโครงการ",
+        "summary": "สรุป เขียนใหม่ แนะนำขั้นตอนถัดไป หรือแนะนำป้ายกำกับสำหรับปัญหา",
+        "purpose": "ช่วยให้บุคคลปรับปรุงเนื้อหาปัญหาในขณะที่ยังคงนำคำแนะนำไปใช้อย่างชัดเจน",
+        "dataSent": "ชื่อและคำอธิบายของปัญหา รวมถึงป้ายกำกับหรือความคิดเห็นล่าสุดที่จำเป็นสำหรับการดำเนินการที่เลือก",
+        "retention": "TaskNebula ในปัจจุบันไม่บังคับใช้การหมดอายุอัตโนมัติสำหรับเรกคอร์ดที่เรียกใช้ตัวแทนที่เกี่ยวข้อง การรักษาฝั่งผู้ให้บริการขึ้นอยู่กับผู้ให้บริการที่ใช้งานอยู่"
+      },
+      "triage": {
+        "name": "การคัดแยก Backlog",
+        "summary": "เสนอการเปลี่ยนแปลงลำดับความสำคัญและป้ายกำกับสำหรับปัญหา Backlog ที่มีสิทธิ์",
+        "purpose": "ช่วยให้ผู้ทดสอบที่เป็นมนุษย์ตรวจสอบงานในมือเป็นชุด การรันที่มีการจำกัดการอนุมัติยังคงเป็นการแสดงตัวอย่าง",
+        "dataSent": "คีย์ปัญหาที่ค้าง ชื่อเรื่อง คำอธิบาย ลำดับความสำคัญ ป้ายกำกับ และวันครบกำหนดรวมอยู่ในบริบทการวางแผนที่มีขอบเขต",
+        "retention": "TaskNebula ในปัจจุบันไม่บังคับใช้การหมดอายุอัตโนมัติสำหรับเรกคอร์ดที่เรียกใช้ตัวแทนที่เกี่ยวข้อง การรักษาฝั่งผู้ให้บริการขึ้นอยู่กับผู้ให้บริการที่ใช้งานอยู่"
+      },
+      "ask": {
+        "name": "แผงด้านข้าง AI Q และ A",
+        "summary": "ตอบคำถามจากปัญหาขององค์กรหรือโครงการและเอกสารที่ดึงมาสำหรับคำขอปัจจุบัน",
+        "purpose": "ให้คำตอบแบบอ่านอย่างเดียวและอ้างอิงจากบริบท TaskNebula ที่ผู้โทรสามารถใช้ได้",
+        "dataSent": "คำถามและประเด็นที่มีขอบเขตหรือตัวอย่างเอกสารที่ดึงมาสำหรับองค์กรที่เลือกและโครงการเสริม",
+        "retention": "สถานะการสนทนาถูกเก็บไว้ในหน่วยความจำเบราว์เซอร์สำหรับเซสชันหน้าปัจจุบัน และไม่สามารถดำเนินการต่อได้ การรักษาฝั่งผู้ให้บริการขึ้นอยู่กับผู้ให้บริการที่ใช้งานอยู่"
+      },
+      "summary": {
+        "name": "การสร้างบทสรุป",
+        "summary": "สร้างสรุปตามความต้องการเมื่อมีคุณลักษณะนี้",
+        "purpose": "ช่วยให้บุคคลสแกนเนื้อหา TaskNebula ที่เลือกโดยไม่ต้องเปลี่ยนแหล่งข้อมูล",
+        "dataSent": "เนื้อหาที่เลือกอย่างชัดเจนสำหรับการสรุปและขอบเขตข้อมูลเมตาที่ร้องขอ",
+        "retention": "ไม่มีการบังคับใช้การหมดอายุอัตโนมัติเฉพาะคุณลักษณะในปัจจุบัน การรักษาฝั่งผู้ให้บริการขึ้นอยู่กับผู้ให้บริการที่ใช้งานอยู่"
+      },
+      "embedding": {
+        "name": "การแสดงเวกเตอร์การค้นหาความหมาย",
+        "summary": "สร้างการฝังเวกเตอร์สำหรับการจัดทำดัชนีการค้นหาความหมายที่กำหนดค่าไว้",
+        "purpose": "ปรับปรุงการดึงข้อมูลโดยการแสดงข้อความต้นฉบับที่เลือกเป็นเวกเตอร์การค้นหา",
+        "dataSent": "ข้อความต้นฉบับที่เลือกและตัวระบุที่จำเป็นในการประมวลผลและจัดเก็บงานการฝัง",
+        "retention": "ปัญหา ข้อคิดเห็น และการฝังโครงการใช้การอ้างอิงที่เชื่อมโยงแบบเรียงซ้อน ผู้ดำเนินการจะต้องตรวจสอบการล้างข้อมูลสำหรับประเภทเนื้อหาและผู้ให้บริการที่เปิดใช้งานทุกประเภท"
+      }
     }
   },
   "presence": {

@@ -34,13 +34,10 @@ import {
   type TriageProviderPlan,
   type TrackingProviderPlan,
 } from './providers';
-import {
-  BudgetExhaustedError,
-  estimatePromptTokens,
-  runWithBudget,
-} from '@/lib/ai/budget';
+import { BudgetExhaustedError, estimatePromptTokens, runWithBudget } from '@/lib/ai/budget';
 import type { AgentModelConfigRecord } from './model-configs';
 import type { ProjectContext, ProjectIssueRow, ProjectSprintRow } from './types';
+import { resolveAgentExecutionPolicy, type AgentWriteDisposition } from './execution-policy';
 
 type AgentLogEntry = {
   logIndex: number;
@@ -54,12 +51,16 @@ type RunResponse = {
   output: Record<string, unknown>;
   dryRun: boolean;
   forcedDryRun: boolean;
+  approvalRequired: boolean;
+  writeDisposition: AgentWriteDisposition;
   errorCode?: string;
   httpStatus?: number;
 };
 
 function asStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 function nextLog(logs: AgentLogEntry[], content: string, type: AgentLogEntry['type'] = 'system') {
@@ -225,11 +226,14 @@ function collectProjectTrackingMetrics(context: ProjectContext): ProjectTracking
   const activeSprint = context.sprints.find((sprint) => sprint.status === 'active') ?? null;
   const issuesInProject = context.issues;
   const openIssues = issuesInProject.filter((issue) => issue.statusCategory !== 'done');
-  const overdueIssues = openIssues.filter((issue) => issue.dueDate && issue.dueDate.getTime() < Date.now());
+  const overdueIssues = openIssues.filter(
+    (issue) => issue.dueDate && issue.dueDate.getTime() < Date.now()
+  );
   const unassignedIssues = openIssues.filter((issue) => !issue.assigneeId);
-  const blockedIssues = openIssues.filter((issue) =>
-    issue.statusCategory === 'blocked'
-      || asStringArray(issue.labels).some((label) => label.toLowerCase() === 'blocked')
+  const blockedIssues = openIssues.filter(
+    (issue) =>
+      issue.statusCategory === 'blocked' ||
+      asStringArray(issue.labels).some((label) => label.toLowerCase() === 'blocked')
   );
   const backlogIssues = openIssues.filter((issue) => !issue.sprintId);
 
@@ -248,10 +252,14 @@ function createNativeTrackingRecommendations(metrics: ProjectTrackingMetrics) {
   const recommendations: string[] = [];
 
   if (metrics.overdueIssues > 0) {
-    recommendations.push(`${metrics.overdueIssues} issue is overdue and needs a decision on scope or ownership.`);
+    recommendations.push(
+      `${metrics.overdueIssues} issue is overdue and needs a decision on scope or ownership.`
+    );
   }
   if (metrics.blockedIssues > 0) {
-    recommendations.push(`${metrics.blockedIssues} issue is blocked. Review blockers before the next planning cycle.`);
+    recommendations.push(
+      `${metrics.blockedIssues} issue is blocked. Review blockers before the next planning cycle.`
+    );
   }
   if (!metrics.activeSprint && metrics.backlogIssues >= 5) {
     recommendations.push('Backlog volume is high enough to draft the next sprint plan.');
@@ -263,10 +271,7 @@ function createNativeTrackingRecommendations(metrics: ProjectTrackingMetrics) {
   return recommendations;
 }
 
-function buildBacklogTriageProposals(
-  context: ProjectContext,
-  generatedPlan?: TriageProviderPlan
-) {
+function buildBacklogTriageProposals(context: ProjectContext, generatedPlan?: TriageProviderPlan) {
   const backlogIssues = context.issues.filter(
     (issue) => !issue.sprintId && issue.statusCategory !== 'done'
   );
@@ -293,8 +298,8 @@ function buildBacklogTriageProposals(
           targetPriority,
           nextLabels,
           changed:
-            targetPriority !== issue.priority
-            || JSON.stringify(nextLabels) !== JSON.stringify(labels),
+            targetPriority !== issue.priority ||
+            JSON.stringify(nextLabels) !== JSON.stringify(labels),
         };
       })
       .filter((proposal) => proposal.changed);
@@ -326,8 +331,8 @@ function buildBacklogTriageProposals(
       targetPriority: change.nextPriority,
       nextLabels,
       changed:
-        change.nextPriority !== issue.priority
-        || JSON.stringify(nextLabels) !== JSON.stringify(currentLabels),
+        change.nextPriority !== issue.priority ||
+        JSON.stringify(nextLabels) !== JSON.stringify(currentLabels),
       rationale: change.rationale,
     });
 
@@ -411,7 +416,8 @@ function materializePlannedSprints(params: {
     sprintEnd.setDate(sprintEnd.getDate() + params.effectiveSettings.sprintLengthDays - 1);
 
     plannedSprints.push({
-      name: sprint.name.trim() || `Sprint ${params.context.sprints.length + plannedSprints.length + 1}`,
+      name:
+        sprint.name.trim() || `Sprint ${params.context.sprints.length + plannedSprints.length + 1}`,
       goal: sprint.goal.trim() || `Deliver ${issueKeys.slice(0, 3).join(', ')}.`,
       startDate: sprintStart.toISOString(),
       endDate: sprintEnd.toISOString(),
@@ -437,7 +443,10 @@ async function runProjectTracking(params: {
 }) {
   const metrics = collectProjectTrackingMetrics(params.context);
 
-  nextLog(params.logs, `Scanned ${metrics.totalIssues} issues across ${params.context.project.name}.`);
+  nextLog(
+    params.logs,
+    `Scanned ${metrics.totalIssues} issues across ${params.context.project.name}.`
+  );
   nextLog(
     params.logs,
     metrics.activeSprint
@@ -449,12 +458,11 @@ async function runProjectTracking(params: {
     ? params.generatedPlan.recommendations
     : createNativeTrackingRecommendations(metrics);
 
-  const summary = params.generatedPlan?.summary
-    || (
-      metrics.activeSprint
-        ? `${params.context.project.name} has ${metrics.openIssues} open issues and ${metrics.blockedIssues} blockers in flight.`
-        : `${params.context.project.name} has ${metrics.openIssues} open issues with no active sprint.`
-    );
+  const summary =
+    params.generatedPlan?.summary ||
+    (metrics.activeSprint
+      ? `${params.context.project.name} has ${metrics.openIssues} open issues and ${metrics.blockedIssues} blockers in flight.`
+      : `${params.context.project.name} has ${metrics.openIssues} open issues with no active sprint.`);
 
   return {
     summary,
@@ -508,7 +516,8 @@ async function runBacklogTriage(params: {
   if (params.dryRun || !params.effectiveSettings.allowWriteActions) {
     nextLog(params.logs, 'Write actions are disabled, returning a preview only.');
     return {
-      summary: params.generatedPlan?.summary || `Prepared ${proposals.length} backlog triage updates.`,
+      summary:
+        params.generatedPlan?.summary || `Prepared ${proposals.length} backlog triage updates.`,
       writeActionsCount: 0,
       output: {
         changedIssues: proposals.map((proposal) => ({
@@ -580,7 +589,9 @@ async function runBacklogTriage(params: {
   nextLog(params.logs, `Applied ${writeActionsCount} triage updates to backlog issues.`);
 
   return {
-    summary: params.generatedPlan?.summary || `Updated ${writeActionsCount} backlog issues with fresh priority and labels.`,
+    summary:
+      params.generatedPlan?.summary ||
+      `Updated ${writeActionsCount} backlog issues with fresh priority and labels.`,
     writeActionsCount,
     output: {
       changedIssues: proposals.map((proposal) => ({
@@ -596,7 +607,9 @@ async function runBacklogTriage(params: {
 }
 
 function resolveSprintStartDate(projectSprints: ProjectSprintRow[]) {
-  const latestSprint = [...projectSprints].sort((left, right) => right.endDate.getTime() - left.endDate.getTime())[0];
+  const latestSprint = [...projectSprints].sort(
+    (left, right) => right.endDate.getTime() - left.endDate.getTime()
+  )[0];
   const startDate = latestSprint ? new Date(latestSprint.endDate) : new Date();
   startDate.setHours(0, 0, 0, 0);
   startDate.setDate(startDate.getDate() + 1);
@@ -622,12 +635,11 @@ async function buildSprintPlanningOutput(params: {
   });
 
   return {
-    summary: params.generatedPlan?.summary
-      || (
-        plan.length > 0
-          ? `Prepared ${plan.length} sprint plan block${plan.length === 1 ? '' : 's'} for ${params.context.project.name}.`
-          : 'No eligible backlog issues were found for sprint planning.'
-      ),
+    summary:
+      params.generatedPlan?.summary ||
+      (plan.length > 0
+        ? `Prepared ${plan.length} sprint plan block${plan.length === 1 ? '' : 's'} for ${params.context.project.name}.`
+        : 'No eligible backlog issues were found for sprint planning.'),
     output: {
       plannedSprints: plan.map((sprint) => ({
         name: sprint.name,
@@ -862,7 +874,8 @@ export async function runProjectAgent(params: {
   dryRun?: boolean;
   selectedModelConfig?: AgentModelConfigRecord | null;
   providerApiKey?: string | null;
-}) : Promise<RunResponse> {
+  signal?: AbortSignal;
+}): Promise<RunResponse> {
   const context = await loadProjectContext(params.projectId);
   if (!context) {
     throw new Error('Project not found');
@@ -875,8 +888,14 @@ export async function runProjectAgent(params: {
   );
 
   const logs: AgentLogEntry[] = [];
-  const forcedDryRun = !effectiveSettings.allowWriteActions && !params.dryRun && params.kind !== 'project_tracking' && params.kind !== 'sprint_planning';
-  const dryRun = Boolean(params.dryRun || forcedDryRun);
+  const executionPolicy = resolveAgentExecutionPolicy({
+    kind: params.kind,
+    requestedDryRun: Boolean(params.dryRun),
+    allowWriteActions: effectiveSettings.allowWriteActions,
+    requireApprovalForWrites: effectiveSettings.requireApprovalForWrites,
+    aiOversight: effectiveSettings.aiOversight,
+  });
+  const { dryRun, forcedDryRun, approvalRequired, disposition: writeDisposition } = executionPolicy;
 
   const run = await createAgentRunRecord({
     organizationId: context.project.organizationId,
@@ -889,6 +908,8 @@ export async function runProjectAgent(params: {
       kind: params.kind,
       projectKey: context.project.key,
       forcedDryRun,
+      approvalRequired,
+      writeDisposition,
       provider: effectiveSettings.provider,
       model: effectiveSettings.model,
       modelConfigId: params.selectedModelConfig?.id || null,
@@ -923,7 +944,10 @@ export async function runProjectAgent(params: {
     emitAgentStatus(run.id, context.project.id, { status: 'running', progress: 18 });
 
     if (effectiveSettings.provider !== 'native') {
-      const plannerLog = nextLog(logs, 'Requesting a structured agent plan from the configured LLM provider.');
+      const plannerLog = nextLog(
+        logs,
+        'Requesting a structured agent plan from the configured LLM provider.'
+      );
       emitLog(run.id, context.project.id, plannerLog);
 
       // Run the provider call inside the AI Cost Guard reservation.
@@ -958,6 +982,7 @@ export async function runProjectAgent(params: {
             modelConfigName: params.selectedModelConfig?.name || null,
             modelTuning: params.selectedModelConfig?.settings || null,
             userId: params.userId,
+            signal: params.signal,
           });
           return {
             value: plan,
@@ -1002,7 +1027,8 @@ export async function runProjectAgent(params: {
           effectiveSettings,
           logs,
           generatedPlan:
-            generatedPlan?.kind === 'sprint_planning' || generatedPlan?.kind === 'bulk_sprint_creation'
+            generatedPlan?.kind === 'sprint_planning' ||
+            generatedPlan?.kind === 'bulk_sprint_creation'
               ? generatedPlan
               : undefined,
         });
@@ -1016,7 +1042,8 @@ export async function runProjectAgent(params: {
           dryRun,
           logs,
           generatedPlan:
-            generatedPlan?.kind === 'sprint_planning' || generatedPlan?.kind === 'bulk_sprint_creation'
+            generatedPlan?.kind === 'sprint_planning' ||
+            generatedPlan?.kind === 'bulk_sprint_creation'
               ? generatedPlan
               : undefined,
         });
@@ -1064,6 +1091,8 @@ export async function runProjectAgent(params: {
       output: result.output,
       dryRun,
       forcedDryRun,
+      approvalRequired,
+      writeDisposition,
       httpStatus: 201,
     };
   } catch (error) {
@@ -1082,7 +1111,11 @@ export async function runProjectAgent(params: {
           : 500;
     const failureLog = nextLog(logs, message, 'stderr');
     emitLog(run.id, context.project.id, failureLog);
-    emitAgentStatus(run.id, context.project.id, { status: 'failed', progress: 100, error: message });
+    emitAgentStatus(run.id, context.project.id, {
+      status: 'failed',
+      progress: 100,
+      error: message,
+    });
 
     const failedRun = await finalizeAgentRun({
       runId: run.id,
@@ -1123,6 +1156,8 @@ export async function runProjectAgent(params: {
       output: { error: message, errorCode },
       dryRun,
       forcedDryRun,
+      approvalRequired,
+      writeDisposition,
       errorCode,
       httpStatus,
     };

@@ -1,5 +1,5 @@
 /**
- * EU AI Act Article 50 — disclosure acknowledgement ledger.
+ * AI transparency-notice acknowledgement ledger.
  *
  * Tracks the first time each (workspace, user) sees an AI-generated output and
  * acknowledges the disclosure modal that explains AI involvement, retention
@@ -7,17 +7,10 @@
  * once per disclosure-text version; bumping `version` re-shows the modal to
  * every user the next time they interact with an AI surface.
  *
- * Regulation enforcement begins 2026-08-02.
+ * This product record is not a legal classification or compliance determination.
  */
 
-import {
-  index,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  varchar,
-} from 'drizzle-orm/pg-core';
+import { index, pgTable, text, timestamp, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 import { organizations } from './organizations';
 import { users } from './users';
@@ -41,15 +34,15 @@ export const aiDisclosuresAcknowledged = pgTable(
   },
   (table) => ({
     // Each user acknowledges each version exactly once per workspace.
-    workspaceUserVersionIdx: uniqueIndex(
-      'ai_disclosures_workspace_user_version_idx'
-    ).on(table.workspaceId, table.userId, table.version),
+    workspaceUserVersionIdx: uniqueIndex('ai_disclosures_workspace_user_version_idx').on(
+      table.workspaceId,
+      table.userId,
+      table.version
+    ),
     workspaceIdx: index('ai_disclosures_workspace_idx').on(table.workspaceId),
     userIdx: index('ai_disclosures_user_idx').on(table.userId),
   })
 );
 
-export type AiDisclosureAcknowledgement =
-  typeof aiDisclosuresAcknowledged.$inferSelect;
-export type NewAiDisclosureAcknowledgement =
-  typeof aiDisclosuresAcknowledged.$inferInsert;
+export type AiDisclosureAcknowledgement = typeof aiDisclosuresAcknowledged.$inferSelect;
+export type NewAiDisclosureAcknowledgement = typeof aiDisclosuresAcknowledged.$inferInsert;

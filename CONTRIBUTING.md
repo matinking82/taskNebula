@@ -152,7 +152,7 @@ pnpm test
 pnpm test:watch
 
 # Run tests with coverage
-pnpm test:coverage
+pnpm --filter @tasknebula/web test:coverage
 ```
 
 ## 📝 Pull Request Process
@@ -232,9 +232,10 @@ We welcome feature requests! Please:
 
 ## 📞 Getting Help
 
-- **Discord**: [Join our Discord](https://discord.gg/tasknebula) (coming soon)
-- **GitHub Discussions**: Ask questions and share ideas
-- **GitHub Issues**: Report bugs and request features
+- **GitHub Issues**: use the bug, feature, or question templates in
+  `.github/ISSUE_TEMPLATE/`.
+- **Private/security contact**: follow `SECURITY.md`; do not disclose a
+  vulnerability in a public issue.
 
 ## 📄 License
 

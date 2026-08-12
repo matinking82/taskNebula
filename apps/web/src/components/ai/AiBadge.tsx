@@ -3,14 +3,12 @@
 /**
  * AiBadge — inline pill that marks any AI-generated output.
  *
- * Required by EU AI Act Article 50 (enforced 2026-08-02): AI outputs intended
- * for consumption by natural persons must carry a machine-readable, visible
- * indicator of their AI origin. The hover tooltip surfaces the model name,
- * the feature that produced the content, and a timestamp so reviewers can
- * trace the run via the AI Transparency settings page / model card.
+ * Product provenance label for supported user-facing AI output. The hover
+ * tooltip surfaces the model name, feature, and timestamp so reviewers can
+ * trace the run through the AI Transparency settings page / model card.
  *
  * Usage:
- *   <AiBadge feature="Draft Issue" model="Claude Sonnet 4.7" generatedAt={d} />
+ *   <AiBadge feature="Draft Issue" model="claude-sonnet-4-6" generatedAt={d} />
  *   <AiBadge operationId={id} />   // resolves the rest via useAiTrace()
  */
 
@@ -26,7 +24,7 @@ export interface AiBadgeProps {
   label?: string;
   /** Human-readable feature name surfaced in the tooltip (e.g. "Draft Issue"). */
   feature?: string;
-  /** Model identifier surfaced in the tooltip (e.g. "Claude Sonnet 4.7"). */
+  /** Model identifier surfaced in the tooltip (e.g. "claude-sonnet-4-6"). */
   model?: string;
   /** When the output was produced. ISO string or Date. */
   generatedAt?: string | Date | null;

@@ -4138,19 +4138,19 @@
       "generatedWithAi": "Vygenerováno pomocí AI",
       "ariaLabel": "Obsah vygenerovaný AI. {detail}",
       "tooltipTitle": "Výstup vygenerovaný AI",
-      "disclosure": "Sdělení podle článku 50 nařízení EU AI Act. Viz <link>karty modelů</link>."
+      "disclosure": "Informace o transparentnosti AI. Viz <link>Karty modelů AI</link>."
     },
     "disclosure": {
       "title": "Chystáte se interagovat s AI",
       "description": "Některé funkce TaskNebula používají modely AI třetích stran k generování textu, návrhů a shrnutí. Než budete pokračovat, přečtěte si prosím, co to pro vás znamená.",
       "whatRunsTitle": "Co běží ve vašem pracovním prostoru",
-      "rightsTitle": "Vaše práva",
-      "rightLabelled": "Každý výstup AI je označen <label>Vygenerováno pomocí AI</label>.",
-      "rightReview": "Můžete zkontrolovat a odmítnout jakýkoli návrh AI, než je použit.",
-      "rightDisable": "Správci pracovního prostoru mohou zakázat jakoukoli funkci AI v Nastavení → Transparentnost AI.",
-      "rightRetention": "Vstupy/výstupy jsou uchovávány podle zásad uchovávání uvedených v kartě modelu a nikdy se neprodávají.",
+      "rightsTitle": "Co můžete očekávat",
+      "rightLabelled": "V TaskNebula nese podporovaný uživatelsky orientovaný výstup generovaný AI štítek <label>Vygenerováno pomocí AI</label>.",
+      "rightReview": "Akce zápisu se schválením zůstávají v náhledu, dokud je neschválí oprávněný člověk.",
+      "rightDisable": "Správci pracovního prostoru mohou spravovat podporované funkce AI v Nastavení → AI Transparency.",
+      "rightRetention": "Modelové karty popisují manipulaci s dokumentovanými daty a jejich uchovávání; aktivní poskytovatel a nastavení nasazení se mohou lišit.",
       "modelCardsLine": "Přečtěte si <link>úplné karty modelů</link> pro každou funkci, včetně identity modelu, odeslaných dat a uchovávání.",
-      "versionLine": "Verze sdělení {version}. Vyžadováno článkem 50 nařízení EU AI Act.",
+      "versionLine": "Verze oznámení o transparentnosti {version}.",
       "acknowledge": "Rozumím, pokračovat"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "Transparentnost AI",
-      "subtitle": "Povinná sdělení pro každou funkci AI v tomto pracovním prostoru. Vyžadováno <link>článkem 50 nařízení EU AI Act</link> (v účinnosti od 2026-08-02)."
+      "subtitle": "Informace o transparentnosti produktu pro funkce AI dostupné v tomto pracovním prostoru. Viz <link>Karty modelů AI</link>."
     },
     "oversight": {
       "title": "Postoj k lidskému dohledu",
-      "description": "Řídí, zda lze výstupy AI použít automaticky, nebo musí být před použitím na data pracovního prostoru vždy zkontrolovány člověkem.",
+      "description": "Řídí, zda podporované akce AI s možností zápisu jsou způsobilé pro automatickou aplikaci nebo zda zůstávají v náhledu pro kontrolu člověkem.",
       "reviewRequiredLabel": "Vyžadována kontrola (doporučeno)",
       "autoApplyLabel": "Automaticky použít",
-      "reviewRequiredDescription": "Každý návrh AI je zařazen do fronty pro výslovné lidské schválení, než se změní jakákoli data pracovního prostoru. Návrhy třídění se zobrazují v náhledu, nikdy se nepoužijí.",
-      "autoApplyDescription": "Funkce, které to podporují, mohou použít vysoce spolehlivé výstupy AI bez výslovné lidské kontroly. Záznam auditu i tak zaznamenává každou akci.",
+      "reviewRequiredDescription": "Podporované akce umělé inteligence s možností zápisu zůstávají v náhledu, dokud je neschválí oprávněný člověk.",
+      "autoApplyDescription": "Podporované akce jsou způsobilé pro automatickou aplikaci pouze v případě, že to umožňují i samostatné ovládací prvky pro zápis a schvalování; jinak zůstanou v náhledu.",
       "toggleAria": "Přepnout postoj k lidskému dohledu"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Odeslaná data",
       "retentionLabel": "Uchovávání",
       "readModelCard": "Přečíst úplnou kartu modelu",
-      "footer": "<strong>{userFacing}</strong> z {total} funkcí je orientováno na uživatele a musí nést odznak <em>Vygenerováno pomocí AI</em> podle článku 50."
+      "footer": "<strong>{userFacing}</strong> z {total} zdokumentovaných funkcí vytváří výstup pro uživatele. V TaskNebula nese podporovaný výstup generovaný AI štítek <em>Vygenerováno pomocí AI</em>."
     },
     "import": {
       "metaTitle": "Importovat úkoly · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Zavřít navigační menu",
         "items": {
           "features": "Funkce",
-          "compare": "Porovnat",
           "selfHost": "Self-hosting",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Nebo self-hosting dvěma příkazy",
         "quickstartAria": "Příkazy rychlého startu self-hostingu",
         "copyQuickstart": "Kopírovat rychlý start self-hostingu",
-        "selfHostMeta": "Self-hosting navždy zdarma · Tři kontejnery: Postgres, Redis, jeden web image",
+        "selfHostMeta": "Self-hosting navždy zdarma · Malý Compose stack s Postgres, Redisem, webem a volitelnými službami",
         "demoPill": "Interaktivní demo níže",
         "chips": {
           "cmdk": "Cmd+K všude",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Funkce",
-          "compare": "Porovnat",
           "selfHost": "Self-hosting",
           "faq": "FAQ",
           "openapiSpec": "Specifikace OpenAPI",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "Jeden příkaz spustí malý Compose stack. Základní data jsou v Postgresu, export je vzdálený jen o pg_dump a ve výchozím nastavení nic neposílá data ven — bez závislosti na dodavateli.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Self-hosting je výchozí cesta. S Dockerem spustíte malý Compose stack s Postgres 16 a pgvector, Redis 7, webovým obrazem neuraparse/tasknebula a přibalenými či volitelnými službami, které zapnete. Migrace proběhnou při startu, GET /api/health slouží jako kontrolní endpoint a rychlý start se otevře na localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Základní tracker — úkoly, nástěnky, sprinty, dokumenty, vyhledávání, REST API a specifikace OpenAPI — lze provozovat na vlastní infrastruktuře. Přihlášení přes OAuth stále potřebuje databázový adaptér, proto zatím použijte přihlášení údaji. Spolupráce v reálném čase je propojena přes Docker/Compose, ale nasazení stále potřebuje dostupnou URL a živý smoke test. AI a MCP zůstávají v režimu preview. Mezery sledujeme v docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Zpět na TaskNebula",
-    "disclosureBadge": "Informační povinnost podle článku 50 EU AI Act",
+    "disclosureBadge": "Informace o transparentnosti AI",
     "title": "Karty modelů AI",
-    "intro": "TaskNebula poskytuje koncovým uživatelům následující funkce AI. U každé z nich zveřejňujeme zamýšlený účel, identitu modelu, data odesílaná při každém volání, zásady uchovávání dat a náš výchozí přístup k lidskému dohledu. Tato stránka je veřejným záznamem o transparentnosti a vztahuje se na všechna nasazení TaskNebula. Verze informací <version></version>.",
-    "lastReviewed": "Naposledy zkontrolováno 14. 5. 2026. Vymáhání nařízení začíná 2. 8. 2026.",
+    "intro": "Tato stránka popisuje zdokumentované funkce umělé inteligence TaskNebula a výchozí konfiguraci. Skutečné modely, manipulace s daty, jejich uchovávání a kontroly se mohou lišit podle pracovního prostoru a nasazení; potvrďte aktivní nastavení u svého správce. Verze oznámení o transparentnosti <version></version>.",
+    "lastReviewed": "Poslední revize 2026-08-12. Článek 50 nařízení (EU) 2024/1689 platí od 2026-08-02.",
     "onThisPage": "Na této stránce",
     "model": "Model",
     "provider": "Poskytovatel",
@@ -6778,7 +6670,53 @@
     "footerContact": "Máte dotazy ohledně transparentnosti AI, práv subjektů údajů nebo těchto karet modelů? Napište na <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Informace o transparentnosti produktu pro funkce TaskNebula AI, včetně účelu, nakonfigurovaných výchozích hodnot, zpracování dat a ovládacích prvků kontroly."
+    },
+    "dataSent": "Použitá data",
+    "retention": "Manipulace s daty a jejich uchovávání",
+    "features": {
+      "draft": {
+        "name": "Návrh pracovní položky projektu",
+        "summary": "Vytváří upravitelné koncepty vydání z výzvy s libovolným textem.",
+        "purpose": "Pomáhá uživateli přeměnit hrubou myšlenku nebo zprávu na strukturované koncepty problému, které lze před vytvořením upravit.",
+        "dataSent": "Výzva, název projektu a dostupné typy problémů a priority použité k přípravě návrhu.",
+        "retention": "TaskNebula aktuálně nevynucuje automatické vypršení platnosti pro související záznamy spuštěné agentem. Uchování na straně poskytovatele závisí na aktivním poskytovateli."
+      },
+      "assist": {
+        "name": "Asistent projektové pracovní položky",
+        "summary": "Shrnuje, přepisuje, navrhuje další kroky nebo navrhuje štítky pro problém.",
+        "purpose": "Pomáhá uživateli vylepšit obsah problému a zároveň zachovat explicitní použití návrhu.",
+        "dataSent": "Název a popis problému plus štítky nebo nedávné komentáře požadované vybranou akcí.",
+        "retention": "TaskNebula aktuálně nevynucuje automatické vypršení platnosti pro související záznamy spuštěné agentem. Uchování na straně poskytovatele závisí na aktivním poskytovateli."
+      },
+      "triage": {
+        "name": "Třídění nevyřízených věcí",
+        "summary": "Navrhuje omezenou prioritu a změny štítků pro způsobilé nevyřízené záležitosti.",
+        "purpose": "Pomáhá lidskému triageru kontrolovat nevyřízené položky v dávkách; běhy se schválením zůstávají náhledy.",
+        "dataSent": "Klíče nevyřízených problémů, názvy, popisy, priority, štítky a termíny splatnosti zahrnuté v omezeném kontextu plánování.",
+        "retention": "TaskNebula aktuálně nevynucuje automatické vypršení platnosti pro související záznamy spuštěné agentem. Uchování na straně poskytovatele závisí na aktivním poskytovateli."
+      },
+      "ask": {
+        "name": "AI boční panel Q a A",
+        "summary": "Odpovídá na otázky týkající se organizačních nebo projektových problémů a dokumentů získaných pro aktuální požadavek.",
+        "purpose": "Poskytuje pouze pro čtení, citované odpovědi z kontextu TaskNebula dostupného volajícímu.",
+        "dataSent": "Otázka a ohraničený problém nebo úryvky dokumentu načtené pro vybranou organizaci a volitelný projekt.",
+        "retention": "Stav konverzace je uchováván v paměti prohlížeče pro aktuální relaci stránky a nelze jej obnovit. Uchování na straně poskytovatele závisí na aktivním poskytovateli."
+      },
+      "summary": {
+        "name": "Generování souhrnu",
+        "summary": "Vytváří souhrny na vyžádání tam, kde je funkce dostupná.",
+        "purpose": "Pomáhá uživateli skenovat vybraný TaskNebula obsah bez nahrazení zdrojového materiálu.",
+        "dataSent": "Obsah explicitně vybraný pro shrnutí a metadata rozsahu vyžadovaná požadavkem.",
+        "retention": "V současné době není vynuceno žádné automatické vypršení platnosti specifické pro určitou funkci. Uchování na straně poskytovatele závisí na aktivním poskytovateli."
+      },
+      "embedding": {
+        "name": "Vektorové reprezentace sémantického vyhledávání",
+        "summary": "Vytváří vektorová vložení pro nakonfigurované indexování sémantického vyhledávání.",
+        "purpose": "Zlepšuje načítání tím, že představuje vybraný zdrojový text jako vektor vyhledávání.",
+        "dataSent": "Vybraný zdrojový text a identifikátory potřebné ke zpracování a uložení úlohy vkládání.",
+        "retention": "Vložení problému, komentáře a projektu používá kaskádově propojené odkazy. Operátoři musí ověřit vyčištění pro každý povolený typ obsahu a poskytovatele."
+      }
     }
   },
   "presence": {

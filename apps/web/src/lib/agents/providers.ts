@@ -1,12 +1,6 @@
 import { z } from 'zod';
-import {
-  getRunKindSummary,
-  rankIssuesForPlanning,
-} from './planner';
-import type {
-  AgentRunKind,
-  EffectiveProjectAgentSettings,
-} from './config';
+import { getRunKindSummary, rankIssuesForPlanning } from './planner';
+import type { AgentRunKind, EffectiveProjectAgentSettings } from './config';
 import type { AgentModelConfigSettings } from './model-configs';
 import type { ProjectContext } from './types';
 import {
@@ -14,35 +8,51 @@ import {
   extractAnthropicCacheUsage,
   isPromptCacheEnabled,
 } from '../ai/cache-blocks';
+import { createProviderDeadline, type ProviderAbortKind } from './provider-deadline';
 
 const PRIORITY_VALUES = ['critical', 'high', 'medium', 'low', 'none'] as const;
 
 const trackingResponseSchema = z.object({
   summary: z.string().min(1).max(320),
   recommendations: z.array(z.string().min(1).max(220)).max(8).default([]),
-  highlights: z.array(z.object({
-    issueKey: z.string().min(1).max(32),
-    reason: z.string().min(1).max(220),
-  })).max(6).default([]),
+  highlights: z
+    .array(
+      z.object({
+        issueKey: z.string().min(1).max(32),
+        reason: z.string().min(1).max(220),
+      })
+    )
+    .max(6)
+    .default([]),
 });
 
 const triageResponseSchema = z.object({
   summary: z.string().min(1).max(320),
-  changedIssues: z.array(z.object({
-    issueKey: z.string().min(1).max(32),
-    nextPriority: z.enum(PRIORITY_VALUES),
-    addLabels: z.array(z.string().min(1).max(32)).max(6).default([]),
-    rationale: z.string().min(1).max(240),
-  })).max(80).default([]),
+  changedIssues: z
+    .array(
+      z.object({
+        issueKey: z.string().min(1).max(32),
+        nextPriority: z.enum(PRIORITY_VALUES),
+        addLabels: z.array(z.string().min(1).max(32)).max(6).default([]),
+        rationale: z.string().min(1).max(240),
+      })
+    )
+    .max(80)
+    .default([]),
 });
 
 const sprintPlanResponseSchema = z.object({
   summary: z.string().min(1).max(320),
-  plannedSprints: z.array(z.object({
-    name: z.string().min(1).max(80),
-    goal: z.string().min(1).max(220),
-    issueKeys: z.array(z.string().min(1).max(32)).max(50),
-  })).max(6).default([]),
+  plannedSprints: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(80),
+        goal: z.string().min(1).max(220),
+        issueKeys: z.array(z.string().min(1).max(32)).max(50),
+      })
+    )
+    .max(6)
+    .default([]),
 });
 
 export type TrackingProviderPlan = z.infer<typeof trackingResponseSchema>;
@@ -65,6 +75,9 @@ type ProviderParams = {
   modelTuning?: AgentModelConfigSettings | null;
   // Passed by engine.ts for audit/budget attribution (P0-07 cost guard).
   userId?: string | null;
+  signal?: AbortSignal;
+  /** Test/internal override; production defaults to a finite two minutes. */
+  providerTimeoutMs?: number;
 };
 
 type OpenAiErrorPayload = {
@@ -88,7 +101,9 @@ export class AgentExecutionError extends Error {
 }
 
 function asStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 function formatDate(value: Date | null) {
@@ -110,11 +125,14 @@ function sanitizeLabel(label: string) {
 function buildProjectMetrics(context: ProjectContext) {
   const activeSprint = context.sprints.find((sprint) => sprint.status === 'active') ?? null;
   const openIssues = context.issues.filter((issue) => issue.statusCategory !== 'done');
-  const overdueIssues = openIssues.filter((issue) => issue.dueDate && issue.dueDate.getTime() < Date.now());
+  const overdueIssues = openIssues.filter(
+    (issue) => issue.dueDate && issue.dueDate.getTime() < Date.now()
+  );
   const unassignedIssues = openIssues.filter((issue) => !issue.assigneeId);
-  const blockedIssues = openIssues.filter((issue) =>
-    issue.statusCategory === 'blocked'
-      || asStringArray(issue.labels).some((label) => label.toLowerCase() === 'blocked')
+  const blockedIssues = openIssues.filter(
+    (issue) =>
+      issue.statusCategory === 'blocked' ||
+      asStringArray(issue.labels).some((label) => label.toLowerCase() === 'blocked')
   );
   const backlogIssues = openIssues.filter((issue) => !issue.sprintId);
 
@@ -170,15 +188,19 @@ function createTrackingInput(context: ProjectContext) {
         }
       : null,
     metrics,
-    note: openIssues.length > interestingIssues.length
-      ? `Only the top ${interestingIssues.length} open issues are included for reasoning.`
-      : 'All open issues are included.',
+    note:
+      openIssues.length > interestingIssues.length
+        ? `Only the top ${interestingIssues.length} open issues are included for reasoning.`
+        : 'All open issues are included.',
     openIssues: interestingIssues,
     backlogIssueKeys: backlogIssues.slice(0, 50).map((issue) => issue.key),
   };
 }
 
-function createBacklogInput(context: ProjectContext, effectiveSettings: EffectiveProjectAgentSettings) {
+function createBacklogInput(
+  context: ProjectContext,
+  effectiveSettings: EffectiveProjectAgentSettings
+) {
   const backlogIssues = rankIssuesForPlanning(
     context.issues
       .filter((issue) => !issue.sprintId && issue.statusCategory !== 'done')
@@ -191,14 +213,17 @@ function createBacklogInput(context: ProjectContext, effectiveSettings: Effectiv
         labels: asStringArray(issue.labels),
         dueDate: issue.dueDate,
       }))
-  )
-    .slice(0, 80);
+  ).slice(0, 80);
 
   return {
-    objective: 'Review the backlog and propose the minimal set of priority or label changes that would improve planning quality.',
+    objective:
+      'Review the backlog and propose the minimal set of priority or label changes that would improve planning quality.',
     project: context.project,
     constraints: {
-      maxIssuesToChange: Math.min(backlogIssues.length, effectiveSettings.issueCapacityPerSprint * effectiveSettings.sprintBatchSize),
+      maxIssuesToChange: Math.min(
+        backlogIssues.length,
+        effectiveSettings.issueCapacityPerSprint * effectiveSettings.sprintBatchSize
+      ),
       allowedPriorities: PRIORITY_VALUES,
       labelRules: [
         'Only short kebab-case labels.',
@@ -217,7 +242,10 @@ function createBacklogInput(context: ProjectContext, effectiveSettings: Effectiv
   };
 }
 
-function createSprintPlanningInput(context: ProjectContext, effectiveSettings: EffectiveProjectAgentSettings) {
+function createSprintPlanningInput(
+  context: ProjectContext,
+  effectiveSettings: EffectiveProjectAgentSettings
+) {
   const backlogIssues = rankIssuesForPlanning(
     context.issues
       .filter((issue) => !issue.sprintId && issue.statusCategory !== 'done')
@@ -230,13 +258,16 @@ function createSprintPlanningInput(context: ProjectContext, effectiveSettings: E
         labels: asStringArray(issue.labels),
         dueDate: issue.dueDate,
       }))
-  )
-    .slice(0, Math.max(20, effectiveSettings.issueCapacityPerSprint * effectiveSettings.sprintBatchSize * 3));
+  ).slice(
+    0,
+    Math.max(20, effectiveSettings.issueCapacityPerSprint * effectiveSettings.sprintBatchSize * 3)
+  );
 
   const activeSprint = context.sprints.find((sprint) => sprint.status === 'active') ?? null;
 
   return {
-    objective: 'Group backlog issues into sensible future sprint batches without inventing issue keys.',
+    objective:
+      'Group backlog issues into sensible future sprint batches without inventing issue keys.',
     project: context.project,
     activeSprint: activeSprint
       ? {
@@ -304,7 +335,10 @@ function buildPrompt(params: ProviderParams) {
             },
           },
         },
-        parser: (value: unknown) => ({ kind: 'project_tracking' as const, ...trackingResponseSchema.parse(value) }),
+        parser: (value: unknown) => ({
+          kind: 'project_tracking' as const,
+          ...trackingResponseSchema.parse(value),
+        }),
       };
     case 'backlog_triage':
       return {
@@ -342,7 +376,10 @@ function buildPrompt(params: ProviderParams) {
             },
           },
         },
-        parser: (value: unknown) => ({ kind: 'backlog_triage' as const, ...triageResponseSchema.parse(value) }),
+        parser: (value: unknown) => ({
+          kind: 'backlog_triage' as const,
+          ...triageResponseSchema.parse(value),
+        }),
       };
     case 'sprint_planning':
     case 'bulk_sprint_creation':
@@ -408,10 +445,7 @@ function extractStructuredText(payload: Record<string, unknown>) {
 
     for (const block of content) {
       const text = typeof block.text === 'string' ? block.text : null;
-      if (
-        text
-        && (block.type === 'output_text' || block.type === 'text')
-      ) {
+      if (text && (block.type === 'output_text' || block.type === 'text')) {
         return text;
       }
     }
@@ -452,11 +486,24 @@ function createOpenAiError(status: number, payload: OpenAiErrorPayload, model: s
     );
   }
 
-  return new AgentExecutionError(
-    `OpenAI failed while running ${model}: ${message}`,
-    code,
-    502
-  );
+  return new AgentExecutionError(`OpenAI failed while running ${model}: ${message}`, code, 502);
+}
+
+function createProviderTransportError(
+  provider: 'OpenAI' | 'Anthropic',
+  abortKind: ProviderAbortKind
+) {
+  if (abortKind === 'caller') {
+    return new AgentExecutionError(`${provider} request was cancelled.`, 'provider_cancelled', 408);
+  }
+  if (abortKind === 'timeout') {
+    return new AgentExecutionError(
+      `${provider} request exceeded its runtime limit.`,
+      'provider_timeout',
+      504
+    );
+  }
+  return new AgentExecutionError(`${provider} could not be reached.`, 'provider_unavailable', 502);
 }
 
 async function generateOpenAiPlan(params: ProviderParams): Promise<AgentProviderPlan> {
@@ -478,38 +525,55 @@ async function generateOpenAiPlan(params: ProviderParams): Promise<AgentProvider
   }
 
   const prompt = buildPrompt(params);
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: params.model,
-      store: false,
-      instructions: `${prompt.instructions} Requested flow: ${getRunKindSummary(params.kind)}.`,
-      input: JSON.stringify(prompt.input, null, 2),
-      ...(params.modelTuning?.temperature !== null && params.modelTuning?.temperature !== undefined
-        ? { temperature: params.modelTuning.temperature }
-        : {}),
-      ...(params.modelTuning?.maxOutputTokens
-        ? { max_output_tokens: params.modelTuning.maxOutputTokens }
-        : {}),
-      ...(params.modelTuning?.reasoningEffort
-        ? { reasoning: { effort: params.modelTuning.reasoningEffort } }
-        : {}),
-      text: {
-        format: {
-          type: 'json_schema',
-          name: prompt.schemaName,
-          strict: true,
-          schema: prompt.schema,
-        },
-      },
-    }),
+  const deadline = createProviderDeadline({
+    signal: params.signal,
+    timeoutMs: params.providerTimeoutMs,
   });
-
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  let response: Response;
+  let payload: Record<string, unknown>;
+  try {
+    response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      signal: deadline.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: params.model,
+        store: false,
+        instructions: `${prompt.instructions} Requested flow: ${getRunKindSummary(params.kind)}.`,
+        input: JSON.stringify(prompt.input, null, 2),
+        ...(params.modelTuning?.temperature !== null &&
+        params.modelTuning?.temperature !== undefined
+          ? { temperature: params.modelTuning.temperature }
+          : {}),
+        ...(params.modelTuning?.maxOutputTokens
+          ? { max_output_tokens: params.modelTuning.maxOutputTokens }
+          : {}),
+        ...(params.modelTuning?.reasoningEffort
+          ? { reasoning: { effort: params.modelTuning.reasoningEffort } }
+          : {}),
+        text: {
+          format: {
+            type: 'json_schema',
+            name: prompt.schemaName,
+            strict: true,
+            schema: prompt.schema,
+          },
+        },
+      }),
+    });
+    payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (deadline.abortKind()) {
+      throw createProviderTransportError('OpenAI', deadline.abortKind());
+    }
+  } catch (error) {
+    if (error instanceof AgentExecutionError) throw error;
+    throw createProviderTransportError('OpenAI', deadline.abortKind());
+  } finally {
+    deadline.dispose();
+  }
   if (!response.ok) {
     throw createOpenAiError(response.status, payload as OpenAiErrorPayload, params.model);
   }
@@ -590,33 +654,48 @@ async function generateAnthropicPlan(params: ProviderParams): Promise<AgentProvi
     toolSchemaBlock: stableSchemaBlock,
   });
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      ...(isPromptCacheEnabled()
-        ? { 'anthropic-beta': 'prompt-caching-2024-07-31' }
-        : {}),
-    },
-    body: JSON.stringify({
-      model: params.model,
-      max_tokens: params.modelTuning?.maxOutputTokens || 4096,
-      system: systemBlocks,
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify(prompt.input, null, 2),
-        },
-      ],
-      ...(params.modelTuning?.temperature !== null && params.modelTuning?.temperature !== undefined
-        ? { temperature: params.modelTuning.temperature }
-        : {}),
-    }),
+  const deadline = createProviderDeadline({
+    signal: params.signal,
+    timeoutMs: params.providerTimeoutMs,
   });
-
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  let response: Response;
+  let payload: Record<string, unknown>;
+  try {
+    response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: deadline.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        ...(isPromptCacheEnabled() ? { 'anthropic-beta': 'prompt-caching-2024-07-31' } : {}),
+      },
+      body: JSON.stringify({
+        model: params.model,
+        max_tokens: params.modelTuning?.maxOutputTokens || 4096,
+        system: systemBlocks,
+        messages: [
+          {
+            role: 'user',
+            content: JSON.stringify(prompt.input, null, 2),
+          },
+        ],
+        ...(params.modelTuning?.temperature !== null &&
+        params.modelTuning?.temperature !== undefined
+          ? { temperature: params.modelTuning.temperature }
+          : {}),
+      }),
+    });
+    payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (deadline.abortKind()) {
+      throw createProviderTransportError('Anthropic', deadline.abortKind());
+    }
+  } catch (error) {
+    if (error instanceof AgentExecutionError) throw error;
+    throw createProviderTransportError('Anthropic', deadline.abortKind());
+  } finally {
+    deadline.dispose();
+  }
   if (!response.ok) {
     const error = (payload as { error?: { message?: string; type?: string } }).error;
     const code =
@@ -633,9 +712,11 @@ async function generateAnthropicPlan(params: ProviderParams): Promise<AgentProvi
   }
 
   const content = Array.isArray((payload as { content?: unknown }).content)
-    ? ((payload as { content: Array<{ type?: string; text?: string }> }).content)
+    ? (payload as { content: Array<{ type?: string; text?: string }> }).content
     : [];
-  const textBlock = content.find((block) => block.type === 'text' && typeof block.text === 'string');
+  const textBlock = content.find(
+    (block) => block.type === 'text' && typeof block.text === 'string'
+  );
   const rawText = textBlock?.text ?? '';
 
   // Record cache metrics for audit logging. The audit table from task #7 is

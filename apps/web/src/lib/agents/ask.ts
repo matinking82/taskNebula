@@ -2,20 +2,19 @@
  * Ask TaskNebula — retrieval-augmented Q&A.
  *
  * The endpoint hands a free-form question to this module which:
- *   1. Runs hybrid retrieval in parallel — Postgres tsvector ("BM25-ish")
- *      against issues + document pages, plus pgvector cosine search when
- *      a `content_embeddings` row exists for the org. We always retrieve
- *      something useful: if no embeddings exist we lean on tsvector, and
- *      if the docs `search_vector` column is missing we lean on ILIKE.
+ *   1. Runs organization-scoped lexical retrieval in parallel against issues
+ *      and document pages. The pgvector leg is present but deliberately
+ *      dormant until an organization-safe embedder is supplied.
  *   2. Optionally reranks the top-20 with Cohere when COHERE_API_KEY is
  *      set; otherwise the original hybrid score order is kept.
  *   3. Builds a context window where every source is prefixed with its
  *      citation marker (`[TN-<key>]` for issues, `[DOC-<id>]` for docs)
  *      so the model can attribute claims back to specific snippets.
- *   4. Streams Claude Sonnet with a strict system prompt requiring a
- *      `[Source: ...]` tag on every claim.
+ *   4. Streams Claude Sonnet with a strict system prompt requiring the same
+ *      canonical `[TN-…]` / `[DOC-…]` marker grammar parsed by the API.
  *
- * Output is an async iterable of {type:'token'|'sources'|'done'|'error'}
+ * Output is an async iterable of
+ * {type:'token'|'sources'|'citations'|'done'|'error'}
  * events the route layer can serialize into SSE frames. The function
  * deliberately does *not* know about Next.js or NextResponse so it can be
  * unit-tested with a plain fake fetch.
@@ -23,7 +22,13 @@
 import crypto from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { db } from '@tasknebula/db';
-import type { CitationSource } from './citation-parser';
+import {
+  findUnresolvedCitations,
+  parseCitations,
+  type Citation,
+  type CitationSource,
+} from './citation-parser';
+import { createProviderDeadline, type ProviderAbortKind } from './provider-deadline';
 
 // --- public types -----------------------------------------------------------
 
@@ -42,6 +47,9 @@ export interface AskOptions {
   retrievalOnly?: boolean;
   /** Hook for tests to mock the streaming fetch call. */
   fetchImpl?: typeof fetch;
+  signal?: AbortSignal;
+  /** Test/internal override; production defaults to a finite two minutes. */
+  providerTimeoutMs?: number;
 }
 
 export interface RetrievedSnippet extends CitationSource {
@@ -54,6 +62,7 @@ export interface RetrievedSnippet extends CitationSource {
 export type AskEvent =
   | { type: 'sources'; sources: CitationSource[] }
   | { type: 'token'; text: string }
+  | { type: 'citations'; citations: Citation[]; unresolved: string[] }
   | { type: 'done'; usage: AskUsage }
   | { type: 'error'; error: string; code: string };
 
@@ -267,11 +276,26 @@ async function retrieveVectorContent(
         ce.issue_id,
         ce.project_id,
         ce.content_snippet,
-        (ce.embedding <=> ${sql.raw(`'${vectorLiteral}'::vector`)}) as distance
+        (ce.embedding <=> ${vectorLiteral}::vector) as distance
       from content_embeddings ce
-      where 1 = 1
+      where (
+        (ce.project_id is not null and exists (
+          select 1 from projects p
+          where p.id = ce.project_id and p.organization_id = ${organizationId}
+        ))
+        or (ce.issue_id is not null and exists (
+          select 1 from issues ix
+          where ix.id = ce.issue_id and ix.organization_id = ${organizationId}
+        ))
+        or (ce.comment_id is not null and exists (
+          select 1
+          from issue_comments ic
+          inner join issues ci on ci.id = ic.issue_id
+          where ic.id = ce.comment_id and ci.organization_id = ${organizationId}
+        ))
+      )
         ${filterProject}
-      order by ce.embedding <=> ${sql.raw(`'${vectorLiteral}'::vector`)} asc
+      order by ce.embedding <=> ${vectorLiteral}::vector asc
       limit ${TOP_K_RETRIEVE}
     `);
 
@@ -337,11 +361,15 @@ async function cohereRerank(
   query: string,
   candidates: RetrievedSnippet[],
   apiKey: string,
-  fetchImpl: typeof fetch
+  fetchImpl: typeof fetch,
+  signal?: AbortSignal,
+  timeoutMs?: number
 ): Promise<RetrievedSnippet[]> {
+  const deadline = createProviderDeadline({ signal, timeoutMs });
   try {
     const response = await fetchImpl('https://api.cohere.ai/v1/rerank', {
       method: 'POST',
+      signal: deadline.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
@@ -367,6 +395,8 @@ async function cohereRerank(
       .filter((value): value is RetrievedSnippet => value !== null);
   } catch {
     return candidates;
+  } finally {
+    deadline.dispose();
   }
 }
 
@@ -375,7 +405,7 @@ async function cohereRerank(
 const SYSTEM_PROMPT = `You are Ask TaskNebula, a careful research assistant for a project-management workspace. Always answer using only the provided context.
 
 Citation rules — these are mandatory and non-negotiable:
-1. Every load-bearing claim MUST end with a citation in the form [Source: TN-<key>] for issues or [Source: DOC-<id>] for documents.
+1. Every load-bearing claim MUST end with a citation in the form [TN-<key>] for issues or [DOC-<id>] for documents.
 2. If a claim cannot be cited from the provided context, do not make the claim. Say "I don't have that information in TaskNebula." instead.
 3. Never invent issue keys or document ids. Only cite keys/ids that appear in the Context block.
 4. When you summarize multiple sources, attach a separate citation tag for each source consulted.
@@ -396,7 +426,9 @@ function buildUserMessage(query: string, snippets: RetrievedSnippet[]): string {
     if (snippet.snippet) lines.push(snippet.snippet);
     lines.push('');
   }
-  lines.push('Now answer the question. Remember: every claim ends with [Source: ...].');
+  lines.push(
+    'Now answer the question. Remember: every claim ends with its exact [TN-…] or [DOC-…] marker.'
+  );
   return lines.join('\n');
 }
 
@@ -411,28 +443,39 @@ async function* streamClaude(
   userMessage: string,
   model: string,
   apiKey: string,
-  fetchImpl: typeof fetch
+  fetchImpl: typeof fetch,
+  signal?: AbortSignal,
+  timeoutMs?: number
 ): AsyncGenerator<{
   kind: 'token' | 'usage';
   text?: string;
   inputTokens?: number;
   outputTokens?: number;
 }> {
-  const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1024,
-      stream: true,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  });
+  const deadline = createProviderDeadline({ signal, timeoutMs });
+  let response: Response;
+  try {
+    response = await fetchImpl('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: deadline.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        stream: true,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+  } catch (error) {
+    const abortKind = deadline.abortKind();
+    deadline.dispose();
+    throw createAskTransportError(abortKind, error);
+  }
 
   if (!response.ok || !response.body) {
     let detail = '';
@@ -441,6 +484,7 @@ async function* streamClaude(
     } catch {
       // ignore
     }
+    deadline.dispose();
     throw new AskError(
       response.status === 401 || response.status === 403
         ? 'provider_auth_failed'
@@ -455,49 +499,68 @@ async function* streamClaude(
   let inputTokens = 0;
   let outputTokens = 0;
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    let newlineIndex: number;
-    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-      const line = buffer.slice(0, newlineIndex).trim();
-      buffer = buffer.slice(newlineIndex + 1);
-      if (!line.startsWith('data:')) continue;
-      const data = line.slice(5).trim();
-      if (!data || data === '[DONE]') continue;
-      try {
-        const parsed = JSON.parse(data) as Record<string, unknown>;
-        const eventType = parsed.type as string | undefined;
-        if (eventType === 'content_block_delta') {
-          const delta = parsed.delta as { type?: string; text?: string } | undefined;
-          if (delta?.type === 'text_delta' && typeof delta.text === 'string') {
-            yield { kind: 'token', text: delta.text };
+      let newlineIndex: number;
+      while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(data) as Record<string, unknown>;
+          const eventType = parsed.type as string | undefined;
+          if (eventType === 'content_block_delta') {
+            const delta = parsed.delta as { type?: string; text?: string } | undefined;
+            if (delta?.type === 'text_delta' && typeof delta.text === 'string') {
+              yield { kind: 'token', text: delta.text };
+            }
+          } else if (eventType === 'message_start') {
+            const usage = (
+              parsed.message as
+                | { usage?: { input_tokens?: number; output_tokens?: number } }
+                | undefined
+            )?.usage;
+            if (usage) {
+              inputTokens = usage.input_tokens ?? 0;
+              outputTokens = usage.output_tokens ?? 0;
+            }
+          } else if (eventType === 'message_delta') {
+            const usage = parsed.usage as { output_tokens?: number } | undefined;
+            if (usage?.output_tokens != null) {
+              outputTokens = usage.output_tokens;
+            }
           }
-        } else if (eventType === 'message_start') {
-          const usage = (
-            parsed.message as
-              | { usage?: { input_tokens?: number; output_tokens?: number } }
-              | undefined
-          )?.usage;
-          if (usage) {
-            inputTokens = usage.input_tokens ?? 0;
-            outputTokens = usage.output_tokens ?? 0;
-          }
-        } else if (eventType === 'message_delta') {
-          const usage = parsed.usage as { output_tokens?: number } | undefined;
-          if (usage?.output_tokens != null) {
-            outputTokens = usage.output_tokens;
-          }
+        } catch {
+          // Ignore unparseable lines so a single bad chunk doesn't abort the stream.
         }
-      } catch {
-        // Ignore unparseable lines so a single bad chunk doesn't abort the stream.
       }
     }
+  } catch (error) {
+    throw createAskTransportError(deadline.abortKind(), error);
+  } finally {
+    deadline.dispose();
   }
 
   yield { kind: 'usage', inputTokens, outputTokens };
+}
+
+function createAskTransportError(abortKind: ProviderAbortKind, cause: unknown): AskError {
+  if (abortKind === 'caller') {
+    return new AskError('provider_cancelled', 'Anthropic request was cancelled.');
+  }
+  if (abortKind === 'timeout') {
+    return new AskError('provider_timeout', 'Anthropic request exceeded its runtime limit.');
+  }
+  return new AskError(
+    'provider_error',
+    cause instanceof Error ? cause.message : 'Anthropic request failed.'
+  );
 }
 
 // --- public entry point ----------------------------------------------------
@@ -552,7 +615,14 @@ export async function runAsk(options: AskOptions): Promise<AskBundle> {
   const cohereKey = process.env.COHERE_API_KEY;
   const reranked =
     cohereKey && merged.length > 0
-      ? await cohereRerank(options.query, merged, cohereKey, fetchImpl)
+      ? await cohereRerank(
+          options.query,
+          merged,
+          cohereKey,
+          fetchImpl,
+          options.signal,
+          options.providerTimeoutMs
+        )
       : merged.slice(0, TOP_K_CONTEXT);
   const contextSnippets = reranked.slice(0, TOP_K_CONTEXT);
 
@@ -602,15 +672,19 @@ export async function runAsk(options: AskOptions): Promise<AskBundle> {
 
     let inputTokens = 0;
     let outputTokens = 0;
+    let answer = '';
     try {
       for await (const event of streamClaude(
         SYSTEM_PROMPT,
         userMessage,
         model,
         apiKey,
-        fetchImpl
+        fetchImpl,
+        options.signal,
+        options.providerTimeoutMs
       )) {
         if (event.kind === 'token' && event.text) {
+          answer += event.text;
           yield { type: 'token', text: event.text };
         } else if (event.kind === 'usage') {
           inputTokens = event.inputTokens ?? 0;
@@ -629,6 +703,12 @@ export async function runAsk(options: AskOptions): Promise<AskBundle> {
       };
       return;
     }
+
+    yield {
+      type: 'citations',
+      citations: parseCitations(answer, sources),
+      unresolved: findUnresolvedCitations(answer, sources),
+    };
 
     yield {
       type: 'done',

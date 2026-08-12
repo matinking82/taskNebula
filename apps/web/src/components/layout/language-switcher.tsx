@@ -22,7 +22,7 @@ import { LOCALE_COOKIE, localeLabels, locales, type Locale } from '@/lib/i18n/co
  * the cookie when setting `<html lang>` + `dir`). After writing the cookie
  * we just refresh the page — that keeps the implementation simple and
  * sidesteps the question of whether the current URL has a `/[locale]/`
- * prefix today (most app routes do not yet — see lib/i18n/MIGRATION.md).
+ * prefix today; middleware also supports cookie-selected app routes.
  */
 export function LanguageSwitcher() {
   const locale = useLocale() as Locale;

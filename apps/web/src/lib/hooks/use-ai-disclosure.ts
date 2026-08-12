@@ -2,7 +2,7 @@
 
 /**
  * useAiDisclosure — drives the first-time AI involvement modal mandated by
- * EU AI Act Article 50 (enforcement 2026-08-02).
+ * TaskNebula's versioned product-transparency notice.
  *
  * Logic:
  *   1. The current `DISCLOSURE_VERSION` is loaded from the model-cards config.
@@ -26,13 +26,9 @@ type DisclosuresResponse = {
   acknowledgedVersions: string[];
 };
 
-async function fetchAcknowledgements(
-  workspaceId: string
-): Promise<DisclosuresResponse> {
+async function fetchAcknowledgements(workspaceId: string): Promise<DisclosuresResponse> {
   try {
-    const r = await fetch(
-      `/api/ai/disclosures?workspaceId=${encodeURIComponent(workspaceId)}`
-    );
+    const r = await fetch(`/api/ai/disclosures?workspaceId=${encodeURIComponent(workspaceId)}`);
     if (!r.ok) return { acknowledgedVersions: [] };
     return (await r.json()) as DisclosuresResponse;
   } catch {
@@ -40,10 +36,7 @@ async function fetchAcknowledgements(
   }
 }
 
-async function postAcknowledgement(
-  workspaceId: string,
-  version: string
-): Promise<void> {
+async function postAcknowledgement(workspaceId: string, version: string): Promise<void> {
   await fetch('/api/ai/disclosures', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -102,9 +95,7 @@ export function useAiDisclosure(): AiDisclosureState {
 
   const acknowledged = query.data?.acknowledgedVersions ?? [];
   const needsAcknowledgement =
-    !!currentOrganizationId &&
-    !query.isLoading &&
-    !acknowledged.includes(DISCLOSURE_VERSION);
+    !!currentOrganizationId && !query.isLoading && !acknowledged.includes(DISCLOSURE_VERSION);
 
   return {
     needsAcknowledgement,

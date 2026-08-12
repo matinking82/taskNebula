@@ -27,8 +27,9 @@ pnpm start    # node src/server.mjs
 | `DATABASE_URL`                    | Postgres for doc persistence                   |
 | `REDIS_URL`                       | Redis pub/sub for multi-instance               |
 
-## Gotchas
+## Deployment note
 
-- The web client **is** wired (`@hocuspocus/provider` via `NEXT_PUBLIC_HOCUSPOCUS_URL`), but collab env
-  vars are **not passed into the Docker web image/compose files** — collab is dark in containerized
-  deploys until that plumbing lands. Don't assume a missing client integration; the gap is deployment env.
+The web client and Docker/Compose build/runtime variables are wired. A
+deployment must still set a reachable `NEXT_PUBLIC_HOCUSPOCUS_URL`, matching
+auth secret, Postgres, and (for multiple instances) Redis; code wiring is not a
+live-service smoke test.

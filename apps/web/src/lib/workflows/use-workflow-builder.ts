@@ -18,6 +18,7 @@ export interface ProjectState {
 
 export interface TransitionRule {
   id: string;
+  name?: string;
   fromStateId: string;
   toStateId: string;
   allowedRoles: ProjectRole[];
@@ -25,6 +26,9 @@ export interface TransitionRule {
   approverRoles?: ApproverRole[];
   approvedTargetStateId?: string;
   rejectedTargetStateId?: string;
+  conditions?: unknown;
+  validators?: unknown;
+  postActions?: unknown;
 }
 
 export interface WorkflowSavePayload {
@@ -58,11 +62,31 @@ interface WorkflowStatusRow {
 
 interface WorkflowTransitionRow {
   id: string;
+  name?: string;
   fromStatusId: string;
   toStatusId: string;
+  allowedRoles?: unknown;
+  requiresApproval?: boolean;
+  approverRoles?: unknown;
+  approvedTargetStatusId?: string | null;
+  rejectedTargetStatusId?: string | null;
   conditions?: unknown;
   validators?: unknown;
   postActions?: unknown;
+}
+
+function projectRoles(value: unknown): ProjectRole[] {
+  if (!Array.isArray(value)) return ['admin', 'member'];
+  const roles = value.filter(
+    (role): role is ProjectRole => role === 'admin' || role === 'member' || role === 'guest'
+  );
+  return roles.length > 0 ? Array.from(new Set(roles)) : ['admin', 'member'];
+}
+
+function approverRoles(value: unknown): ApproverRole[] {
+  if (!Array.isArray(value)) return ['admin'];
+  const roles = value.filter((role): role is ApproverRole => role === 'admin' || role === 'member');
+  return roles.length > 0 ? Array.from(new Set(roles)) : ['admin'];
 }
 
 function generateId(): string {
@@ -91,10 +115,17 @@ function statusToState(status: WorkflowStatusRow): ProjectState {
 function transitionRowToRule(row: WorkflowTransitionRow): TransitionRule {
   return {
     id: row.id,
+    name: row.name,
     fromStateId: row.fromStatusId,
     toStateId: row.toStatusId,
-    allowedRoles: ['admin', 'member'],
-    requiresApproval: false,
+    allowedRoles: projectRoles(row.allowedRoles),
+    requiresApproval: Boolean(row.requiresApproval),
+    approverRoles: approverRoles(row.approverRoles),
+    approvedTargetStateId: row.approvedTargetStatusId ?? undefined,
+    rejectedTargetStateId: row.rejectedTargetStatusId ?? undefined,
+    conditions: row.conditions ?? [],
+    validators: row.validators ?? [],
+    postActions: row.postActions ?? [],
   };
 }
 
@@ -116,8 +147,17 @@ async function saveTransitions(projectId: string, transitions: TransitionRule[])
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       transitions: transitions.map((rule) => ({
+        name: rule.name,
         fromStatusId: rule.fromStateId,
         toStatusId: rule.toStateId,
+        allowedRoles: rule.allowedRoles,
+        requiresApproval: rule.requiresApproval,
+        approverRoles: rule.approverRoles ?? ['admin'],
+        approvedTargetStatusId: rule.approvedTargetStateId ?? null,
+        rejectedTargetStatusId: rule.rejectedTargetStateId ?? null,
+        conditions: rule.conditions ?? [],
+        validators: rule.validators ?? [],
+        postActions: rule.postActions ?? [],
       })),
     }),
   });
@@ -236,3 +276,7 @@ export function useWorkflowBuilder(projectId: string): UseWorkflowBuilderResult 
 }
 
 export const DEFAULT_PROJECT_STATES: readonly ProjectState[] = [];
+
+export const __internal = {
+  transitionRowToRule,
+};

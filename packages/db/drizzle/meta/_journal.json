@@ -421,6 +421,13 @@
       "when": 1779000000018,
       "tag": "0059_local_agent_codex_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1779000000019,
+      "tag": "0060_workflow_transition_policy",
+      "breakpoints": true
     }
   ]
 }

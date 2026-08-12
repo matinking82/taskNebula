@@ -76,9 +76,6 @@ echo ""
 read -p "Do you want to run database migrations? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "🗄️  Generating migrations..."
-    pnpm db:generate
-    
     echo "🗄️  Running migrations..."
     pnpm db:migrate
     
@@ -95,9 +92,8 @@ echo "   2. Run 'pnpm dev' to start the development server"
 echo "   3. Open http://localhost:3000 in your browser"
 echo ""
 echo "📚 Documentation:"
-echo "   - Quick Start: docs/QUICK_START.md"
+echo "   - Setup: README.md"
 echo "   - Architecture: docs/ARCHITECTURE.md"
 echo "   - Contributing: CONTRIBUTING.md"
 echo ""
 echo "Happy coding! 🌌"
-

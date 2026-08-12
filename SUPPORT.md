@@ -1,7 +1,10 @@
-# Getting Help
+# Getting help
 
-- **Bugs and feature requests** — open a GitHub issue using the templates under `.github/ISSUE_TEMPLATE/`.
-- **Questions and discussion** — use [GitHub Discussions](https://github.com/neuraparse/tasknebula/discussions).
-- **Commercial support** — write to hello@neuraparse.com.
+- **Bugs, feature requests, and usage questions:** open a GitHub issue using
+  the matching template under `.github/ISSUE_TEMPLATE/`.
+- **Security vulnerabilities:** follow [`SECURITY.md`](SECURITY.md); never post
+  sensitive details publicly.
+- **Private project contact:** email hello@neuraparse.com.
 
-Please do not use GitHub issues to ask "how do I…" questions. Discussions are a much better fit.
+Search existing issues and the canonical [`docs/`](docs/README.md) guides
+before opening a duplicate.

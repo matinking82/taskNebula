@@ -1,298 +1,244 @@
-# TaskNebula Architecture
+# TaskNebula architecture
 
-This document provides an overview of TaskNebula's architecture, design decisions, and technical implementation.
+**Verified:** 2026-08-12
 
-## 🏗️ High-Level Architecture
+TaskNebula is a pnpm/Turborepo modular monolith centered on a Next.js web
+application and PostgreSQL. Hocuspocus is the one separately deployed runtime
+service. Redis and LiveKit are optional capabilities with explicit degraded
+modes.
 
-TaskNebula follows a **modular monolith** architecture with the potential to extract services as needed.
+## System map
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Frontend                             │
-│  Next.js 15 (App Router) + React 19 + TypeScript            │
-│  - Server Components for data fetching                       │
-│  - Client Components for interactivity                       │
-│  - TanStack Query for client-side state                      │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      API Layer                               │
-│  Next.js API Routes / tRPC (future)                          │
-│  - RESTful endpoints                                         │
-│  - Type-safe with Zod validation                             │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Business Logic                            │
-│  Domain Services & Use Cases                                 │
-│  - Organization management                                   │
-│  - Project & Issue management                                │
-│  - Workflow engine                                           │
-│  - AI integration                                            │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Data Layer                                │
-│  Drizzle ORM + PostgreSQL 16                                 │
-│  - Type-safe database access                                 │
-│  - Org-scoped multi-tenancy (app-level; RLS planned)         │
-│  - Migrations with Drizzle Kit                               │
-└─────────────────────────────────────────────────────────────┘
+```text
+browser
+  ├─ Next.js pages / React 19 client islands
+  ├─ REST + SSE ───────────────────────────────┐
+  ├─ Yjs WebSocket ───── Hocuspocus ──────────┤
+  └─ LiveKit WebSocket/WebRTC ─ LiveKit       │
+                                               │
+Next.js 15 web process                         │
+  ├─ auth, authorization, Zod API boundaries   │
+  ├─ domain services and REST routes           │
+  ├─ AI/provider, agent, search, job logic      │
+  ├─ SSE publisher/consumer                    │
+  └─ Drizzle queries ──────────────────────────┤
+                                               ▼
+                                     PostgreSQL 16 + pgvector
+                                               ▲
+Redis (optional) ─ SSE/presence/rate-limit ────┘
 ```
 
-## 📦 Monorepo Structure
+The public repository workspaces are:
 
-We use **Turborepo** for monorepo management with **pnpm workspaces**.
+| Path                  | Responsibility                                                                 |
+| --------------------- | ------------------------------------------------------------------------------ |
+| `apps/web`            | Next.js UI, REST/SSE routes, auth, domain logic, AI, workers/cron entry points |
+| `packages/db`         | Drizzle schema, SQL migration journal, Postgres client and seed tooling        |
+| `packages/types`      | Shared domain/API types                                                        |
+| `packages/config`     | Shared TypeScript/ESLint/Tailwind configuration                                |
+| `packages/mcp-server` | MCP stdio/HTTP client surface over the web REST API                            |
+| `services/hocuspocus` | Yjs WebSocket auth, Postgres persistence, Redis scale-out                      |
 
-### Apps
+There is no separate tRPC layer, LLM package, microservice mesh, or durable
+agent worker today. Documentation must not draw planned components as current.
 
-- **`apps/web`**: Main Next.js application
-  - User-facing UI
-  - API routes
-  - Server-side rendering
+## Web application
 
-### Packages
+### Rendering and state
 
-- **`packages/config`**: Shared configurations
-  - TypeScript configs
-  - ESLint configs
-  - Tailwind configs
+- Next.js App Router and React Server Components own initial data/rendering.
+- Client components are used for interactivity; TanStack Query owns remote
+  client state, Zustand owns UI state, and React Hook Form + Zod own forms.
+- `next-intl` provides 30 catalogs, browser/cookie locale negotiation, and RTL
+  direction for Arabic/Hebrew.
+- Route intent and evidence live in `apps/web/DESIGN.md`; token/component
+  behavior lives in `apps/web/DESIGN_SYSTEM.md`.
 
-- **`packages/types`**: Shared TypeScript types
-  - Domain models
-  - API contracts
-  - Utility types
+### API boundary
 
-- **`packages/db`**: Database layer
-  - Drizzle ORM schema
-  - Database client
-  - Migrations
+Protected routes follow this order:
 
-- **`packages/mcp-server`**: `@tasknebula/mcp-server`
-  - MCP server exposing TaskNebula tools to AI agents
-  - stdio + HTTP transports
-
-### Services
-
-- **`services/hocuspocus`**: Standalone Yjs realtime collaboration server
-  - WebSocket + Postgres persistence + Redis pub/sub
-
-> LLM integration (provider abstraction, prompts, agents) lives in `apps/web/src/lib/ai` and
-> `apps/web/src/lib/agents` — there is no separate `packages/llm` workspace.
-
-## 🗄️ Database Design
-
-### Multi-Tenancy Strategy
-
-We use **organization-scoped multi-tenancy**.
-
-- Tenant-scoped tables carry an `organization_id` column
-- Isolation is enforced **at the application level today**: every route scopes its queries with
-  `WHERE organization_id = …` plus membership/permission checks
-- **PostgreSQL RLS is planned, not yet implemented** (roadmap #37 in `docs/ROADMAP_2026.md`):
-  session-GUC plumbing + `CREATE POLICY` per table will add a DB-level backstop. Until then there
-  is no database-level enforcement — see `docs/AUDIT_2026-06.md` Gap #2.
-
-### Key Entities
-
-```
-Organizations (root tenant)
-  ├── Teams
-  ├── Projects
-  │   ├── Issues
-  │   ├── Sprints
-  │   └── Workflows
-  └── Members
+```text
+authenticate session or scoped API identity
+  -> resolve membership and organization/project access
+    -> parse body/query with Zod
+      -> execute organization-scoped domain operation
+        -> persist audit / publish relevant event
+          -> return stable error or response contract
 ```
 
-### Schema Highlights
+Canonical guards live in `apps/web/src/lib/auth`. Hand-written per-route
+membership logic is legacy risk. A project or organization identifier from the
+request is never authorization by itself.
 
-- **CUID2** for primary keys (sortable, URL-safe)
-- **JSONB** for flexible metadata and custom fields
-- **Enums** for type safety (status, priority, etc.)
-- **Indexes** on frequently queried columns
-- **Foreign keys** with cascade deletes where appropriate
+The OpenAPI document is generated by the web workspace and checked for drift.
 
-## 🎨 Frontend Architecture
+## Data architecture
 
-### App Router Structure
+PostgreSQL with pgvector is the durable store. Drizzle schema definitions live
+in `packages/db/src/schema`; SQL migrations and their journal live in
+`packages/db/drizzle`.
 
-```
-app/
-├── (marketing)/          # Public pages (landing, pricing)
-│   ├── page.tsx
-│   └── layout.tsx
-├── (app)/                # Authenticated app
-│   ├── dashboard/
-│   ├── projects/
-│   ├── issues/
-│   └── ai/
-└── api/                  # API routes
-```
+### Tenant isolation
 
-### Component Organization
+- Tenant-owned rows carry an `organization_id` directly or have a verifiable
+  owning relation.
+- Isolation is application-enforced with explicit filters and membership
+  checks.
+- PostgreSQL RLS is not implemented. It is a roadmap option, not a current
+  backstop.
+- Cross-organization negative tests are required for any new retrieval,
+  mutation, webhook, export, or worker path.
 
-```
-components/
-├── ui/                   # Base UI components (shadcn/ui)
-├── layout/               # Layout components (sidebar, header)
-├── kanban/               # Kanban-specific components
-├── forms/                # Form components
-└── providers/            # Context providers
-```
+### Migration contract
 
-### State Management
+Drizzle snapshots stop at `0012`; `db:generate` scripts were removed to prevent
+invalid output. Every later change follows:
 
-- **Server State**: TanStack Query (React Query)
-- **UI State**: Zustand (lightweight stores)
-- **Form State**: React Hook Form + Zod
-- **URL State**: Next.js router (searchParams)
-
-## 🔐 Authentication & Authorization
-
-### Authentication
-
-- **Auth.js (NextAuth v5)** for authentication
-- Support for OAuth providers (Google, GitHub)
-- JWT-based sessions
-- Refresh token rotation
-
-### Authorization
-
-- **Role-Based Access Control (RBAC)**
-  - Organization roles: Owner, Admin, Member, Viewer, Guest
-  - Team roles: Lead, Member
-- **Permission checks** at API and UI level
-- **Row-Level Security** in PostgreSQL — _planned (roadmap #37); isolation is app-level WHERE clauses today_
-
-## 🤖 AI Integration
-
-### LLM Client Abstraction
-
-```typescript
-interface LLMClient {
-  chat(messages: LLMMessage[]): Promise<LLMResponse>;
-  complete(prompt: string): Promise<LLMResponse>;
-}
+```text
+edit schema TypeScript
+  -> hand-write next idempotent SQL migration
+    -> append strictly increasing journal timestamp
+      -> review tenancy, indexes, re-run and rollback behavior
+        -> apply to a disposable Postgres/pgvector database twice
 ```
 
-### Supported Providers
+Persistent environments are never reset or seeded as routine verification.
 
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
-- Azure OpenAI
-- Local models (future)
+## Authentication and authorization
 
-### AI Features
+- Auth.js/NextAuth v5 issues JWT sessions for the web app.
+- Credentials auth has a durable application user path.
+- Google/GitHub provider registration exists, but the complete DB
+  adapter/identity-to-user lifecycle is not production-ready.
+- Organization/project roles and canonical guards enforce working paths.
+- Permission schemes, issue security, feature flags, and some SSO controls have
+  configuration surfaces that are not yet consumed by every operation.
+- MCP/API-key authentication requires completion before the public MCP package
+  can be considered end-to-end usable.
 
-1. **Issue Generation**: Natural language → structured ticket
-2. **Thread Summarization**: Long discussions → concise summary
-3. **Sprint Planning**: Backlog + capacity → sprint proposal
-4. **Health Analysis**: Metrics → insights and recommendations
+## Realtime and collaboration
 
-## 🚀 Performance Optimizations
+### Domain events
 
-### Frontend
+Issue/sprint/project events stream over `/api/events/stream`.
 
-- **React Server Components** for reduced client bundle
-- **Streaming SSR** for faster initial load
-- **Optimistic UI updates** for perceived performance
-- **Code splitting** with dynamic imports
-- **Image optimization** with Next.js Image
+- Events are organization-scoped and fail closed without an organization ID.
+- A local in-process emitter provides the single-process path.
+- When `REDIS_URL` is configured, origin-tagged Redis pub/sub fans events out
+  across web replicas.
+- The current bus is live delivery, not a durable event log. Agent/research
+  progress needs persisted ordered events and cursor replay.
 
-### Backend
+### Collaborative editing
 
-- **Database connection pooling**
-- **Query optimization** with proper indexes
-- **Caching** with Redis (future)
-- **Rate limiting** on API endpoints
+Tiptap uses Yjs through `@hocuspocus/provider`. The web app mints a collab JWT;
+Hocuspocus verifies the shared auth secret, persists Yjs state in Postgres, and
+uses Redis for multi-instance awareness/update propagation. Docker and Compose
+carry the build/runtime variables, but each deployment must configure a
+reachable public WebSocket URL and matching secrets.
 
-### Real-time Features
+### Voice
 
-- **WebSocket** for live updates (future)
-- **Server-Sent Events** for notifications
-- **Optimistic updates** with rollback on error
+LiveKit provides optional audio rooms. It is operationally distinct from
+Hocuspocus and SSE and requires its own reachable URL, API credentials, and
+network/TURN verification.
 
-## 📊 Observability
+## Search and AI
 
-### Logging
+### Retrieval
 
-- Structured logging with context
-- Log levels: error, warn, info, debug
-- Request ID tracking
+- Issue/document lexical retrieval is organization scoped.
+- `content_embeddings` and pgvector infrastructure exist. Ask's vector leg is
+  dormant until an embedder is passed; the query now verifies organization
+  ownership through the source relations.
+- Optional reranking and provider calls require external credentials.
 
-### Monitoring (Future)
+### Ask
 
-- Application metrics (response time, error rate)
-- Database metrics (query performance, connection pool)
-- User analytics (feature usage, engagement)
+Ask is a workspace retrieval-augmented answer flow:
 
-### Error Tracking (Future)
-
-- Sentry for error tracking
-- User feedback integration
-- Source map support
-
-## 🔄 CI/CD Pipeline (Future)
-
-```
-GitHub Actions
-  ├── Lint & Type Check
-  ├── Run Tests
-  ├── Build
-  ├── Deploy to Staging
-  └── Deploy to Production (on release)
+```text
+authorized organization/project scope
+  -> issue and document retrieval
+    -> optional rerank
+      -> one Claude synthesis stream
+        -> citation parse + unresolved marker report
+          -> sources/citations in Sidecar and audit usage
 ```
 
-## 🌐 Deployment
+It is not a deep-research engine. There is no web crawler, durable multi-round
+run, source snapshot/claim persistence, or mid-run refine flow yet.
 
-### Recommended Platforms
+### Project and coding agents
 
-- **Vercel**: Next.js optimized, edge functions
-- **Railway**: Full-stack with PostgreSQL
-- **Fly.io**: Global edge deployment
-- **Self-hosted**: Docker + Kubernetes
+- Project agents load project context, optionally ask OpenAI/Anthropic for a
+  structured plan, and execute tracking/triage/planning/bulk logic.
+- Write-capable runs consult one fail-closed execution policy. When writes are
+  disabled or approval/oversight is required, they stay in preview and perform
+  zero domain writes.
+- Atomic approval/apply, transactions/idempotent effect ledger, provider-wide
+  cancellation/retry, and crash recovery remain incomplete.
+- Local Claude/Codex sessions spawn configured CLIs with an allowlisted
+  provider-specific environment. They still run under the web process rather
+  than a leased durable worker.
 
-### Environment Variables
+### Bounded graph foundation
 
-See `.env.example` files in each package for required configuration.
+`apps/web/src/lib/agents/graph-runtime.ts` implements explicit typed routes,
+`END`, step/visit/wall/no-progress limits, classified retry hooks, versioned
+checkpoints, cancellation, and HITL interruption. `research-graph.ts` defines a
+bounded plan/retrieve/grade/gap/synthesize/verify/review topology.
 
-## 📈 Scalability Considerations
+These are tested foundations, not yet the production execution path for all
+agents. The complete maturity and persistence target is
+[`AGENT_RUNTIME.md`](AGENT_RUNTIME.md).
 
-### Current (Monolith)
+## Workflow architecture
 
-- Single deployment
-- Shared database
-- Vertical scaling
+Workflow statuses and transitions have database models and editing APIs.
+Transition conditions/validators/post-actions can be stored. However, status
+mutation consumers do not yet converge on one enforcement engine; some direct
+issue and agent/webhook writes bypass the stored graph.
 
-### Future (Microservices)
+The target service order is:
 
-Potential service extraction:
+```text
+load current state -> find allowed edge -> validate -> authorize -> approve
+  -> atomic update -> post-action/outbox -> history/event -> stable end
+```
 
-- **Core API**: Project & issue management
-- **AI Worker**: LLM processing (async)
-- **Notification Service**: Email, Slack, webhooks
-- **Analytics Service**: Metrics and reporting
+Until that service exists, graph-shaped UI is configuration—not proof of
+runtime enforcement.
 
-## 🔒 Security
+## Observability and operations
 
-- **Input validation** with Zod schemas
-- **SQL injection prevention** with parameterized queries
-- **XSS protection** with React's built-in escaping
-- **CSRF protection** with SameSite cookies
-- **Rate limiting** on sensitive endpoints
-- **Audit logging** for compliance
+- Pino provides structured logs; adoption is not universal.
+- Audit logs and LLM usage/cost records cover substantial but not all paths.
+- OpenTelemetry, Sentry, Langfuse, metrics, and SIEM integrations are available
+  in parts of the system and require deployment configuration.
+- Agent node/tool/effect spans and durable progress replay remain roadmap work.
+- Health/readiness/metrics endpoints and Docker health checks support
+  operations; provider, WebSocket, email, voice, and multi-replica behavior
+  still need live environment smoke tests.
 
-## 📚 Further Reading
+## Build and verification
 
-- [Database Setup](./DATABASE_SETUP.md)
-- [API Documentation](../apps/web/src/lib/openapi/README.md)
-- [Deployment Guide](./DEPLOYMENT.md)
-- [Security Best Practices](../SECURITY.md)
+CI on `main` and pull requests installs with Node 22/pnpm 9, builds the MCP
+package, then runs i18n parity, repository hygiene, UI contract, type-check,
+lint, and unit tests. OpenAPI drift and browser tests are proportional local or
+release gates; see `.claude/commands/verify.md` and `docs/RELEASE.md`.
 
----
+Unit coverage is concentrated in the web app. Database migrations,
+Hocuspocus, multi-process recovery, provider integrations, and full browser
+flows require more integration coverage.
 
-Last updated: 2026-06-12 (tenant-isolation description corrected: app-level WHERE clauses today, RLS planned — see `docs/AUDIT_2026-06.md`)
+## Further reading
+
+- [Documentation index](README.md)
+- [Live status](STATUS.md)
+- [Roadmap](ROADMAP_2026.md)
+- [Agent runtime contract](AGENT_RUNTIME.md)
+- [Deployment](DEPLOYMENT.md)
+- [Observability](OBSERVABILITY.md)
+- [Security policy](../SECURITY.md)

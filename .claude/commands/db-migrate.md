@@ -1,16 +1,17 @@
 ---
-description: Generate a Drizzle migration from schema changes, review the SQL, then apply it
-argument-hint: '[optional migration description]'
-allowed-tools: Bash(pnpm db:generate:*), Bash(pnpm db:migrate:*), Read, Grep
+description: Create and verify the next hand-written TaskNebula database migration
+argument-hint: '<schema change>'
+allowed-tools: Read, Edit, Grep, Glob, Bash(pnpm db:migrate:*), Bash(pnpm --filter @tasknebula/db type-check:*)
 ---
 
-Generate and apply a database migration for the change described as: $ARGUMENTS
+Read `packages/db/CLAUDE.md` first and implement: $ARGUMENTS
 
-Steps:
+Use the repository migration convention: schema TypeScript plus the next
+idempotent `packages/db/drizzle/NNNN_name.sql` file and a strictly increasing
+`packages/db/drizzle/meta/_journal.json` entry. Never run `db:generate` or
+`drizzle-kit generate`; snapshots after `0012` do not represent this schema.
 
-1. Run `pnpm db:generate` to create the migration from the current `packages/db/src/schema/` state.
-2. Read the newly generated SQL in `packages/db/drizzle/` and summarize the delta (tables/columns/indexes/constraints). Flag any destructive operation (drop, rename, type narrowing) and STOP for confirmation before applying if found.
-3. Verify any new tenant table has an `organization_id` column and an RLS policy.
-4. If non-destructive (or confirmed), run `pnpm db:migrate` and report the result.
-
-Never hand-edit generated migration SQL.
+Review tenant ownership, indexes, constraints, re-run safety, and rollback.
+RLS is not implemented, so do not create a false RLS assumption. Stop before
+applying a destructive change or touching a persistent database unless the
+user explicitly authorized that action.

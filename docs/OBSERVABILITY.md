@@ -1,20 +1,22 @@
 # Observability
 
+**Verified:** 2026-08-12
+
 TaskNebula ships with hooks for an end-to-end self-hostable observability
 stack. This document explains how each layer plugs in, what to expect when
-it is *not* configured, and the recommended tier matrix.
+it is _not_ configured, and the recommended tier matrix.
 
 Reference: roadmap task **OBS-35** (Langfuse + OpenTelemetry).
 
 ## Layers at a glance
 
-| Layer            | Tool                                      | Activation env                                                  | Default |
-|------------------|-------------------------------------------|------------------------------------------------------------------|---------|
-| Error tracking   | Sentry (cloud or self-host)               | `SENTRY_DSN` (server) / `NEXT_PUBLIC_SENTRY_DSN` (browser)       | off     |
-| LLM tracing      | Langfuse (cloud or self-host)             | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`    | off     |
-| Distributed trace| OpenTelemetry → SigNoz / Grafana Tempo    | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`               | off     |
-| DB query stats   | `pg_stat_statements` + pgHero / pganalyze | shipped on by default in `docker-compose.yml`                    | **on**  |
-| Realtime (RTC)   | LiveKit Prometheus exporter               | `LIVEKIT_PROMETHEUS_PORT` (set to a free port, e.g. `6789`)      | off     |
+| Layer             | Tool                                      | Activation env                                                | Default |
+| ----------------- | ----------------------------------------- | ------------------------------------------------------------- | ------- |
+| Error tracking    | Sentry (cloud or self-host)               | `SENTRY_DSN` (server) / `NEXT_PUBLIC_SENTRY_DSN` (browser)    | off     |
+| LLM tracing       | Langfuse (cloud or self-host)             | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | off     |
+| Distributed trace | OpenTelemetry → SigNoz / Grafana Tempo    | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`            | off     |
+| DB query stats    | `pg_stat_statements` + pgHero / pganalyze | shipped on by default in `docker-compose.yml`                 | **on**  |
+| Realtime (RTC)    | LiveKit Prometheus exporter               | `LIVEKIT_PROMETHEUS_PORT` (set to a free port, e.g. `6789`)   | off     |
 
 When an env var is unset the matching code path is a no-op — TaskNebula has
 no observability dependencies in dev / CI.
@@ -57,7 +59,7 @@ LANGFUSE_HOST=https://cloud.langfuse.com   # or your self-host URL
 
 Every call to `draftIssue()` / `draftIssuesMulti()` ends with `traceLlmCall()`
 which records the prompt, response, latency, and provider. Native (heuristic)
-runs are *not* traced — they're not LLM calls.
+runs are _not_ traced — they're not LLM calls.
 
 To trace a new AI feature, import the helper and call it once per generation:
 
@@ -117,16 +119,18 @@ SELECT query, calls, total_exec_time, mean_exec_time
 
 ### Visualizers
 
-* **pgHero** (open source, self-host) — drop-in Docker container that reads
+- **pgHero** (open source, self-host) — drop-in Docker container that reads
   `pg_stat_statements`:
+
   ```bash
   docker run -d --name pghero \
     -e DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5432/tasknebula \
     -p 8080:8080 ankane/pghero
   ```
+
   Add as a service in your prod compose file behind your internal-only network.
 
-* **pganalyze** (SaaS, commercial) — install the collector container and
+- **pganalyze** (SaaS, commercial) — install the collector container and
   point it at the same DATABASE_URL. Better long-term retention + EXPLAIN
   capture, paid.
 
@@ -158,14 +162,14 @@ Key series to alert on: `livekit_room_participants`, `livekit_packets_lost`,
 
 ## Tier matrix
 
-| Need                              | Minimum                                          | Recommended                                                                                | Ideal                                                                                                  |
-|----------------------------------|--------------------------------------------------|--------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
-| Error tracking                    | server `console.error` + container logs          | Sentry (cloud)                                                                             | Sentry (self-host) + Slack/PagerDuty routing                                                           |
-| LLM cost & latency                | none                                             | Langfuse cloud                                                                             | Langfuse self-host on the same cluster as the DB                                                       |
-| Request tracing                   | Next.js access logs                              | SigNoz single-node                                                                         | SigNoz / Grafana LGTM (Loki + Grafana + Tempo + Mimir) cluster                                         |
-| Postgres performance              | `pg_stat_statements` + ad-hoc psql               | pgHero                                                                                     | pganalyze + EXPLAIN insights                                                                           |
-| LiveKit / RTC                     | container logs                                   | Prometheus exporter + Grafana LiveKit dashboard                                            | Exporter + per-room recording + p99 packet-loss alerts                                                 |
-| Uptime                            | none                                             | Healthchecks.io ping on `/api/health`                                                      | Synthetic monitoring (Checkly, Grafana Synthetic) per critical user flow                               |
+| Need                 | Minimum                                 | Recommended                                     | Ideal                                                                    |
+| -------------------- | --------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------ |
+| Error tracking       | server `console.error` + container logs | Sentry (cloud)                                  | Sentry (self-host) + Slack/PagerDuty routing                             |
+| LLM cost & latency   | none                                    | Langfuse cloud                                  | Langfuse self-host on the same cluster as the DB                         |
+| Request tracing      | Next.js access logs                     | SigNoz single-node                              | SigNoz / Grafana LGTM (Loki + Grafana + Tempo + Mimir) cluster           |
+| Postgres performance | `pg_stat_statements` + ad-hoc psql      | pgHero                                          | pganalyze + EXPLAIN insights                                             |
+| LiveKit / RTC        | container logs                          | Prometheus exporter + Grafana LiveKit dashboard | Exporter + per-room recording + p99 packet-loss alerts                   |
+| Uptime               | none                                    | Healthchecks.io ping on `/api/health`           | Synthetic monitoring (Checkly, Grafana Synthetic) per critical user flow |
 
 ### Recommended self-host stack (single VM)
 

@@ -1,5 +1,5 @@
 /**
- * /api/ai/disclosures — read + write the EU AI Act Article 50 ledger.
+ * /api/ai/disclosures — read + write transparency-notice acknowledgements.
  *
  *   GET  ?workspaceId=...   -> { acknowledgedVersions: string[] }
  *   POST { workspaceId, version } -> 204 (idempotent)
@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { aiDisclosuresAcknowledged, db, organizationMembers } from '@tasknebula/db';
 import { auth } from '@/auth';
 

@@ -169,11 +169,44 @@ function MessageBubble({ message }: MessageBubbleProps) {
         {message.content}
       </div>
       {isAssistant && (
-        <AiBadge
-          feature={t('sidecar.badgeFeature')}
-          generatedAt={new Date(message.createdAt)}
-          className="mt-0.5"
-        />
+        <>
+          {message.citations && message.citations.length > 0 ? (
+            <ul className="mt-1 flex max-w-[88%] flex-wrap gap-1">
+              {message.citations.map((citation) => {
+                const marker =
+                  citation.type === 'issue' ? `TN-${citation.key}` : `DOC-${citation.key}`;
+                const classes =
+                  'border-border bg-background text-muted-foreground hover:text-foreground rounded-sm border px-1.5 py-0.5 font-mono text-[10px] transition-colors';
+                return (
+                  <li key={`${citation.type}:${citation.id}`}>
+                    {citation.url?.startsWith('/') && !citation.url.startsWith('//') ? (
+                      <a href={citation.url} title={citation.title} className={classes}>
+                        {marker}
+                      </a>
+                    ) : (
+                      <span title={citation.title} className={classes}>
+                        {marker}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+          {message.unresolvedCitations && message.unresolvedCitations.length > 0 ? (
+            <div
+              role="status"
+              className="border-destructive/40 bg-destructive/5 text-destructive mt-1 max-w-[88%] rounded-sm border px-1.5 py-1 font-mono text-[10px]"
+            >
+              {message.unresolvedCitations.join(' ')}
+            </div>
+          ) : null}
+          <AiBadge
+            feature={t('sidecar.badgeFeature')}
+            generatedAt={new Date(message.createdAt)}
+            className="mt-0.5"
+          />
+        </>
       )}
     </div>
   );

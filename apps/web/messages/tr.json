@@ -4138,19 +4138,19 @@
       "generatedWithAi": "AI ile oluşturuldu",
       "ariaLabel": "AI tarafından oluşturulan içerik. {detail}",
       "tooltipTitle": "AI tarafından oluşturulan çıktı",
-      "disclosure": "EU AI Act 50. Madde açıklaması. <link>Model kartlarına</link> bakın."
+      "disclosure": "Yapay zeka şeffaflık bilgileri. <link>AI Model Kartları</link>’e bakın."
     },
     "disclosure": {
       "title": "AI ile etkileşime girmek üzeresiniz",
       "description": "Bazı TaskNebula özellikleri metin, öneri ve özet oluşturmak için üçüncü taraf AI modelleri kullanır. Devam etmeden önce lütfen bunun sizin için ne anlama geldiğini okuyun.",
       "whatRunsTitle": "Çalışma alanınızda neler çalışıyor",
-      "rightsTitle": "Haklarınız",
-      "rightLabelled": "Her AI çıktısı <label>AI ile oluşturuldu</label> olarak etiketlenir.",
-      "rightReview": "Uygulanmadan önce herhangi bir AI önerisini inceleyebilir ve reddedebilirsiniz.",
-      "rightDisable": "Çalışma alanı yöneticileri Ayarlar → AI Şeffaflığı'ndan herhangi bir AI özelliğini devre dışı bırakabilir.",
-      "rightRetention": "Girdiler/çıktılar model kartı saklama politikasına göre tutulur ve asla satılmaz.",
+      "rightsTitle": "Ne bekleyebilirsiniz?",
+      "rightLabelled": "TaskNebula'da, kullanıcıya yönelik yapay zeka tarafından oluşturulan desteklenen çıktı <label>AI ile oluşturuldu</label> etiketini taşır.",
+      "rightReview": "Onay geçişli yazma eylemleri, yetkili bir kişi bunları onaylayana kadar önizlemede kalır.",
+      "rightDisable": "Çalışma alanı yöneticileri, desteklenen AI özelliklerini Ayarlar → AI Şeffaflığı bölümünden yönetebilir.",
+      "rightRetention": "Model kartları belgelenmiş veri işleme ve saklamayı açıklar; etkin sağlayıcı ve dağıtım ayarları farklılık gösterebilir.",
       "modelCardsLine": "Model kimliği, gönderilen veriler ve saklama dahil olmak üzere her özellik için <link>tam model kartlarını</link> okuyun.",
-      "versionLine": "Açıklama sürümü {version}. EU AI Act 50. Madde tarafından gereklidir.",
+      "versionLine": "Şeffaflık bildirimi sürümü {version}.",
       "acknowledge": "Anladım, devam et"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "AI Şeffaflığı",
-      "subtitle": "Bu çalışma alanındaki her AI özelliği için zorunlu açıklamalar. <link>EU AI Act 50. Madde</link> tarafından gereklidir (2026-08-02'de yürürlükte)."
+      "subtitle": "Bu çalışma alanında bulunan AI özelliklerine ilişkin ürün şeffaflığı bilgileri. <link>AI Model Kartları</link>’e bakın."
     },
     "oversight": {
       "title": "İnsan gözetimi duruşu",
-      "description": "AI çıktılarının otomatik olarak uygulanıp uygulanamayacağını veya çalışma alanı verilerine uygulanmadan önce her zaman bir insan tarafından incelenmesi gerekip gerekmediğini kontrol eder.",
+      "description": "Desteklenen yazma özellikli AI eylemlerinin otomatik uygulama için uygun olup olmadığını veya insan incelemesi için önizlemede kalıp kalmadığını kontrol eder.",
       "reviewRequiredLabel": "İnceleme gerekli (önerilen)",
       "autoApplyLabel": "Otomatik uygula",
-      "reviewRequiredDescription": "Herhangi bir çalışma alanı verisi değiştirilmeden önce her AI önerisi açık insan onayı için sıraya alınır. Önceliklendirme önerileri önizlenir, asla uygulanmaz.",
-      "autoApplyDescription": "Bunu destekleyen özellikler, yüksek güvenilirlikli AI çıktılarını açık insan incelemesi olmadan uygulayabilir. Denetim günlüğü yine de her eylemi kaydeder.",
+      "reviewRequiredDescription": "Desteklenen yazma özellikli yapay zeka eylemleri, yetkili bir kişi bunları onaylayana kadar önizlemede kalır.",
+      "autoApplyDescription": "Desteklenen eylemler yalnızca ayrı yazma ve onay kontrollerinin de buna izin vermesi durumunda otomatik uygulama için uygundur; aksi halde önizlemede kalırlar.",
       "toggleAria": "İnsan gözetimi duruşunu aç/kapat"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Gönderilen veri",
       "retentionLabel": "Saklama",
       "readModelCard": "Tam model kartını oku",
-      "footer": "{total} özellikten <strong>{userFacing}</strong> tanesi kullanıcıya yöneliktir ve 50. Madde gereği <em>AI ile oluşturuldu</em> rozetini taşımalıdır."
+      "footer": "{total} belgelenen özelliklerin <strong>{userFacing}</strong>'i kullanıcılar için çıktı üretir. TaskNebula'da, desteklenen AI tarafından oluşturulan çıktı <em>AI ile oluşturuldu</em> etiketini taşır."
     },
     "import": {
       "metaTitle": "İşleri içe aktar · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Gezinme menüsünü kapat",
         "items": {
           "features": "Özellikler",
-          "compare": "Karşılaştır",
           "selfHost": "Kendin barındır",
           "faq": "SSS"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Ya da iki komutla kendin barındır",
         "quickstartAria": "Kendi barındırma hızlı başlangıç komutları",
         "copyQuickstart": "Kendi barındırma hızlı başlangıcını kopyala",
-        "selfHostMeta": "Kendin barındırınca sonsuza kadar ücretsiz · Üç konteyner: Postgres, Redis, tek web imajı",
+        "selfHostMeta": "Kendin barındırdığında daima ücretsiz · Postgres, Redis, web ve isteğe bağlı servislerden oluşan küçük Compose yığını",
         "demoPill": "Aşağıda etkileşimli demo",
         "chips": {
           "cmdk": "Her yerde Cmd+K",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Özellikler",
-          "compare": "Karşılaştır",
           "selfHost": "Kendin barındır",
           "faq": "SSS",
           "openapiSpec": "OpenAPI tanımı",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Kendin barındır",
         "title": "İşiniz. Sunucunuz. Veriniz.",
-        "description": "Üç konteyner ve tek komut. Her şey Postgres’inizde yaşar, dışa aktarma bir pg_dump kadar yakındır ve hiçbir şey eve telefon etmez; tasarım gereği vendor lock-in yok.",
+        "description": "Tek komut küçük bir Compose yığınını başlatır. Çekirdek veriler Postgres’te kalır, dışa aktarma bir pg_dump uzağındadır ve varsayılan olarak hiçbir şey dışarı veri göndermez — tasarım gereği sağlayıcı bağımlılığı yoktur.",
         "cards": {
           "postgres": {
             "title": "Bir Postgres, bir web imajı",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Karşılaştır",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "Dördü de güçlü araçlar. TaskNebula’nın tam olarak nerede ayrıştığı burada: varsayılan olarak açık, sizin barındırmanıza uygun, AI-native. Ne eksik ne fazla.",
-        "tableAria": "Özellik karşılaştırma tablosu",
-        "tableCaption": "TaskNebula, Jira, Linear ve Plane arasında özellik karşılaştırması. Her hücre Evet, Kısmi veya Hayır olarak işaretlenir ve kısa bir detay içerir.",
-        "featureHeader": "Özellik",
-        "marks": {
-          "yes": "Evet",
-          "partial": "Kısmi",
-          "no": "Hayır"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Açık kaynak (MIT)",
-            "notes": {
-              "tasknebula": "Tüm kod tabanı, MIT",
-              "jira": "Kapalı kaynak",
-              "linear": "Kapalı kaynak",
-              "plane": "AGPL-3.0 çekirdek"
-            }
-          },
-          "selfHost": {
-            "feature": "Kendin barındırma (tek Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + tek web imajı",
-              "jira": "Cloud-first; DC aşamalı kaldırılıyor",
-              "linear": "Sadece bulut",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Fiyat",
-            "notes": {
-              "tasknebula": "Ücretsiz, sınırsız kullanıcı, kendin barındır",
-              "jira": "≤10 kullanıcı ücretsiz, sonra koltuk başı",
-              "linear": "Ücretsiz plan, sonra koltuk başı",
-              "plane": "≤12 kullanıcı ücretsiz, sonra koltuk başı"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI ajanları native + MCP sunucusu",
-            "notes": {
-              "tasknebula": "Yerleşik ajanlar + MIT MCP sunucusu",
-              "jira": "Rovo + uzak MCP, yalnızca bulut",
-              "linear": "AI + uzak MCP sunucusu",
-              "plane": "Plane AI (kredi) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Klavye öncelikli",
-            "notes": {
-              "tasknebula": "Command palette + kısayollar",
-              "jira": "Sınırlı kısayollar",
-              "linear": "Sınıfının en iyisi",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Gerçek zamanlı işbirliği",
-            "notes": {
-              "tasknebula": "Yjs ile canlı imleçler",
-              "jira": "Canlı sync, ortak düzenleme yok",
-              "linear": "Canlı sync",
-              "plane": "Canlı sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear içe aktarma",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Jira’ya import",
-              "linear": "Yerleşik Jira import",
-              "plane": "Jira / Linear importer’ları"
-            }
-          },
-          "sprints": {
-            "feature": "Sprintler / Cycle’lar",
-            "notes": {
-              "tasknebula": "Sprintler + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycle’lar",
-              "plane": "Cycle’lar + modüller"
-            }
-          },
-          "structure": {
-            "feature": "Etiketler / Bileşenler / Versiyonlar",
-            "notes": {
-              "tasknebula": "Birinci sınıf, üçü de",
-              "jira": "Üçü de",
-              "linear": "Etiketler + projeler",
-              "plane": "Etiketler + modüller"
-            }
-          },
-          "api": {
-            "feature": "API / Kod olarak projeler",
-            "notes": {
-              "tasknebula": "Açık REST + OpenAPI tanımı",
-              "jira": "REST API, IaC yok",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Satıcı detayları Haziran 2026 itibarıyla herkese açık dokümantasyon ve fiyatlandırma sayfalarını yansıtır ve değişebilir. Jira Atlassian’ın, Linear Linear Orbit’in, Plane ise Plane Software’in ticari markasıdır; hepsi sağlam ürünlerdir ve hiçbiri TaskNebula ile bağlantılı değildir."
-      },
       "faq": {
         "kicker": "SSS",
         "title": "Net sorular, dürüst cevaplar.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Kendim barındırabilir miyim?",
-            "answer": "Varsayılan yol bu. Docker getirin; üç konteyner alırsınız: pgvector eklentili Postgres 16, Redis 7 ve neuraparse/tasknebula web imajı. Migration’lar açılışta çalışır, GET /api/health yoklama endpoint’inizdir ve tek satırlık compose hızlı başlangıcı sizi localhost:3000’a getirir. Kendiniz çalıştırınca kaybedeceğiniz hosted-only bir özellik yok."
+            "answer": "Kendin barındırma varsayılan yoldur. Docker ile Postgres 16 ve pgvector, Redis 7, neuraparse/tasknebula web imajı ve etkinleştirdiğin paketli veya isteğe bağlı servislerden oluşan küçük bir Compose yığını başlatırsın. Migration’lar açılışta çalışır, GET /api/health kontrol endpoint’idir ve hızlı başlangıç localhost:3000 üzerinde açılır."
           },
           "aiKeys": {
             "question": "AI özelliklerine ihtiyacım var mı? Kendi anahtarlarımı getirebilir miyim?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Production’a hazır mı?",
-            "answer": "Çekirdek takip aracı — işler, panolar, sprintler, dokümanlar, arama, izinler, REST API ve OpenAPI tanımı — sağlamdır ve kendiniz barındırabilirsiniz. Bazı kenarlar hâlâ olgunlaşıyor: OAuth login DB adapter’a ihtiyaç duyuyor, şimdilik credentials auth kullanın; realtime collab ortam değişkenleri Docker imajlarına henüz bağlanmadı; AI/MCP yüzeyinin bazı parçaları preview. Hepsini docs/STATUS.md içinde açıkça takip ediyoruz."
+            "answer": "Çekirdek takip aracı — işler, panolar, sprintler, dokümanlar, arama, REST API ve OpenAPI tanımı — kendin barındırılabilir. OAuth girişi hâlâ bir DB adapter gerektiriyor; şimdilik credentials auth kullanın. Gerçek zamanlı iş birliği Docker/Compose üzerinden bağlandı, ancak kurulumunuzun erişilebilir bir URL’ye ve canlı bir smoke testine hâlâ ihtiyacı var. AI ve MCP preview olarak kalıyor. Eksikleri docs/STATUS.md içinde takip ediyoruz."
           },
           "dataVisibility": {
             "question": "Verimi kim görebilir?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "TaskNebula'ya dön",
-    "disclosureBadge": "EU AI Act Madde 50 açıklaması",
+    "disclosureBadge": "Yapay zeka şeffaflığı bilgileri",
     "title": "AI Model Kartları",
-    "intro": "TaskNebula, son kullanıcılara aşağıdaki AI özelliklerini sunar. Her biri için amaçlanan kullanımı, model kimliğini, her çağrıda gönderilen verileri, saklama politikasını ve varsayılan insan gözetimi yaklaşımımızı yayımlıyoruz. Bu sayfa kamuya açık bir şeffaflık kaydıdır ve tüm TaskNebula dağıtımları için geçerlidir. Açıklama sürümü <version></version>.",
-    "lastReviewed": "Son inceleme 2026-05-14. Düzenlemenin yürürlüğe girmesi 2026-08-02 tarihinde başlar.",
+    "intro": "Bu sayfada TaskNebula'nın belgelenmiş yapay zeka özellikleri ve varsayılan yapılandırması açıklanmaktadır. Gerçek modeller, veri işleme, saklama ve inceleme kontrolleri çalışma alanına ve dağıtıma göre değişiklik gösterebilir; etkin ayarları yöneticinizle onaylayın. Şeffaflık bildirimi sürümü <version></version>.",
+    "lastReviewed": "Son inceleme tarihi: 2026-08-12. (AB) 2024/1689 sayılı Yönetmeliğin 50. Maddesi 02.08.2026 tarihinden itibaren geçerlidir.",
     "onThisPage": "Bu sayfada",
     "model": "Model",
     "provider": "Sağlayıcı",
@@ -6778,7 +6670,53 @@
     "footerContact": "AI şeffaflığı, veri sahibi hakları veya bu model kartları hakkında sorularınız mı var? <link></link> adresine e-posta gönderin.",
     "meta": {
       "title": "AI Model Kartları — TaskNebula",
-      "description": "TaskNebula’nın son kullanıcılara sunduğu her AI özelliği için, AB AI Act Madde 50 kapsamında gereken herkese açık AI şeffaflık açıklamaları."
+      "description": "Amaç, yapılandırılmış varsayılanlar, veri işleme ve inceleme kontrolleri dahil olmak üzere TaskNebula AI özelliklerine ilişkin ürün şeffaflığı bilgileri."
+    },
+    "dataSent": "Kullanılan veriler",
+    "retention": "Veri işleme ve saklama",
+    "features": {
+      "draft": {
+        "name": "Proje çalışma öğesi taslağı",
+        "summary": "Serbest metin isteminden düzenlenebilir sayı taslakları oluşturur.",
+        "purpose": "Bir kişinin kaba bir fikri veya raporu, oluşturulmadan önce düzenlenebilir durumda kalan yapılandırılmış konu taslaklarına dönüştürmesine yardımcı olur.",
+        "dataSent": "Taslağı hazırlamak için kullanılan bilgi istemi, proje adı ve mevcut sorun türleri ve öncelikler.",
+        "retention": "TaskNebula şu anda ilgili aracı tarafından çalıştırılan kayıtlar için otomatik süre sonunu zorunlu kılmamaktadır. Sağlayıcı tarafında elde tutma, etkin sağlayıcıya bağlıdır."
+      },
+      "assist": {
+        "name": "Proje çalışma öğesi asistanı",
+        "summary": "Bir sorunu özetler, yeniden yazar, sonraki adımları önerir veya etiket önerir.",
+        "purpose": "Önerinin uygulanmasını açık tutarken kişinin sorun içeriğini iyileştirmesine yardımcı olur.",
+        "dataSent": "Sorun başlığı ve açıklamasının yanı sıra seçilen eylemin gerektirdiği etiketler veya son yorumlar.",
+        "retention": "TaskNebula şu anda ilgili aracı tarafından çalıştırılan kayıtlar için otomatik süre sonunu zorunlu kılmamaktadır. Sağlayıcı tarafında elde tutma, etkin sağlayıcıya bağlıdır."
+      },
+      "triage": {
+        "name": "İş Listesi Triyajı",
+        "summary": "Uygun biriktirme listesi sorunları için sınırlı öncelik ve etiket değişiklikleri önerir.",
+        "purpose": "Bir insan tetikleyicisinin birikmiş yığınları gruplar halinde incelemesine yardımcı olur; onay geçişli çalıştırmalar önizleme olarak kalır.",
+        "dataSent": "Sınırlı planlama bağlamına dahil edilen biriktirme listesi sorun anahtarları, başlıklar, açıklamalar, öncelikler, etiketler ve son tarihler.",
+        "retention": "TaskNebula şu anda ilgili aracı tarafından çalıştırılan kayıtlar için otomatik süre sonunu zorunlu kılmamaktadır. Sağlayıcı tarafında elde tutma, etkin sağlayıcıya bağlıdır."
+      },
+      "ask": {
+        "name": "AI yan panel Soru ve Cevap",
+        "summary": "Mevcut istek için alınan organizasyon veya proje sorunlarından ve belgelerden gelen soruları yanıtlar.",
+        "purpose": "Arayanın erişebileceği TaskNebula bağlamdan salt okunur, alıntı yapılan yanıtlar sağlar.",
+        "dataSent": "Seçilen kuruluş ve isteğe bağlı proje için alınan soru ve sınırlı sorun veya belge parçacıkları.",
+        "retention": "Konuşma durumu, geçerli sayfa oturumu için tarayıcı belleğinde tutulur ve sürdürülemez. Sağlayıcı tarafında elde tutma, etkin sağlayıcıya bağlıdır."
+      },
+      "summary": {
+        "name": "Özet Oluşturma",
+        "summary": "Özelliğin mevcut olduğu durumlarda isteğe bağlı özetler üretir.",
+        "purpose": "Bir kişinin seçilen TaskNebula içeriğini kaynak materyali değiştirmeden taramasına yardımcı olur.",
+        "dataSent": "Özetleme için açıkça seçilen içerik ve isteğin gerektirdiği kapsam meta verileri.",
+        "retention": "Şu anda özelliğe özel otomatik süre sonu uygulanmamaktadır. Sağlayıcı tarafında elde tutma, etkin sağlayıcıya bağlıdır."
+      },
+      "embedding": {
+        "name": "Anlamsal arama vektör gösterimleri",
+        "summary": "Yapılandırılmış anlamsal arama indeksleme için vektör yerleştirmeleri oluşturur.",
+        "purpose": "Seçilen kaynak metni bir arama vektörü olarak temsil ederek erişimi iyileştirir.",
+        "dataSent": "Yerleştirme işini işlemek ve depolamak için seçilen kaynak metin ve tanımlayıcılar.",
+        "retention": "Sorun, yorum ve proje yerleştirmeleri basamak bağlantılı referansları kullanır. Operatörler, etkinleştirilmiş her içerik türü ve sağlayıcı için temizleme işlemini doğrulamalıdır."
+      }
     }
   },
   "presence": {

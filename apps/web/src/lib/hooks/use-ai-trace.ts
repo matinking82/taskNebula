@@ -9,7 +9,7 @@
  * arrive in the response body) the operationId is optional — callers can pass
  * the data directly to <AiBadge> and skip this hook entirely.
  *
- * Required by EU AI Act Article 50 (2026-08-02) transparency obligations.
+ * Product provenance metadata for supported AI-generated output.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -18,7 +18,7 @@ export interface AiTrace {
   operationId: string;
   /** The display feature name, e.g. "Draft Issue", "Triage Suggestion". */
   feature: string;
-  /** The model identifier surfaced to the user, e.g. "Claude Sonnet 4.7". */
+  /** The model identifier surfaced to the user, e.g. "claude-sonnet-4-6". */
   model: string;
   /** Provider, e.g. "anthropic" | "openai". */
   provider?: string;

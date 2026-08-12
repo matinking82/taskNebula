@@ -16,7 +16,7 @@ be committed, quoted in public issues/PRs, or copied into tracked source.
 > Never hardcode user-facing strings — route every one through `next-intl` and
 > add the key to all 30 catalogs in `apps/web/messages/*.json` (key parity:
 > `node scripts/i18n-check.mjs`). See `.claude/rules/frontend.md` and
-> `.cursor/rules/i18n.mdc`. Applies to all assistants (Claude/Cursor/Codex).
+> `.cursor/rules/i18n.mdc`. Applies to all assistants (Claude/Cursor/Codex/Copilot).
 
 Per-package guides (each `CLAUDE.md` has a sibling `AGENTS.md` pointer):
 

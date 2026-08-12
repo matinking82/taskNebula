@@ -6,11 +6,11 @@ The TaskNebula team and the Neura Parse organization take security seriously. We
 
 TaskNebula follows semantic versioning. Security fixes are backported to the **two most recent minor releases** on the active major line.
 
-| Version       | Supported          |
-| ------------- | ------------------ |
-| 0.2.x (latest) | :white_check_mark: |
-| 0.1.x (prior)  | :white_check_mark: |
-| < 0.1.0        | :x:                |
+| Release line                                                                   | Support                      |
+| ------------------------------------------------------------------------------ | ---------------------------- |
+| Latest minor on the active major (see root `package.json` and GitHub releases) | Supported                    |
+| Immediately preceding minor on the active major                                | Security fixes when feasible |
+| Older minors and unsupported major lines                                       | Not supported                |
 
 Older releases will not receive patches. We strongly recommend running the latest minor release.
 
@@ -25,26 +25,20 @@ Send a detailed report to **security@neuraparse.com**. Include:
 - Proof-of-concept code or screenshots if available.
 - Your name and contact information (optional, used for credit if you wish).
 
-If you prefer encrypted communication, our PGP key is published below. The fingerprint is also available on `keys.openpgp.org` once we publish a permanent key.
-
-```
------BEGIN PGP PUBLIC KEY BLOCK-----
-(Placeholder — production PGP key will be published before v1.0.0.
- Until then, please use TLS-encrypted email or request a key over a
- verified channel.)
------END PGP PUBLIC KEY BLOCK-----
-```
+If encrypted communication is required, ask for a current key through the
+security address before sending sensitive reproduction material. The
+repository does not publish a placeholder key.
 
 ## Our Commitments (SLA)
 
 When you report a vulnerability to us, we commit to the following targets:
 
-| Stage              | Target                                   |
-| ------------------ | ---------------------------------------- |
-| Acknowledgement    | Within **72 hours** of receipt           |
-| Triage & severity  | Within **5 business days**               |
-| Status updates     | Every **7 days** until resolved          |
-| Coordinated fix    | Aim for **90 days** from triage          |
+| Stage             | Target                          |
+| ----------------- | ------------------------------- |
+| Acknowledgement   | Within **72 hours** of receipt  |
+| Triage & severity | Within **5 business days**      |
+| Status updates    | Every **7 days** until resolved |
+| Coordinated fix   | Aim for **90 days** from triage |
 
 We follow [coordinated disclosure](https://www.cisa.gov/coordinated-vulnerability-disclosure-process): we ask that you give us a reasonable opportunity to remediate before any public disclosure. If the issue is actively being exploited in the wild, we may accelerate the timeline and publish guidance immediately.
 

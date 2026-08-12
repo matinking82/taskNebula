@@ -3,7 +3,6 @@ import { getTranslations } from 'next-intl/server';
 import webPackage from '../../package.json';
 import { HeroShowcase } from '@/components/landing/product-showcase';
 import { AiMcpSection } from '@/components/marketing/ai-mcp-section';
-import { Comparison } from '@/components/marketing/comparison';
 import { Faq } from '@/components/marketing/faq';
 import { FinalCta } from '@/components/marketing/final-cta';
 import { Hero } from '@/components/marketing/hero';
@@ -86,7 +85,6 @@ export default async function HomePage() {
         <HeroShowcase />
         <AiMcpSection />
         <SelfHost />
-        <Comparison />
         <Faq />
         <FinalCta />
       </main>

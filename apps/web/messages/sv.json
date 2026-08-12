@@ -4204,19 +4204,19 @@
       "generatedWithAi": "Genererad med AI",
       "ariaLabel": "AI-genererat innehåll. {detail}",
       "tooltipTitle": "AI-genererad utdata",
-      "disclosure": "Upplysning enligt EU:s AI-förordning artikel 50. Se <link>modellkort</link>."
+      "disclosure": "AI-transparensinformation. Se <link>AI-modellkort</link>."
     },
     "disclosure": {
       "title": "Du är på väg att interagera med AI",
       "description": "Vissa TaskNebula-funktioner använder AI-modeller från tredje part för att generera text, förslag och sammanfattningar. Läs vad det innebär för dig innan du fortsätter.",
       "whatRunsTitle": "Vad som körs i din arbetsyta",
-      "rightsTitle": "Dina rättigheter",
-      "rightLabelled": "Varje AI-utdata märks <label>Genererad med AI</label>.",
-      "rightReview": "Du kan granska och avvisa varje AI-förslag innan det tillämpas.",
-      "rightDisable": "Arbetsyteadministratörer kan inaktivera vilken AI-funktion som helst i Inställningar → AI-transparens.",
-      "rightRetention": "In-/utdata behålls enligt modellkortets lagringspolicy och säljs aldrig.",
+      "rightsTitle": "Vad du kan förvänta dig",
+      "rightLabelled": "I TaskNebula bär stödd användarvänd AI-genererad utdata etiketten <label>Genererad med AI</label>.",
+      "rightReview": "Godkännande-styrda skrivåtgärder förblir i förhandsgranskning tills en auktoriserad människa godkänner dem.",
+      "rightDisable": "Workspace-administratörer kan hantera AI-funktioner som stöds i Inställningar → AI Transparency.",
+      "rightRetention": "Modellkort beskriver dokumenterad datahantering och lagring; aktiv leverantör och distributionsinställningar kan variera.",
       "modelCardsLine": "Läs de <link>fullständiga modellkorten</link> för varje funktion, inklusive modellidentitet, data som skickas och lagring.",
-      "versionLine": "Upplysningsversion {version}. Krävs enligt EU:s AI-förordning artikel 50.",
+      "versionLine": "Transparensmeddelande version {version}.",
       "acknowledge": "Jag förstår, fortsätt"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "AI-transparens",
-      "subtitle": "Obligatoriska upplysningar för varje AI-funktion i den här arbetsytan. Krävs enligt <link>EU:s AI-förordning artikel 50</link> (i kraft 2026-08-02)."
+      "subtitle": "Produkttransparensinformation för AI-funktioner tillgänglig i den här arbetsytan. Se <link>AI-modellkort</link>."
     },
     "oversight": {
       "title": "Hållning för mänsklig tillsyn",
-      "description": "Styr om AI-utdata kan tillämpas automatiskt eller alltid måste granskas av en människa innan de tillämpas på arbetsytedata.",
+      "description": "Styr om stödda skrivkapabla AI-åtgärder är kvalificerade för automatisk tillämpning eller förblir i förhandsgranskning för mänsklig granskning.",
       "reviewRequiredLabel": "Granskning krävs (rekommenderas)",
       "autoApplyLabel": "Tillämpa automatiskt",
-      "reviewRequiredDescription": "Varje AI-förslag köas för uttryckligt mänskligt godkännande innan någon arbetsytedata ändras. Triage-förslag förhandsvisas, tillämpas aldrig.",
-      "autoApplyDescription": "Funktioner som stödjer det kan tillämpa AI-utdata med hög tillförlitlighet utan uttrycklig mänsklig granskning. Granskningsloggen registrerar fortfarande varje åtgärd.",
+      "reviewRequiredDescription": "Stödda skrivkapabla AI-åtgärder förblir i förhandsgranskning tills en auktoriserad människa godkänner dem.",
+      "autoApplyDescription": "Åtgärder som stöds är endast kvalificerade för automatisk tillämpning när separata skriv- och godkännandekontroller också tillåter det; annars förblir de i förhandsvisning.",
       "toggleAria": "Växla hållning för mänsklig tillsyn"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Data skickad",
       "retentionLabel": "Lagring",
       "readModelCard": "Läs fullständigt modellkort",
-      "footer": "<strong>{userFacing}</strong> av {total} funktioner är användarvända och måste bära märket <em>Genererad med AI</em> enligt artikel 50."
+      "footer": "<strong>{userFacing}</strong> av {total} dokumenterade funktioner producerar utdata för användarna. I TaskNebula bär AI-genererad utdata etiketten <em>Genererad med AI</em>."
     },
     "import": {
       "metaTitle": "Importera ärenden · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Stäng navigeringsmenyn",
         "items": {
           "features": "Funktioner",
-          "compare": "Jämför",
           "selfHost": "Självhosta",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Eller självhosta med två kommandon",
         "quickstartAria": "Snabbstartskommandon för självhosting",
         "copyQuickstart": "Kopiera snabbstart för självhosting",
-        "selfHostMeta": "Gratis för alltid som självhostad · Tre containrar: Postgres, Redis, en webbimage",
+        "selfHostMeta": "Gratis för alltid vid självhosting · En liten Compose-stack med Postgres, Redis, webb och valfria tjänster",
         "demoPill": "Interaktiv demo nedan",
         "chips": {
           "cmdk": "Cmd+K överallt",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Funktioner",
-          "compare": "Jämför",
           "selfHost": "Självhosta",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI-specifikation",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "Ett kommando startar en liten Compose-stack. Kärndata ligger i Postgres, export är bara en pg_dump bort och som standard skickas inget ut — utan leverantörslåsning.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Självhosting är standardvägen. Med Docker startar du en liten Compose-stack med Postgres 16 och pgvector, Redis 7, webb-imagen neuraparse/tasknebula och de medföljande eller valfria tjänster du aktiverar. Migreringar körs vid start, GET /api/health är kontroll-endpointen och snabbstarten öppnas på localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Kärntrackern — ärenden, tavlor, sprintar, dokument, sökning, REST API och OpenAPI-specifikation — kan självhostas. OAuth-inloggning behöver fortfarande en databasadapter, så använd inloggning med användaruppgifter tills vidare. Realtidssamarbete är kopplat via Docker/Compose, men driftsättningen behöver fortfarande en nåbar URL och ett verkligt smoke-test. AI och MCP är fortsatt preview. Vi följer luckorna i docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Tillbaka till TaskNebula",
-    "disclosureBadge": "Informationskrav enligt EU AI Act artikel 50",
+    "disclosureBadge": "AI-transparensinformation",
     "title": "AI-modellkort",
-    "intro": "TaskNebula tillhandahåller följande AI-funktioner till slutanvändare. För var och en publicerar vi avsett syfte, modellidentitet, data som skickas vid varje anrop, lagringspolicy och vår standardinställning för mänsklig tillsyn. Den här sidan är ett offentligt transparensregister och gäller alla TaskNebula-driftsättningar. Informationsversion <version></version>.",
-    "lastReviewed": "Senast granskad 2026-05-14. Regleringens tillämpning börjar 2026-08-02.",
+    "intro": "Den här sidan beskriver TaskNebulas dokumenterade AI-funktioner och standardkonfiguration. Faktiska modeller, datahantering, lagring och granskningskontroller kan variera beroende på arbetsyta och distribution; bekräfta de aktiva inställningarna med din administratör. Transparensmeddelande version <version></version>.",
+    "lastReviewed": "Senast granskad 2026-08-12. Artikel 50 i förordning (EU) 2024/1689 gäller från 2026-08-02.",
     "onThisPage": "På den här sidan",
     "model": "Modell",
     "provider": "Leverantör",
@@ -6778,7 +6670,53 @@
     "footerContact": "Frågor om AI-transparens, registrerades rättigheter eller dessa modellkort? Mejla <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Produkttransparensinformation för TaskNebula AI-funktioner, inklusive syfte, konfigurerade standardinställningar, datahantering och granskningskontroller."
+    },
+    "dataSent": "Data som används",
+    "retention": "Datahantering och lagring",
+    "features": {
+      "draft": {
+        "name": "Utkast till projektarbetsobjekt",
+        "summary": "Skapar redigerbara problemutkast från en fritextprompt.",
+        "purpose": "Hjälper en person att omvandla en grov idé eller rapport till strukturerade problemutkast som förblir redigerbara innan de skapas.",
+        "dataSent": "Uppmaningen, projektnamnet och tillgängliga problemtyper och prioriteringar som används för att förbereda utkastet.",
+        "retention": "TaskNebula framtvingar för närvarande inte automatiskt upphörande för relaterade agentkörda poster. Bibehållande på leverantörssidan beror på den aktiva leverantören."
+      },
+      "assist": {
+        "name": "Projektarbetsartikelassistent",
+        "summary": "Sammanfattar, skriver om, föreslår nästa steg eller föreslår etiketter för ett problem.",
+        "purpose": "Hjälper en person att förbättra probleminnehållet samtidigt som förslaget tillämpas tydligt.",
+        "dataSent": "Problemtiteln och beskrivningen plus etiketterna eller de senaste kommentarerna som krävs för den valda åtgärden.",
+        "retention": "TaskNebula framtvingar för närvarande inte automatiskt upphörande för relaterade agentkörda poster. Bibehållande på leverantörssidan beror på den aktiva leverantören."
+      },
+      "triage": {
+        "name": "Backlog Triage",
+        "summary": "Föreslår begränsade prioritets- och etikettändringar för kvalificerade eftersläpningsproblem.",
+        "purpose": "Hjälper en mänsklig triager att granska en eftersläpning i partier; godkännandekontrollerade körningar förblir förhandsvisningar.",
+        "dataSent": "Eftersläpningsnycklar, titlar, beskrivningar, prioriteringar, etiketter och förfallodatum inkluderade i det avgränsade planeringssammanhanget.",
+        "retention": "TaskNebula framtvingar för närvarande inte automatiskt upphörande för relaterade agentkörda poster. Bibehållande på leverantörssidan beror på den aktiva leverantören."
+      },
+      "ask": {
+        "name": "AI sidopanel Q och A",
+        "summary": "Svarar på frågor från organisations- eller projektfrågor och dokument som hämtas för den aktuella förfrågan.",
+        "purpose": "Ger skrivskyddade, citerade svar från TaskNebula sammanhang tillgängliga för den som ringer.",
+        "dataSent": "Frågan och det avgränsade problemet eller dokumentutdragen hämtade för den valda organisationen och det valfria projektet.",
+        "retention": "Konversationsstatus hålls i webbläsarens minne för den aktuella sidsessionen och kan inte återupptas. Bibehållande på leverantörssidan beror på den aktiva leverantören."
+      },
+      "summary": {
+        "name": "Sammanfattningsgenerering",
+        "summary": "Ger sammanfattningar på begäran där funktionen är tillgänglig.",
+        "purpose": "Hjälper en person att skanna valt TaskNebula innehåll utan att ersätta källmaterialet.",
+        "dataSent": "Innehållet som uttryckligen valts för sammanfattning och omfattningsmetadata som krävs av begäran.",
+        "retention": "Ingen funktionsspecifik automatisk utgång tillämpas för närvarande. Bibehållande på leverantörssidan beror på den aktiva leverantören."
+      },
+      "embedding": {
+        "name": "Semantisk sökning vektor representationer",
+        "summary": "Skapar vektorinbäddningar för konfigurerad semantisk sökningsindexering.",
+        "purpose": "Förbättrar hämtning genom att representera vald källtext som en sökvektor.",
+        "dataSent": "Vald källtext och de identifierare som krävs för att bearbeta och lagra inbäddningsjobbet.",
+        "retention": "Inbäddningar av problem, kommentarer och projekt använder kaskadlänkade referenser. Operatörer måste verifiera rensningen för varje aktiverad innehållstyp och leverantör."
+      }
     }
   },
   "presence": {

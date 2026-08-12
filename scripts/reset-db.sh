@@ -63,11 +63,9 @@ fi
 # Run migrations
 echo ""
 echo "🗄️  Running migrations..."
-pnpm db:generate
 pnpm db:migrate
 
 echo ""
 echo "✅ Database reset complete!"
 echo ""
 echo "🚀 You can now start the development server with 'pnpm dev'"
-

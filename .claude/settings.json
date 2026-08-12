@@ -10,7 +10,6 @@
       "Bash(pnpm test:*)",
       "Bash(pnpm format:*)",
       "Bash(pnpm run:*)",
-      "Bash(pnpm db:generate:*)",
       "Bash(pnpm db:migrate:*)",
       "Bash(pnpm db:studio:*)",
       "Bash(pnpm tests:e2e:*)",

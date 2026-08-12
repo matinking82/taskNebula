@@ -46,7 +46,7 @@ export interface NotificationFilterBarProps {
   isRefreshing?: boolean;
   markAllDisabled?: boolean;
 
-  // v0.2.7 — optional search + sort + results-counter integration. Callers
+  // Optional search + sort + results-counter integration. Callers
   // that haven't wired these up yet continue to work; the bar simply omits
   // the search box / counter / sort dropdown when the props are missing.
   search?: string;

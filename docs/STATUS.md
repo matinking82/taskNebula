@@ -1,50 +1,107 @@
-# TaskNebula — Project Status
+# TaskNebula project status
 
-**Last updated:** 2026-07-27 · **Version:** 0.14.0 · **Status:** Beta, self-hostable (Docker Hub `neuraparse/tasknebula`)
+**Verified:** 2026-08-12 · **Version:** 0.14.0 · **Lifecycle:** beta,
+self-hostable
 
-> This is a short, honest snapshot. For the full picture use:
->
-> - **`docs/AUDIT_2026-06.md`** — the June 2026 full-codebase audit (28 domain auditors + adversarial critic): every known gap with file/line evidence.
-> - **`docs/ROADMAP_2026.md`** — per-item status of the 2026 plan (#1–27) and the H2-2026 extension (#28–50).
-> - **`CHANGELOG.md`** — what shipped, release by release.
+This is the only live capability snapshot. Future work belongs in
+[`ROADMAP_2026.md`](ROADMAP_2026.md); released history belongs in
+[`../CHANGELOG.md`](../CHANGELOG.md).
 
-## By the numbers (at v0.14.0, current tree)
+## Checked tree inventory
 
-| Metric                                         | Value                                                                                                             |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| API routes (`apps/web/src/app/api`)            | 280 route handlers                                                                                                |
-| Database tables (Drizzle, Postgres + pgvector) | 115 across 55 schema files                                                                                        |
-| Migrations                                     | 54 (`packages/db/drizzle/`)                                                                                       |
-| Jest                                           | Web: 273 suites / 1,673 passed + 1 skipped; MCP: 45 passed                                                        |
-| Playwright e2e                                 | 8 specs; authenticated Chromium flow plus a 42-case public desktop/mobile light/dark matrix are covered           |
-| CI                                             | Minimal workflow in `.github/workflows/ci.yml`; still verify locally: `pnpm type-check && pnpm lint && pnpm test` |
+The values below are a dated inventory, not agent instructions:
 
-## What genuinely works
+| Surface                                    | 2026-08-12 tree |
+| ------------------------------------------ | --------------: |
+| Next.js API `route.ts` files               |             280 |
+| Drizzle `pgTable` definitions              |             115 |
+| Schema files excluding the re-export index |              54 |
+| Journaled SQL migrations                   |              61 |
+| Web Jest test files                        |             277 |
+| Playwright spec files                      |               8 |
+| Locale catalogs                            |              30 |
 
-- **Core PM**: issues (CRUD, links, subtasks, custom fields, attachments), projects, sprints with auto-rollover, kanban, backlog, time tracking, initiatives, intake forms, importers (Linear is the deepest).
-- **Structural layer (new in 0.3.x)**: first-class **labels**, **project versions/releases**, **components**, and an **issue resolution model** (`resolution`/`resolvedAt`/`flagged`) — schema + REST APIs via migration 0054; UI is still minimal.
-- **AI (real, not mocked)**: draft-with-AI, issue assist, triage, Ask RAG with citations (`/api/ask`), standup/janitor cron agents, agent-as-assignee (Linear Agent Protocol), per-org cost guard, OpenAI + Anthropic BYOK.
-- **Realtime**: SSE live updates, presence, Yjs/Hocuspocus collaborative issue descriptions (Docker env wiring and the Hocuspocus runtime are covered; hosted WebSocket/device smoke still remains).
-- **Enterprise scaffolding**: SAML SSO + SCIM, audit logs + SIEM sinks, trust center, EU AI Act disclosures, permission/security scheme admin UIs.
-- **Chat & calls**: project-scoped chat with threads (API), LiveKit audio calls.
-- **Analytics**: burndown, velocity, project health, time-in-status, CSV/JSON export (parts of the modern chart suite exist but are unmounted).
+## Working product areas
 
-## Known broken seams (the honest list)
+- Core project management: organization/project membership, issues, comments,
+  links, subtasks, custom fields, attachments, boards, backlog, sprints,
+  initiatives, intake, time tracking, releases/versions, components, labels,
+  resolution, imports, and analytics surfaces.
+- Realtime: organization-scoped SSE with Redis fan-out when configured;
+  Tiptap/Yjs collaboration through Hocuspocus with Postgres persistence and
+  Redis scale-out.
+- AI/provider foundations: OpenAI and Anthropic project-agent adapters, BYOK
+  credential resolution, cost audit/guard on covered paths, Ask workspace RAG,
+  triage/planning, standup/janitor jobs, and coding-agent session integrations.
+- Ask grounding: one canonical `[TN-…]` / `[DOC-…]` citation grammar, unresolved
+  marker reporting, SSE source/citation events, and Sidecar citation links.
+- Agent safety foundation: approval-gated project mutations fail closed to
+  preview; local Claude/Codex subprocesses receive an allowlisted environment;
+  a typed bounded graph/research topology has focused tests.
+- Enterprise scaffolding: SAML/SCIM, audit/SIEM, trust and AI transparency
+  surfaces, permission/security scheme configuration.
+- CI: MCP build, i18n parity, public-repository hygiene, UI contract,
+  type-check, lint, and tests run on pushes and pull requests to `main`.
 
-Per the audit's executive summary — these are real, current, and being worked down:
+## Important limitations
 
-1. **Tenant isolation**: RLS does not exist (app-level WHERE clauses only); ~20 API surfaces skipped even those. The cross-tenant route holes, org-scoped issue-key uniqueness, and the migration-journal ordering bug are fixed in the current change-set; RLS itself is roadmap #37.
-2. **Last-mile wiring**: Cmd+K search and the `/api/search` route are wired; the Ask sidecar now consumes `/api/ask` SSE and embeddings have a cron drain endpoint, while API-key/MCP authentication lacks a full live end-to-end check, Build mode remains a deliberate stub, and chat attachment downloads are incomplete.
-3. **Enforcement gaps**: workflow transitions stored but never enforced; permission/security schemes configurable but enforced nowhere; feature flags gate nothing.
-4. **Notifications**: mentions/watchers notify no one; core events are email-only; digests/push never send.
-5. **Scale**: core list endpoints unpaginated; no board/list virtualization. (The in-process event bus that broke at >1 web replica is **fixed in the current change-set** — the realtime SSE bus now fans out over Redis pub/sub with an in-process fallback.)
-6. **Ops**: `pnpm db:generate` remains broken (snapshots frozen at 0012); DB integration coverage is still sparse, and external OAuth/AI/LiveKit credentials are required for full provider-flow verification.
+### Trust and enforcement
 
-## Where to contribute
+1. PostgreSQL RLS is not implemented. Tenant isolation depends on explicit
+   organization filters and authorization in application code.
+2. Workflow transitions, validators, conditions, roles, approvals, targets,
+   and post-actions are persisted but are not consistently enforced by one service across issue
+   PATCH, board drag, bulk operations, automations, and agent webhooks.
+3. Project-agent approval is containment, not a complete queue: guarded runs
+   now make zero writes, but proposed effects are not yet persisted and resumed
+   through an atomic exactly-once approval/apply worker.
+4. Existing generic approval endpoints and webhook/session state paths still
+   need compare-and-swap/idempotency hardening.
 
-Highest-leverage areas (see `docs/AUDIT_2026-06.md` §4 "Quick Wins" — most are <1 day):
-closing the remaining cross-tenant guards, mounting orphaned finished UI (analytics bento,
-time-tracking panel, settings pages), wiring the embedding worker, and API-key auth (roadmap #39 —
-un-breaks the MCP server).
+### Agent and research maturity
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md). Historical status documents live in `docs/archive/`.
+1. The tested graph runtime is a library foundation. Current project agents do
+   not persist node checkpoints or resume through a leased worker.
+2. Ask is scoped workspace RAG, not deep research. It has no web crawler,
+   durable activity history, source snapshots/claim tables, parallel durable
+   fan-out, or mid-run refine/interrupt product flow.
+3. Current project-agent bulk writes need transactional/idempotent effect
+   handling. Ask and project-plan providers now have finite timeouts and request
+   cancellation, but retry policy and global budget/cancellation coverage are
+   not yet uniform across every AI path.
+4. Coding-agent local execution still runs from the web request process; a
+   restart can lose active work even though its secret environment is now
+   constrained.
+
+See [`AGENT_RUNTIME.md`](AGENT_RUNTIME.md) for the exact maturity matrix and
+definition of a production engine.
+
+### Product and operations seams
+
+- OAuth providers are registered without the complete database-adapter/user
+  lifecycle needed for production organization access.
+- MCP tooling is present but package publication and end-to-end API-key route
+  authentication remain incomplete.
+- Some configurable permission/security/feature controls are not enforced by
+  all consumers.
+- Notifications, pagination/virtualization, mounted analytics, import depth,
+  and full external-provider/device smoke coverage remain uneven.
+- The pgvector Ask leg is intentionally dormant until an organization-safe
+  embedder is supplied; lexical retrieval remains the active path.
+- Database and Hocuspocus integration coverage is much thinner than web unit
+  coverage.
+
+## Current priority
+
+The next release work should converge existing paths rather than add another
+parallel agent or workflow surface:
+
+1. atomic workflow-transition service;
+2. durable agent run/step/checkpoint/event/effect storage and leased worker;
+3. exactly-once approval/apply and idempotent bulk effects;
+4. tenant/auth hardening and cross-organization negative tests;
+5. source/claim provenance plus replayable research progress;
+6. budget, timeout, cancellation, trace, and recovery coverage on every AI path.
+
+The ordered plan and definitions of done are in
+[`ROADMAP_2026.md`](ROADMAP_2026.md).

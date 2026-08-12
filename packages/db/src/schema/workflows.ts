@@ -1,4 +1,13 @@
-import { pgTable, text, timestamp, jsonb, varchar, boolean, integer, pgEnum } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  text,
+  timestamp,
+  jsonb,
+  varchar,
+  boolean,
+  integer,
+  pgEnum,
+} from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
 import { organizations } from './organizations';
 import { users } from './users';
@@ -15,21 +24,33 @@ export const workflowStatusCategoryEnum = pgEnum('workflow_status_category', [
 
 // Workflows table
 export const workflows = pgTable('workflows', {
-  id: text('id').$defaultFn(() => createId()).primaryKey(),
-  organizationId: text('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  id: text('id')
+    .$defaultFn(() => createId())
+    .primaryKey(),
+  organizationId: text('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
   isDefault: boolean('is_default').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  createdBy: text('created_by').notNull().references(() => users.id),
-  updatedBy: text('updated_by').notNull().references(() => users.id),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => users.id),
+  updatedBy: text('updated_by')
+    .notNull()
+    .references(() => users.id),
 });
 
 // Workflow Statuses table
 export const workflowStatuses = pgTable('workflow_statuses', {
-  id: text('id').$defaultFn(() => createId()).primaryKey(),
-  workflowId: text('workflow_id').notNull().references(() => workflows.id, { onDelete: 'cascade' }),
+  id: text('id')
+    .$defaultFn(() => createId())
+    .primaryKey(),
+  workflowId: text('workflow_id')
+    .notNull()
+    .references(() => workflows.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 100 }).notNull(),
   category: workflowStatusCategoryEnum('category').notNull(),
   color: varchar('color', { length: 20 }).notNull(),
@@ -40,11 +61,34 @@ export const workflowStatuses = pgTable('workflow_statuses', {
 
 // Workflow Transitions table
 export const workflowTransitions = pgTable('workflow_transitions', {
-  id: text('id').$defaultFn(() => createId()).primaryKey(),
-  workflowId: text('workflow_id').notNull().references(() => workflows.id, { onDelete: 'cascade' }),
+  id: text('id')
+    .$defaultFn(() => createId())
+    .primaryKey(),
+  workflowId: text('workflow_id')
+    .notNull()
+    .references(() => workflows.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
-  fromStatusId: text('from_status_id').notNull().references(() => workflowStatuses.id, { onDelete: 'cascade' }),
-  toStatusId: text('to_status_id').notNull().references(() => workflowStatuses.id, { onDelete: 'cascade' }),
+  fromStatusId: text('from_status_id')
+    .notNull()
+    .references(() => workflowStatuses.id, { onDelete: 'cascade' }),
+  toStatusId: text('to_status_id')
+    .notNull()
+    .references(() => workflowStatuses.id, { onDelete: 'cascade' }),
+  allowedRoles: jsonb('allowed_roles')
+    .$type<Array<'admin' | 'member' | 'guest'>>()
+    .notNull()
+    .default(['admin', 'member']),
+  requiresApproval: boolean('requires_approval').notNull().default(false),
+  approverRoles: jsonb('approver_roles')
+    .$type<Array<'admin' | 'member'>>()
+    .notNull()
+    .default(['admin']),
+  approvedTargetStatusId: text('approved_target_status_id').references(() => workflowStatuses.id, {
+    onDelete: 'set null',
+  }),
+  rejectedTargetStatusId: text('rejected_target_status_id').references(() => workflowStatuses.id, {
+    onDelete: 'set null',
+  }),
   conditions: jsonb('conditions').default('[]'),
   validators: jsonb('validators').default('[]'),
   postActions: jsonb('post_actions').default('[]'),
@@ -54,8 +98,12 @@ export const workflowTransitions = pgTable('workflow_transitions', {
 
 // Automation Rules table
 export const automationRules = pgTable('automation_rules', {
-  id: text('id').$defaultFn(() => createId()).primaryKey(),
-  organizationId: text('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  id: text('id')
+    .$defaultFn(() => createId())
+    .primaryKey(),
+  organizationId: text('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
   projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
@@ -65,7 +113,10 @@ export const automationRules = pgTable('automation_rules', {
   actions: jsonb('actions').notNull().default('[]'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-  createdBy: text('created_by').notNull().references(() => users.id),
-  updatedBy: text('updated_by').notNull().references(() => users.id),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => users.id),
+  updatedBy: text('updated_by')
+    .notNull()
+    .references(() => users.id),
 });
-

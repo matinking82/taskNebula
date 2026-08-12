@@ -1,7 +1,4 @@
-import {
-  AgentExecutionError,
-  generateAgentPlan,
-} from '@/lib/agents/providers';
+import { AgentExecutionError, generateAgentPlan } from '@/lib/agents/providers';
 import {
   normalizeProjectAgentSettings,
   normalizeWorkspaceAgentSettings,
@@ -209,6 +206,60 @@ describe('agent providers', () => {
     ).rejects.toMatchObject({
       code: 'provider_rate_limited',
       statusCode: 429,
+    } satisfies Partial<AgentExecutionError>);
+  });
+
+  it('bounds an OpenAI request that never returns headers', async () => {
+    process.env.OPENAI_API_KEY = 'test-key';
+    global.fetch = jest.fn((_url, init) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          'abort',
+          () => reject(init.signal?.reason ?? new Error('aborted')),
+          { once: true }
+        );
+      });
+    }) as typeof fetch;
+
+    await expect(
+      generateAgentPlan({
+        kind: 'project_tracking',
+        model: 'gpt-5',
+        effectiveSettings: buildEffectiveSettings(),
+        context,
+        providerTimeoutMs: 10,
+      })
+    ).rejects.toMatchObject({
+      code: 'provider_timeout',
+      statusCode: 504,
+    } satisfies Partial<AgentExecutionError>);
+  });
+
+  it('propagates caller cancellation into the OpenAI transport', async () => {
+    process.env.OPENAI_API_KEY = 'test-key';
+    const controller = new AbortController();
+    global.fetch = jest.fn((_url, init) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          'abort',
+          () => reject(init.signal?.reason ?? new Error('aborted')),
+          { once: true }
+        );
+        controller.abort(new Error('client disconnected'));
+      });
+    }) as typeof fetch;
+
+    await expect(
+      generateAgentPlan({
+        kind: 'project_tracking',
+        model: 'gpt-5',
+        effectiveSettings: buildEffectiveSettings(),
+        context,
+        signal: controller.signal,
+      })
+    ).rejects.toMatchObject({
+      code: 'provider_cancelled',
+      statusCode: 408,
     } satisfies Partial<AgentExecutionError>);
   });
 });

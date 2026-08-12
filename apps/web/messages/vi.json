@@ -4138,19 +4138,19 @@
       "generatedWithAi": "Được tạo bằng AI",
       "ariaLabel": "Nội dung do AI tạo. {detail}",
       "tooltipTitle": "Đầu ra do AI tạo",
-      "disclosure": "Công bố theo Điều 50 của Đạo luật AI EU. Xem <link>thẻ mô hình</link>."
+      "disclosure": "Thông tin minh bạch về AI. Xem <link>Thẻ mô hình AI</link>."
     },
     "disclosure": {
       "title": "Bạn sắp tương tác với AI",
       "description": "Một số tính năng của TaskNebula sử dụng các mô hình AI bên thứ ba để tạo văn bản, đề xuất và tóm tắt. Trước khi tiếp tục, vui lòng đọc điều đó có ý nghĩa gì với bạn.",
       "whatRunsTitle": "Điều gì chạy trong không gian làm việc của bạn",
-      "rightsTitle": "Quyền của bạn",
-      "rightLabelled": "Mọi đầu ra AI đều được gắn nhãn <label>Được tạo bằng AI</label>.",
-      "rightReview": "Bạn có thể xem xét và từ chối bất kỳ đề xuất AI nào trước khi nó được áp dụng.",
-      "rightDisable": "Quản trị viên không gian làm việc có thể tắt bất kỳ tính năng AI nào trong Cài đặt → Minh bạch AI.",
-      "rightRetention": "Đầu vào/đầu ra được lưu giữ theo chính sách lưu giữ của thẻ mô hình và không bao giờ được bán.",
+      "rightsTitle": "Những gì bạn có thể mong đợi",
+      "rightLabelled": "Trong TaskNebula, đầu ra do AI tạo ra cho người dùng được hỗ trợ mang nhãn <label>Được tạo bằng AI</label>.",
+      "rightReview": "Các hành động ghi được phê duyệt vẫn ở trạng thái xem trước cho đến khi người được ủy quyền phê duyệt chúng.",
+      "rightDisable": "Quản trị viên Workspace có thể quản lý các tính năng AI được hỗ trợ trong Cài đặt → Tính minh bạch của AI.",
+      "rightRetention": "Thẻ mẫu mô tả việc xử lý và lưu giữ dữ liệu dạng văn bản; cài đặt triển khai và nhà cung cấp đang hoạt động có thể khác nhau.",
       "modelCardsLine": "Đọc <link>các thẻ mô hình đầy đủ</link> cho từng tính năng, bao gồm danh tính mô hình, dữ liệu được gửi và việc lưu giữ.",
-      "versionLine": "Phiên bản công bố {version}. Bắt buộc theo Điều 50 của Đạo luật AI EU.",
+      "versionLine": "Phiên bản thông báo minh bạch {version}.",
       "acknowledge": "Tôi đã hiểu, tiếp tục"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "Minh bạch AI",
-      "subtitle": "Các công bố bắt buộc cho mọi tính năng AI trong không gian làm việc này. Bắt buộc theo <link>Điều 50 của Đạo luật AI EU</link> (có hiệu lực từ 2026-08-02)."
+      "subtitle": "Thông tin minh bạch về sản phẩm dành cho các tính năng AI có sẵn trong không gian làm việc này. Xem <link>Thẻ mô hình AI</link>."
     },
     "oversight": {
       "title": "Tư thế giám sát của con người",
-      "description": "Kiểm soát liệu các đầu ra AI có thể được áp dụng tự động hay phải luôn được con người xem xét trước khi áp dụng vào dữ liệu của không gian làm việc.",
+      "description": "Kiểm soát xem các hành động AI có khả năng ghi được hỗ trợ có đủ điều kiện cho ứng dụng tự động hay vẫn ở dạng xem trước để con người xem xét.",
       "reviewRequiredLabel": "Cần xem xét (khuyến nghị)",
       "autoApplyLabel": "Tự động áp dụng",
-      "reviewRequiredDescription": "Mọi đề xuất AI đều được xếp hàng chờ con người phê duyệt rõ ràng trước khi bất kỳ dữ liệu nào của không gian làm việc bị thay đổi. Các đề xuất phân loại được xem trước, không bao giờ tự áp dụng.",
-      "autoApplyDescription": "Các tính năng hỗ trợ có thể áp dụng các đầu ra AI có độ tin cậy cao mà không cần con người xem xét rõ ràng. Nhật ký kiểm toán vẫn ghi lại mọi thao tác.",
+      "reviewRequiredDescription": "Các hành động AI có khả năng ghi được hỗ trợ vẫn ở trạng thái xem trước cho đến khi người được ủy quyền phê duyệt chúng.",
+      "autoApplyDescription": "Các hành động được hỗ trợ chỉ đủ điều kiện cho ứng dụng tự động khi các biện pháp kiểm soát ghi và phê duyệt riêng biệt cũng cho phép điều đó; nếu không chúng vẫn ở dạng xem trước.",
       "toggleAria": "Bật/tắt tư thế giám sát của con người"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Dữ liệu được gửi",
       "retentionLabel": "Lưu giữ",
       "readModelCard": "Đọc thẻ mô hình đầy đủ",
-      "footer": "<strong>{userFacing}</strong> trên {total} tính năng hướng tới người dùng và phải mang nhãn <em>Được tạo bằng AI</em> theo Điều 50."
+      "footer": "<strong>{userFacing}</strong> trong số {total} tính năng được ghi lại sẽ tạo ra kết quả đầu ra cho người dùng. Trong TaskNebula, đầu ra do AI tạo được hỗ trợ mang nhãn <em>Được tạo bằng AI</em>."
     },
     "import": {
       "metaTitle": "Nhập vấn đề · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Đóng menu điều hướng",
         "items": {
           "features": "Tính năng",
-          "compare": "So sánh",
           "selfHost": "Tự lưu trữ",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Or self-host in two commands",
         "quickstartAria": "Self-host quickstart commands",
         "copyQuickstart": "Copy self-host quickstart",
-        "selfHostMeta": "Free forever self-hosted · Three containers: Postgres, Redis, one web image",
+        "selfHostMeta": "Miễn phí vĩnh viễn khi tự lưu trữ · Stack Compose nhỏ với Postgres, Redis, web và các dịch vụ tùy chọn",
         "demoPill": "Interactive demo below",
         "chips": {
           "cmdk": "Cmd+K everywhere",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Features",
-          "compare": "Compare",
           "selfHost": "Self-host",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI spec",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "Một lệnh khởi chạy stack Compose nhỏ. Dữ liệu cốt lõi nằm trong Postgres, chỉ cần pg_dump để xuất và mặc định không có dữ liệu nào được gửi ra ngoài — không bị khóa vào nhà cung cấp.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Tự lưu trữ là cách triển khai mặc định. Với Docker, bạn khởi chạy stack Compose nhỏ gồm Postgres 16 và pgvector, Redis 7, image web neuraparse/tasknebula cùng các dịch vụ đi kèm hoặc tùy chọn mà bạn bật. Migration chạy khi khởi động, GET /api/health là endpoint kiểm tra và quickstart mở tại localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Trình theo dõi cốt lõi — issue, bảng, sprint, tài liệu, tìm kiếm, REST API và đặc tả OpenAPI — có thể tự lưu trữ. Đăng nhập OAuth vẫn cần bộ điều hợp cơ sở dữ liệu, vì vậy hiện tại hãy dùng xác thực bằng thông tin đăng nhập. Cộng tác thời gian thực đã được nối qua Docker/Compose, nhưng deployment vẫn cần URL có thể truy cập và một smoke test thực tế. AI và MCP vẫn ở trạng thái preview. Chúng tôi theo dõi các khoảng trống trong docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Quay lại TaskNebula",
-    "disclosureBadge": "Công bố theo Điều 50 EU AI Act",
+    "disclosureBadge": "Thông tin minh bạch về AI",
     "title": "Thẻ mô hình AI",
-    "intro": "TaskNebula triển khai các tính năng AI sau đây cho người dùng cuối. Với mỗi tính năng, chúng tôi công bố mục đích sử dụng, danh tính mô hình, dữ liệu được gửi trong mỗi lần gọi, chính sách lưu trữ và lập trường giám sát của con người theo mặc định. Trang này là hồ sơ minh bạch công khai và áp dụng cho mọi triển khai TaskNebula. Phiên bản công bố <version></version>.",
-    "lastReviewed": "Lần rà soát gần nhất 2026-05-14. Quy định bắt đầu được thực thi từ 2026-08-02.",
+    "intro": "Trang này mô tả các tính năng AI và cấu hình mặc định được ghi lại của TaskNebula. Các mô hình thực tế, việc xử lý dữ liệu, lưu giữ và kiểm soát đánh giá có thể khác nhau tùy theo không gian làm việc và hoạt động triển khai; xác nhận cài đặt hiện hoạt với quản trị viên của bạn. Phiên bản thông báo minh bạch <version></version>.",
+    "lastReviewed": "Xem xét lần cuối 2026-08-12. Điều 50 của Quy định (EU) 2024/1689 áp dụng từ ngày 2026-08-02.",
     "onThisPage": "Trên trang này",
     "model": "Mô hình",
     "provider": "Nhà cung cấp",
@@ -6778,7 +6670,53 @@
     "footerContact": "Có câu hỏi về tính minh bạch của AI, quyền của chủ thể dữ liệu hoặc các thẻ mô hình này? Gửi email tới <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Thông tin minh bạch về sản phẩm dành cho các tính năng AI của TaskNebula, bao gồm mục đích, các giá trị mặc định được định cấu hình, xử lý dữ liệu và kiểm soát đánh giá."
+    },
+    "dataSent": "Dữ liệu được sử dụng",
+    "retention": "Xử lý và lưu giữ dữ liệu",
+    "features": {
+      "draft": {
+        "name": "Dự thảo hạng mục công việc của dự án",
+        "summary": "Tạo bản nháp vấn đề có thể chỉnh sửa từ lời nhắc văn bản tự do.",
+        "purpose": "Giúp một người biến ý tưởng hoặc báo cáo sơ bộ thành bản thảo vấn đề có cấu trúc mà vẫn có thể chỉnh sửa trước khi tạo.",
+        "dataSent": "Lời nhắc, tên dự án, các loại vấn đề có sẵn và mức độ ưu tiên được sử dụng để chuẩn bị bản dự thảo.",
+        "retention": "TaskNebula hiện không thực thi việc hết hạn tự động cho các bản ghi do tác nhân điều hành có liên quan. Việc duy trì phía nhà cung cấp phụ thuộc vào nhà cung cấp đang hoạt động."
+      },
+      "assist": {
+        "name": "Trợ lý hạng mục công việc của dự án",
+        "summary": "Tóm tắt, viết lại, gợi ý các bước tiếp theo hoặc gợi ý nhãn cho một vấn đề.",
+        "purpose": "Giúp một người cải thiện nội dung vấn đề trong khi vẫn duy trì việc áp dụng đề xuất một cách rõ ràng.",
+        "dataSent": "Tiêu đề và mô tả vấn đề cùng với nhãn hoặc nhận xét gần đây được yêu cầu bởi hành động đã chọn.",
+        "retention": "TaskNebula hiện không thực thi việc hết hạn tự động cho các bản ghi do tác nhân điều hành có liên quan. Việc duy trì phía nhà cung cấp phụ thuộc vào nhà cung cấp đang hoạt động."
+      },
+      "triage": {
+        "name": "Phân loại tồn đọng",
+        "summary": "Đề xuất các thay đổi về mức độ ưu tiên và nhãn cho các vấn đề tồn đọng đủ điều kiện.",
+        "purpose": "Giúp người phân loại xem xét các hồ sơ tồn đọng theo đợt; các lần chạy có kiểm soát phê duyệt vẫn là bản xem trước.",
+        "dataSent": "Các khóa, tiêu đề, mô tả, mức độ ưu tiên, nhãn và ngày đến hạn của vấn đề tồn đọng được đưa vào bối cảnh lập kế hoạch giới hạn.",
+        "retention": "TaskNebula hiện không thực thi việc hết hạn tự động cho các bản ghi do tác nhân điều hành có liên quan. Việc duy trì phía nhà cung cấp phụ thuộc vào nhà cung cấp đang hoạt động."
+      },
+      "ask": {
+        "name": "AI bảng điều khiển bên Q và A",
+        "summary": "Trả lời các câu hỏi từ các vấn đề của tổ chức hoặc dự án và tài liệu được truy xuất cho yêu cầu hiện tại.",
+        "purpose": "Cung cấp các câu trả lời chỉ đọc, được trích dẫn từ ngữ cảnh TaskNebula có sẵn cho người gọi.",
+        "dataSent": "Câu hỏi và vấn đề giới hạn hoặc đoạn tài liệu được truy xuất cho tổ chức đã chọn và dự án tùy chọn.",
+        "retention": "Trạng thái hội thoại được lưu trong bộ nhớ trình duyệt cho phiên trang hiện tại và không thể tiếp tục. Việc duy trì phía nhà cung cấp phụ thuộc vào nhà cung cấp đang hoạt động."
+      },
+      "summary": {
+        "name": "Tạo tóm tắt",
+        "summary": "Tạo các bản tóm tắt theo yêu cầu khi tính năng này khả dụng.",
+        "purpose": "Giúp một người quét nội dung TaskNebula đã chọn mà không cần thay thế tài liệu nguồn.",
+        "dataSent": "Nội dung được chọn rõ ràng để tóm tắt và siêu dữ liệu phạm vi theo yêu cầu.",
+        "retention": "Hiện tại không có sự hết hạn tự động dành riêng cho tính năng nào được thực thi. Việc duy trì phía nhà cung cấp phụ thuộc vào nhà cung cấp đang hoạt động."
+      },
+      "embedding": {
+        "name": "Biểu diễn vectơ tìm kiếm ngữ nghĩa",
+        "summary": "Tạo các phần nhúng vectơ để lập chỉ mục tìm kiếm ngữ nghĩa được định cấu hình.",
+        "purpose": "Cải thiện khả năng truy xuất bằng cách biểu diễn văn bản nguồn đã chọn dưới dạng vectơ tìm kiếm.",
+        "dataSent": "Văn bản nguồn đã chọn và số nhận dạng cần thiết để xử lý và lưu trữ công việc nhúng.",
+        "retention": "Vấn đề, nhận xét và phần nhúng dự án sử dụng các tham chiếu được liên kết theo tầng. Người vận hành phải xác minh việc dọn dẹp đối với mọi loại nội dung và nhà cung cấp được kích hoạt."
+      }
     }
   },
   "presence": {

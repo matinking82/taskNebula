@@ -4204,19 +4204,19 @@
       "generatedWithAi": "AI से जनरेट किया गया",
       "ariaLabel": "AI-जनरेटेड सामग्री। {detail}",
       "tooltipTitle": "AI-जनरेटेड आउटपुट",
-      "disclosure": "EU AI Act अनुच्छेद 50 प्रकटीकरण। <link>मॉडल कार्ड</link> देखें।"
+      "disclosure": "एआई पारदर्शिता जानकारी। <link>AI मॉडल कार्ड</link> देखें।"
     },
     "disclosure": {
       "title": "आप AI के साथ इंटरैक्ट करने वाले हैं",
       "description": "कुछ TaskNebula फ़ीचर टेक्स्ट, सुझाव और सारांश जनरेट करने के लिए तृतीय-पक्ष AI मॉडल का उपयोग करते हैं। जारी रखने से पहले, कृपया पढ़ें कि इसका आपके लिए क्या अर्थ है।",
       "whatRunsTitle": "आपके वर्कस्पेस में क्या चलता है",
-      "rightsTitle": "आपके अधिकार",
-      "rightLabelled": "हर AI आउटपुट <label>AI से जनरेट किया गया</label> लेबल किया जाता है।",
-      "rightReview": "किसी भी AI सुझाव को लागू किए जाने से पहले आप उसकी समीक्षा और अस्वीकार कर सकते हैं।",
-      "rightDisable": "वर्कस्पेस एडमिन सेटिंग्स → AI पारदर्शिता में किसी भी AI फ़ीचर को अक्षम कर सकते हैं।",
-      "rightRetention": "इनपुट/आउटपुट मॉडल कार्ड रिटेंशन नीति के अनुसार रखे जाते हैं और कभी नहीं बेचे जाते।",
+      "rightsTitle": "आप क्या उम्मीद कर सकते हैं",
+      "rightLabelled": "टास्कनेबुला में, समर्थित उपयोगकर्ता-सामना वाले एआई-जनरेटेड आउटपुट का लेबल <label>AI से जनरेट किया गया</label> है।",
+      "rightReview": "अनुमोदन-प्राप्त लेखन क्रियाएँ तब तक पूर्वावलोकन में रहती हैं जब तक कोई अधिकृत मानव उन्हें अनुमोदित नहीं कर देता।",
+      "rightDisable": "वर्कस्पेस व्यवस्थापक सेटिंग्स → एआई पारदर्शिता में समर्थित एआई सुविधाओं का प्रबंधन कर सकते हैं।",
+      "rightRetention": "मॉडल कार्ड दस्तावेज़ीकृत डेटा प्रबंधन और प्रतिधारण का वर्णन करते हैं; सक्रिय प्रदाता और परिनियोजन सेटिंग्स भिन्न हो सकती हैं।",
       "modelCardsLine": "प्रत्येक फ़ीचर के लिए <link>पूर्ण मॉडल कार्ड</link> पढ़ें, जिसमें मॉडल पहचान, भेजा गया डेटा और रिटेंशन शामिल है।",
-      "versionLine": "प्रकटीकरण वर्शन {version}। EU AI Act अनुच्छेद 50 द्वारा आवश्यक।",
+      "versionLine": "पारदर्शिता सूचना संस्करण {version}।",
       "acknowledge": "मैं समझता हूँ, जारी रखें"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "AI पारदर्शिता",
-      "subtitle": "इस वर्कस्पेस में हर AI फ़ीचर के लिए अनिवार्य प्रकटीकरण। <link>EU AI Act अनुच्छेद 50</link> द्वारा आवश्यक (2026-08-02 से लागू)।"
+      "subtitle": "इस कार्यक्षेत्र में उपलब्ध AI सुविधाओं के लिए उत्पाद पारदर्शिता जानकारी। <link>AI मॉडल कार्ड</link> देखें।"
     },
     "oversight": {
       "title": "मानव-पर्यवेक्षण मुद्रा",
-      "description": "नियंत्रित करता है कि क्या AI आउटपुट स्वचालित रूप से लागू किए जा सकते हैं या वर्कस्पेस डेटा पर लागू किए जाने से पहले हमेशा एक मानव द्वारा समीक्षा किए जाने चाहिए।",
+      "description": "यह नियंत्रित करता है कि समर्थित लेखन-सक्षम एआई क्रियाएं स्वचालित अनुप्रयोग के लिए योग्य हैं या मानव समीक्षा के लिए पूर्वावलोकन में बनी हुई हैं।",
       "reviewRequiredLabel": "समीक्षा आवश्यक (अनुशंसित)",
       "autoApplyLabel": "स्वतः-लागू करें",
-      "reviewRequiredDescription": "किसी भी वर्कस्पेस डेटा में परिवर्तन से पहले हर AI सुझाव स्पष्ट मानव अनुमोदन के लिए कतारबद्ध होता है। ट्राइएज सुझावों का पूर्वावलोकन किया जाता है, कभी लागू नहीं किया जाता।",
-      "autoApplyDescription": "इसका समर्थन करने वाले फ़ीचर बिना स्पष्ट मानव समीक्षा के उच्च-विश्वास वाले AI आउटपुट लागू कर सकते हैं। ऑडिट लॉग अभी भी हर कार्रवाई रिकॉर्ड करता है।",
+      "reviewRequiredDescription": "समर्थित लेखन-सक्षम AI क्रियाएँ तब तक पूर्वावलोकन में रहती हैं जब तक कोई अधिकृत मानव उन्हें अनुमोदित नहीं कर देता।",
+      "autoApplyDescription": "समर्थित कार्रवाइयां स्वचालित अनुप्रयोग के लिए केवल तभी पात्र होती हैं जब अलग-अलग लेखन और अनुमोदन नियंत्रण भी इसकी अनुमति देते हैं; अन्यथा वे पूर्वावलोकन में बने रहेंगे।",
       "toggleAria": "मानव-पर्यवेक्षण मुद्रा टॉगल करें"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "भेजा गया डेटा",
       "retentionLabel": "रिटेंशन",
       "readModelCard": "पूर्ण मॉडल कार्ड पढ़ें",
-      "footer": "{total} फ़ीचर में से <strong>{userFacing}</strong> उपयोगकर्ता-सामना वाले हैं और अनुच्छेद 50 के अनुसार उन्हें <em>AI से जनरेट किया गया</em> बैज ले जाना चाहिए।"
+      "footer": "{total} प्रलेखित सुविधाओं में से <strong>{userFacing}</strong> उपयोगकर्ताओं के लिए आउटपुट उत्पन्न करते हैं। टास्कनेबुला में, समर्थित AI-जनरेटेड आउटपुट का लेबल <em>AI से जनरेट किया गया</em> है।"
     },
     "import": {
       "metaTitle": "इश्यू आयात करें · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "नेविगेशन मेनू बंद करें",
         "items": {
           "features": "विशेषताएँ",
-          "compare": "तुलना",
           "selfHost": "स्वयं होस्ट करें",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Or self-host in two commands",
         "quickstartAria": "Self-host quickstart commands",
         "copyQuickstart": "Copy self-host quickstart",
-        "selfHostMeta": "Free forever self-hosted · Three containers: Postgres, Redis, one web image",
+        "selfHostMeta": "सेल्फ-होस्ट करने पर हमेशा मुफ़्त · Postgres, Redis, वेब और वैकल्पिक सेवाओं वाला छोटा Compose स्टैक",
         "demoPill": "Interactive demo below",
         "chips": {
           "cmdk": "Cmd+K everywhere",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Features",
-          "compare": "Compare",
           "selfHost": "Self-host",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI spec",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "एक कमांड छोटा Compose स्टैक शुरू करता है। मुख्य डेटा Postgres में रहता है, निर्यात के लिए बस pg_dump चाहिए, और डिफ़ॉल्ट रूप से कुछ भी बाहर डेटा नहीं भेजता — किसी विक्रेता पर निर्भरता नहीं।",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "सेल्फ-होस्टिंग डिफ़ॉल्ट रास्ता है। Docker से Postgres 16 व pgvector, Redis 7, neuraparse/tasknebula वेब इमेज और आपकी चालू की गई शामिल या वैकल्पिक सेवाओं वाला छोटा Compose स्टैक शुरू करें। माइग्रेशन बूट पर चलते हैं, GET /api/health जाँच endpoint है और quickstart localhost:3000 पर खुलता है।"
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "मुख्य ट्रैकर — समस्याएँ, बोर्ड, स्प्रिंट, दस्तावेज़, खोज, REST API और OpenAPI specification — सेल्फ-होस्ट किया जा सकता है। OAuth login को अभी भी DB adapter चाहिए, इसलिए फिलहाल credentials auth इस्तेमाल करें। रियलटाइम collaboration Docker/Compose से जुड़ा है, लेकिन आपके deployment को अब भी पहुँच योग्य URL और live smoke test चाहिए। AI और MCP अभी preview में हैं। कमियाँ docs/STATUS.md में ट्रैक की जाती हैं।"
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "TaskNebula पर वापस जाएँ",
-    "disclosureBadge": "EU AI Act अनुच्छेद 50 प्रकटीकरण",
+    "disclosureBadge": "एआई पारदर्शिता जानकारी",
     "title": "AI मॉडल कार्ड",
-    "intro": "TaskNebula अंतिम उपयोगकर्ताओं के लिए निम्नलिखित AI सुविधाएँ तैनात करता है। प्रत्येक के लिए, हम इच्छित उद्देश्य, मॉडल पहचान, हर कॉल पर भेजा गया डेटा, प्रतिधारण नीति और हमारी डिफ़ॉल्ट मानव-निरीक्षण मुद्रा प्रकाशित करते हैं। यह पृष्ठ एक सार्वजनिक पारदर्शिता रिकॉर्ड है और सभी TaskNebula परिनियोजनों पर लागू होता है। प्रकटीकरण संस्करण <version></version>।",
-    "lastReviewed": "अंतिम समीक्षा 2026-05-14। विनियमन प्रवर्तन 2026-08-02 से शुरू होता है।",
+    "intro": "यह पृष्ठ टास्कनेबुला की प्रलेखित एआई सुविधाओं और डिफ़ॉल्ट कॉन्फ़िगरेशन का वर्णन करता है। वास्तविक मॉडल, डेटा प्रबंधन, अवधारण और समीक्षा नियंत्रण कार्यक्षेत्र और तैनाती के अनुसार भिन्न हो सकते हैं; अपने व्यवस्थापक के साथ सक्रिय सेटिंग्स की पुष्टि करें। पारदर्शिता सूचना संस्करण <version></version>।",
+    "lastReviewed": "अंतिम समीक्षा 2026-08-12. विनियमन (ईयू) 2024/1689 का अनुच्छेद 50 2026-08-02 से लागू होता है।",
     "onThisPage": "इस पृष्ठ पर",
     "model": "मॉडल",
     "provider": "प्रदाता",
@@ -6778,7 +6670,53 @@
     "footerContact": "AI पारदर्शिता, डेटा विषय अधिकारों, या इन मॉडल कार्डों के बारे में प्रश्न हैं? <link></link> पर ईमेल करें।",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "टास्कनेबुला एआई सुविधाओं के लिए उत्पाद पारदर्शिता जानकारी, जिसमें उद्देश्य, कॉन्फ़िगर किए गए डिफ़ॉल्ट, डेटा हैंडलिंग और समीक्षा नियंत्रण शामिल हैं।"
+    },
+    "dataSent": "डेटा का उपयोग किया गया",
+    "retention": "डेटा प्रबंधन और प्रतिधारण",
+    "features": {
+      "draft": {
+        "name": "प्रोजेक्ट कार्य-मद ड्राफ्ट",
+        "summary": "फ्री-टेक्स्ट प्रॉम्प्ट से संपादन योग्य अंक ड्राफ्ट बनाता है।",
+        "purpose": "किसी व्यक्ति को किसी मोटे विचार या रिपोर्ट को संरचित मुद्दे ड्राफ्ट में बदलने में मदद करता है जो निर्माण से पहले संपादन योग्य रहता है।",
+        "dataSent": "ड्राफ्ट तैयार करने के लिए संकेत, परियोजना का नाम और उपलब्ध समस्या प्रकार और प्राथमिकताएं उपयोग की जाती हैं।",
+        "retention": "TaskNebula वर्तमान में संबंधित एजेंट द्वारा संचालित रिकॉर्ड के लिए स्वचालित समाप्ति लागू नहीं करता है। प्रदाता-पक्ष प्रतिधारण सक्रिय प्रदाता पर निर्भर करता है।"
+      },
+      "assist": {
+        "name": "परियोजना कार्य-मद सहायक",
+        "summary": "सारांशित करता है, पुनः लिखता है, अगले चरण सुझाता है, या किसी मुद्दे के लिए लेबल सुझाता है।",
+        "purpose": "सुझाव के अनुप्रयोग को स्पष्ट रखते हुए किसी व्यक्ति को मुद्दे की सामग्री को बेहतर बनाने में मदद करता है।",
+        "dataSent": "मुद्दे का शीर्षक और विवरण तथा चयनित कार्रवाई के लिए आवश्यक लेबल या हालिया टिप्पणियाँ।",
+        "retention": "TaskNebula वर्तमान में संबंधित एजेंट द्वारा संचालित रिकॉर्ड के लिए स्वचालित समाप्ति लागू नहीं करता है। प्रदाता-पक्ष प्रतिधारण सक्रिय प्रदाता पर निर्भर करता है।"
+      },
+      "triage": {
+        "name": "बैकलॉग ट्राइएज",
+        "summary": "पात्र बैकलॉग मुद्दों के लिए निर्धारित प्राथमिकता और लेबल परिवर्तन का प्रस्ताव।",
+        "purpose": "मानव ट्राइएजर को बैचों में बैकलॉग की समीक्षा करने में मदद करता है; अनुमोदन-प्राप्त रन पूर्वावलोकन बने रहते हैं।",
+        "dataSent": "बाउंडेड प्लानिंग संदर्भ में बैकलॉग समस्या कुंजियाँ, शीर्षक, विवरण, प्राथमिकताएँ, लेबल और नियत तिथियाँ शामिल हैं।",
+        "retention": "TaskNebula वर्तमान में संबंधित एजेंट द्वारा संचालित रिकॉर्ड के लिए स्वचालित समाप्ति लागू नहीं करता है। प्रदाता-पक्ष प्रतिधारण सक्रिय प्रदाता पर निर्भर करता है।"
+      },
+      "ask": {
+        "name": "एआई साइड-पैनल क्यू और ए",
+        "summary": "संगठन या परियोजना के मुद्दों और वर्तमान अनुरोध के लिए प्राप्त दस्तावेज़ों के प्रश्नों के उत्तर देता है।",
+        "purpose": "कॉल करने वाले को TaskNebula संदर्भ से केवल पढ़ने योग्य, उद्धृत उत्तर उपलब्ध कराता है।",
+        "dataSent": "चयनित संगठन और वैकल्पिक प्रोजेक्ट के लिए प्रश्न और संबंधित मुद्दे या दस्तावेज़ स्निपेट पुनर्प्राप्त किए गए।",
+        "retention": "वर्तमान पृष्ठ सत्र के लिए वार्तालाप स्थिति ब्राउज़र मेमोरी में रखी जाती है और इसे फिर से शुरू नहीं किया जा सकता है। प्रदाता-पक्ष प्रतिधारण सक्रिय प्रदाता पर निर्भर करता है।"
+      },
+      "summary": {
+        "name": "सारांश पीढ़ी",
+        "summary": "जहां सुविधा उपलब्ध है वहां ऑन-डिमांड सारांश तैयार करता है।",
+        "purpose": "किसी व्यक्ति को स्रोत सामग्री को बदले बिना चयनित TaskNebula सामग्री को स्कैन करने में मदद करता है।",
+        "dataSent": "संक्षेपण के लिए स्पष्ट रूप से चयनित सामग्री और अनुरोध के लिए आवश्यक स्कोप मेटाडेटा।",
+        "retention": "वर्तमान में कोई सुविधा-विशिष्ट स्वचालित समाप्ति लागू नहीं है। प्रदाता-पक्ष प्रतिधारण सक्रिय प्रदाता पर निर्भर करता है।"
+      },
+      "embedding": {
+        "name": "सिमेंटिक-खोज वेक्टर अभ्यावेदन",
+        "summary": "कॉन्फ़िगर सिमेंटिक-सर्च इंडेक्सिंग के लिए वेक्टर एम्बेडिंग बनाता है।",
+        "purpose": "चयनित स्रोत पाठ को खोज वेक्टर के रूप में प्रस्तुत करके पुनर्प्राप्ति में सुधार करता है।",
+        "dataSent": "चयनित स्रोत पाठ और एम्बेडिंग कार्य को संसाधित करने और संग्रहीत करने के लिए आवश्यक पहचानकर्ता।",
+        "retention": "समस्या, टिप्पणी और प्रोजेक्ट एम्बेडिंग कैस्केड-लिंक्ड संदर्भों का उपयोग करते हैं। ऑपरेटरों को प्रत्येक सक्षम सामग्री प्रकार और प्रदाता के लिए क्लीनअप को सत्यापित करना होगा।"
+      }
     }
   },
   "presence": {

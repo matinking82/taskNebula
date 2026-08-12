@@ -11,14 +11,14 @@ Monorepo managed with **pnpm + Turborepo**. Node **>=22**, pnpm **>=9**, TypeScr
 
 ## Monorepo layout
 
-| Path                  | Purpose                                                                  |
-| --------------------- | ------------------------------------------------------------------------ |
-| `apps/web`            | Next.js 15 (App Router, React 19) full-stack app — UI + REST API routes  |
-| `packages/db`         | Drizzle ORM schema (100+ tables), migrations, seed — Postgres + pgvector |
-| `packages/types`      | Shared TypeScript domain types                                           |
-| `packages/config`     | Shared ESLint / TS / Tailwind configs                                    |
-| `packages/mcp-server` | `@tasknebula/mcp-server` — MCP server exposing TaskNebula tools          |
-| `services/hocuspocus` | Standalone Yjs realtime collab server (WebSocket + Postgres + Redis)     |
+| Path                  | Purpose                                                                 |
+| --------------------- | ----------------------------------------------------------------------- |
+| `apps/web`            | Next.js 15 (App Router, React 19) full-stack app — UI + REST API routes |
+| `packages/db`         | Drizzle ORM schema, migrations, seed — Postgres + pgvector              |
+| `packages/types`      | Shared TypeScript domain types                                          |
+| `packages/config`     | Shared ESLint / TS / Tailwind configs                                   |
+| `packages/mcp-server` | `@tasknebula/mcp-server` — MCP server exposing TaskNebula tools         |
+| `services/hocuspocus` | Standalone Yjs realtime collab server (WebSocket + Postgres + Redis)    |
 
 ## Commands
 
@@ -37,8 +37,8 @@ pnpm db:migrate       # apply migrations (tsx packages/db/src/migrate.ts)
 pnpm db:studio        # Drizzle Studio
 pnpm db:reset         # full reset (scripts/reset-db.sh)
 # also in packages/db: db:seed, db:seed:prod, db:migrate:prod, db:push, db:setup
-# NOTE: pnpm db:generate (drizzle-kit generate) is BROKEN — snapshots frozen at 0012.
-# Migrations are hand-written SQL; see the Database section below.
+# There is intentionally no db:generate script. Migrations are hand-written SQL;
+# see the Database section below.
 
 # Web app (cd apps/web)
 pnpm dev              # next dev (port 3000)
@@ -56,12 +56,12 @@ pnpm openapi:gen      # regenerate public/openapi.json
 
 - **Commits**: Conventional Commits — `type(scope): subject`, header ≤120 chars. Allowed types include the standard set plus `infra`, `ai`, `integrations`. e.g. `feat(kanban): add drag-and-drop`.
 - **Branches**: `feature/`, `fix/`, `docs/`, `refactor/`, `test/`.
-- **TypeScript**: explicit types, avoid `any`. Base config is strict; `apps/web` opts out of `exactOptionalPropertyTypes` while ~146 violations are migrated (see `docs/TS_STRICT_MIGRATION.md`). Don't introduce new violations.
+- **TypeScript**: explicit types, avoid `any`. Base config is strict; `apps/web` temporarily opts out of `exactOptionalPropertyTypes` while the tracked migration proceeds (see `docs/TS_STRICT_MIGRATION.md`). Don't introduce new violations.
 - **Path aliases** (apps/web): `@/*`, `@/components/*`, `@/lib/*`, `@/app/*`.
 - **Product design**: `apps/web/DESIGN.md` defines page archetypes, hierarchy, anti-slop acceptance criteria, and the evidence loop. `apps/web/DESIGN_SYSTEM.md` is the token/component contract (square-ish radii: `rounded-sm`=2px pills, `rounded-md`=4px default, `rounded-lg`=6px cards; semantic `accent-*` colors; spring motion 150–200ms; first-class dark mode). See `.claude/rules/frontend.md`.
 - **Open-source hygiene**: operator domains, host ports, deployment topology, screenshots, dumps, and temporary notes stay in ignored local files or `/tmp`, never tracked source. Prefer updating a canonical document over adding a one-off report. Run `pnpm hygiene:check`. See `.claude/rules/repository-hygiene.md`.
 - **Local-only mobile workspace**: the root `mobile/` directory may exist in operator checkouts, but it is intentionally excluded from the public repository. Never add or force-add it, stage/commit/push any descendant, copy its source into tracked artifacts, or add it to public workspace manifests, lockfiles, CI, or release steps. Work inside it only when the user explicitly requests local mobile work; its own workspace and lockfile remain local. `AGENTS.md` makes this rule apply to Codex and other AGENTS-compatible assistants.
-- **i18n is MANDATORY — zero hardcoded user-facing strings.** The app ships **30 languages** with device/browser auto-detection. EVERY user-facing string (JSX text **and** props like `placeholder`/`aria-label`/`title`/`alt`/`label`/`description`, plus `toast`/error messages) MUST go through `next-intl` — `useTranslations('ns')` in client components, `await getTranslations('ns')` in async server components. Add the English key to `apps/web/messages/en.json` **and the same key, translated, to all 30 locale catalogs** (`apps/web/messages/*.json`); keep full key parity (`node scripts/i18n-check.mjs`). Preserve ICU placeholders/plurals verbatim. The only English-only surface is the marketing landing (`components/marketing/*`). Lint (`react/jsx-no-literals`) blocks new hardcoded JSX text. **All future work — by any assistant (Claude/Cursor/Codex/…) — must follow this.** See `.claude/rules/frontend.md` and `.cursor/rules/i18n.mdc`.
+- **i18n is MANDATORY — zero new hardcoded user-facing strings.** The app ships **30 languages** with device/browser auto-detection. EVERY user-facing string (JSX text **and** props like `placeholder`/`aria-label`/`title`/`alt`/`label`/`description`, plus `toast`/error messages) MUST go through `next-intl` — `useTranslations('ns')` in client components, `await getTranslations('ns')` in async server components. Add the English key and a real translation to all 30 locale catalogs; keep key/ICU parity with `node scripts/i18n-check.mjs`. ESLint and `ui:check` catch only part of this policy, so reviewers must inspect props and non-JSX call sites too. **All future work — by any assistant — must follow this.** See `.claude/rules/frontend.md` and `.cursor/rules/i18n.mdc`.
 
 ## apps/web structure
 
@@ -72,8 +72,8 @@ pnpm openapi:gen      # regenerate public/openapi.json
 
 ## Database
 
-- **Drizzle ORM**. ~113 tables across 53 schema files in `packages/db/src/schema/` (re-exported from `index.ts`) — it was 107 tables / 52 files before the 0054 parity layer, so old "40+ tables" claims are badly stale. Config: `packages/db/drizzle.config.ts`. Migrations in `packages/db/drizzle/`.
-- **Migration workflow (hand-written SQL is the convention here)**: `drizzle-kit generate` is **broken** — snapshots are frozen at `0012`, so `pnpm db:generate` produces garbage. Migrations `0013+` are hand-written SQL files in `packages/db/drizzle/` plus a matching entry in `drizzle/meta/_journal.json`. Workflow: edit schema TS → write an **idempotent** SQL migration by hand (`IF NOT EXISTS` / `duplicate_object` exception guards on every statement) → append a `_journal.json` entry whose `when` is **strictly greater** than the previous entry's → `pnpm db:migrate`. See `packages/db/CLAUDE.md` for the full recipe.
+- **Drizzle ORM**. Schema files live in `packages/db/src/schema/` and are re-exported from `index.ts`; migrations live in `packages/db/drizzle/`.
+- **Migration workflow (hand-written SQL is the convention here)**: snapshots are frozen at `0012`, so the misleading `db:generate` scripts were removed. Migrations `0013+` are hand-written SQL files plus a matching `drizzle/meta/_journal.json` entry. Workflow: edit schema TS → write an **idempotent** SQL migration (`IF NOT EXISTS` / `duplicate_object` guards) → append a journal entry whose `when` is **strictly greater** than the previous entry's → `pnpm db:migrate`. See `packages/db/CLAUDE.md`.
 - **Structural layer (migration `0054_jira_parity_layer`)**: first-class `labels` + `issue_labels` (replacing the legacy `issues.labels` JSONB array — keep back-compat reads in mind), `project_versions` + `issue_fix_versions`/`issue_affects_versions`, `components` + `issue_components`, and `issues.resolution`/`resolved_at`/`flagged`.
 - Multi-tenant: `organization_id` on every tenant-scoped table; isolation is **app-level `WHERE` clauses** (Postgres RLS is planned, **not implemented** — never claim RLS exists). PKs are CUID2. Flexible data in JSONB. See `.claude/rules/database.md`.
 
@@ -106,14 +106,26 @@ pnpm openapi:gen      # regenerate public/openapi.json
 
 ## Current state & gotchas
 
-Most backends are real and substantial; the recurring failure mode is **last-mile wiring**, not missing implementation. Treat these as the known, accurate state (the older "everything is mocked" framing was wrong):
+Most backends are substantial; the recurring failure mode is disconnected
+enforcement and last-mile wiring. `docs/STATUS.md` is the only live product
+snapshot and `docs/ROADMAP_2026.md` contains future work.
 
-- **AI features are REAL** — actual OpenAI + Anthropic calls with a cost guard (`runWithBudget`), tracing, and a complete `/api/ask` RAG endpoint. Several last-mile seams were broken (Cmd+K search/palette payloads, the AI Sidecar stub, the idle embedding worker) and are being fixed in the June 2026 changeset — don't reintroduce stubs.
-- **Tests**: 188 suites / ~1,200 unit tests in `apps/web` plus MCP-server tests and 6 Playwright e2e specs. `packages/db` and `services/hocuspocus` have **zero** tests — add coverage there when you touch them.
-- **Realtime**: Hocuspocus **is** wired client-side (Tiptap + `@hocuspocus/provider`), but the collab env vars (`NEXT_PUBLIC_HOCUSPOCUS_URL` etc.) are not passed into the Docker images/compose files — collab is dark in containerized deploys until that's plumbed.
-- **OAuth is genuinely broken**: GitHub/Google providers register, but there is no DB adapter — OAuth sessions carry a provider profile id that matches no `users` row, so every org-scoped API call 401s/403s for OAuth users.
-- **RLS is PLANNED, not implemented**: tenant isolation is app-level `WHERE organization_id = ...` clauses only. Never claim or rely on Postgres RLS; never skip the org filter.
-- See `docs/AUDIT_2026-06.md`, `docs/STATUS.md`, and `docs/ROADMAP_2026.md` for the live picture.
+- **AI calls are real**, but Ask is workspace RAG rather than deep research.
+  The bounded graph/research topology in `src/lib/agents` is a tested runtime
+  foundation, not yet the durable worker used by every agent path. Read
+  `docs/AGENT_RUNTIME.md` before changing claims or orchestration.
+- **Human oversight fails closed**: approval-gated project-agent mutations stay
+  in preview. The durable approval/apply worker remains roadmap work; never
+  bypass the preview guard to make the UI look live.
+- **Workflow transitions are stored but not consistently enforced**. Status
+  changes, bulk operations, automation, and agent webhooks must eventually use
+  one transition service.
+- **Hocuspocus deployment plumbing exists** in Docker/Compose; a configured
+  endpoint and matching secrets are still required for an actual deployment.
+- **OAuth remains incomplete** without a DB adapter; do not describe external
+  provider sign-in as production-ready.
+- **RLS is planned, not implemented**. Every tenant query needs an explicit
+  organization filter and authorization check.
 
 ## Realtime collab
 
@@ -133,5 +145,5 @@ Each major workspace has its own nested `CLAUDE.md` (with a sibling `AGENTS.md` 
 ## Pointers
 
 - Env template: `.env.example` · Setup: `scripts/setup.sh` (`pnpm setup`)
-- Architecture: `docs/ARCHITECTURE.md` · Contributing: `CONTRIBUTING.md` · Quick start: `docs/QUICK_START.md`
-- Live state: `docs/AUDIT_2026-06.md` + `docs/STATUS.md` + `docs/ROADMAP_2026.md` (`docs/GAPS_AND_ISSUES_SUMMARY.md` is archived/superseded — don't use it)
+- Documentation index: `docs/README.md` · Architecture: `docs/ARCHITECTURE.md` · Agent runtime: `docs/AGENT_RUNTIME.md`
+- Setup: `README.md` and `CONTRIBUTING.md` · Live state: `docs/STATUS.md` · Future work: `docs/ROADMAP_2026.md`

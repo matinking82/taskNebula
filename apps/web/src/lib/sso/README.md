@@ -18,13 +18,13 @@ The matching SCIM logic lives next door in `apps/web/src/lib/scim/`.
 
 ## Endpoints
 
-| Method  | Path                                                  | Purpose                                |
-| ------- | ----------------------------------------------------- | -------------------------------------- |
-| GET     | `/api/auth/saml/[workspace_slug]/metadata.xml`        | SP metadata for IdP setup              |
-| GET/POST| `/api/auth/saml/[workspace_slug]/init`                | Generate SAMLRequest, redirect to IdP  |
-| POST    | `/api/auth/saml/[workspace_slug]/callback`            | ACS endpoint — verify & JIT-provision  |
-| GET     | `/api/scim/v2/Users` (+ `[id]`)                       | SCIM 2.0 Users (RFC 7644)              |
-| GET     | `/api/scim/v2/Groups` (+ `[id]`)                      | SCIM 2.0 Groups                        |
+| Method   | Path                                           | Purpose                               |
+| -------- | ---------------------------------------------- | ------------------------------------- |
+| GET      | `/api/auth/saml/[workspace_slug]/metadata.xml` | SP metadata for IdP setup             |
+| GET/POST | `/api/auth/saml/[workspace_slug]/init`         | Generate SAMLRequest, redirect to IdP |
+| POST     | `/api/auth/saml/[workspace_slug]/callback`     | ACS endpoint — verify & JIT-provision |
+| GET      | `/api/scim/v2/Users` (+ `[id]`)                | SCIM 2.0 Users (RFC 7644)             |
+| GET      | `/api/scim/v2/Groups` (+ `[id]`)               | SCIM 2.0 Groups                       |
 
 SCIM auth is `Authorization: Bearer <token>`, where `<token>` is verified by
 bcrypt-compare against `scim_tokens.token_hash` for an enabled workspace.
@@ -57,7 +57,7 @@ diverges. Notable behaviours we cope with:
 ### Google Workspace
 
 - **POST-only on initial provisioning** — Google creates users with `POST
-  /Users` and uses `PATCH` for subsequent updates, but **never sends PUT**.
+/Users` and uses `PATCH` for subsequent updates, but **never sends PUT**.
 - Drops users via `DELETE /Users/{id}` (most IdPs prefer soft de-provision via
   `active=false` PATCH, which we also accept).
 - Group attribute names use `members[].value`.
@@ -81,4 +81,6 @@ suites under `apps/web/src/lib/sso/__tests__/` cover:
 - Bearer-token hashing (constant-time compare)
 - Attribute-map resolution
 
-For end-to-end IdP smoke tests, see `docs/sso-test-plan.md` (TODO).
+Run the focused Jest files in this directory, then validate SAML login and SCIM
+provision/update/deprovision with a disposable organization and a real test IdP.
+Do not infer IdP interoperability from unit fixtures alone.

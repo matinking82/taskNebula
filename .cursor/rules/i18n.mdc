@@ -46,7 +46,6 @@ and tools (Claude, Cursor, Codex, Copilot, etc.).
   RTL list + `Accept-Language` negotiation). Add a locale there to surface it
   in the switcher.
 - `ar` and `he` are right-to-left (handled by the `DirectionProvider`).
-- The **only** intentionally English-only surface is the marketing landing
-  (`apps/web/src/components/marketing/*`, the public `/` page).
-- ESLint (`react/jsx-no-literals`) rejects new hardcoded JSX text — fix by
-  moving the string into the message catalog, not by disabling the rule.
+- ESLint and `pnpm ui:check` catch only a subset of JSX and prop literals.
+  Review props, configuration objects, toasts, and error paths manually too.
+  Existing legacy exemptions are migration debt, not permission for new text.

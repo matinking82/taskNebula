@@ -15,7 +15,8 @@ login` as the **`neuraparse`** Docker Hub account, and `pnpm install` run.
 ## 1. Pick the version
 
 Decide the next SemVer number (`MAJOR.MINOR.PATCH`). The examples below use
-`<v>` — replace it everywhere (e.g. `0.3.4`).
+`<v>`; derive the previous/current value from the root `package.json` rather
+than a documentation snapshot.
 
 ## 2. Bump version references
 
@@ -24,7 +25,8 @@ Update the version in every pinned location:
 - `package.json` → `"version"`
 - `apps/web/package.json` → `"version"`
 - `docker-compose.desktop.yml` → `neuraparse/tasknebula:<v>`
-- `README.md` → the `0.3.x` references (recommended-tag table, pin examples)
+- any concrete version pin found with `rg '<current-version>'` (do not replace
+  historical `CHANGELOG.md` entries)
 - Regenerate the web API spec:
   ```bash
   pnpm --filter @tasknebula/web openapi:gen   # writes apps/web/public/openapi.json
@@ -44,13 +46,14 @@ In `CHANGELOG.md`, move items from `[Unreleased]` into a new
 
 ## 4. Verify locally
 
-```bash
-pnpm type-check && pnpm lint && pnpm test     # or: /verify
-```
+Run the complete `/verify` command. At minimum it covers the MCP build, i18n,
+repository hygiene, UI contract, type-check, lint, tests, OpenAPI drift, and
+`git diff --check`.
 
-## 5. Commit, tag, push
+## 5. Commit, tag, push (GitHub authorization required)
 
-Releases go straight to `main` (no PR for the maintainer's own work):
+Only perform this section when GitHub publication was explicitly authorized in
+the current task. Releases go straight to `main` for the maintainer:
 
 ```bash
 git pull --rebase
@@ -61,9 +64,11 @@ git tag -a v<v> -m "TaskNebula v<v>"
 git push origin v<v>
 ```
 
-## 6. Build & push the Docker image
+## 6. Build & push the Docker image (registry authorization required)
 
-Image: `neuraparse/tasknebula` on Docker Hub, platform `linux/amd64`.
+Only perform this section when Docker Hub publication was explicitly
+authorized, independently of GitHub. Image: `neuraparse/tasknebula`, platform
+`linux/amd64`.
 
 ```bash
 # Build the web image (uses the multi-stage Dockerfile, standalone output)
@@ -85,7 +90,7 @@ Confirm the published digest:
 docker buildx imagetools inspect neuraparse/tasknebula:<v>
 ```
 
-## 7. Publish release notes
+## 7. Publish release notes (GitHub authorization required)
 
 Create the GitHub release from the tag (notes can come from the changelog):
 

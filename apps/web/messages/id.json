@@ -4138,19 +4138,19 @@
       "generatedWithAi": "Dihasilkan dengan AI",
       "ariaLabel": "Konten yang dihasilkan AI. {detail}",
       "tooltipTitle": "Output yang dihasilkan AI",
-      "disclosure": "Pengungkapan EU AI Act Pasal 50. Lihat <link>kartu model</link>."
+      "disclosure": "Informasi transparansi AI. Lihat <link>Kartu Model AI</link>."
     },
     "disclosure": {
       "title": "Anda akan berinteraksi dengan AI",
       "description": "Beberapa fitur TaskNebula menggunakan model AI pihak ketiga untuk menghasilkan teks, saran, dan ringkasan. Sebelum melanjutkan, harap baca apa artinya itu bagi Anda.",
       "whatRunsTitle": "Apa yang berjalan di ruang kerja Anda",
-      "rightsTitle": "Hak Anda",
-      "rightLabelled": "Setiap output AI diberi label <label>Dihasilkan dengan AI</label>.",
-      "rightReview": "Anda dapat meninjau dan menolak saran AI apa pun sebelum diterapkan.",
-      "rightDisable": "Admin ruang kerja dapat menonaktifkan fitur AI apa pun di Pengaturan → Transparansi AI.",
-      "rightRetention": "Input/output disimpan sesuai kebijakan retensi kartu model dan tidak pernah dijual.",
+      "rightsTitle": "Apa yang dapat Anda harapkan",
+      "rightLabelled": "Di TaskNebula, output yang dihasilkan AI yang dapat dilihat pengguna didukung membawa label <label>Dihasilkan dengan AI</label>.",
+      "rightReview": "Tindakan tulis dengan gerbang persetujuan tetap dalam pratinjau hingga manusia yang berwenang menyetujuinya.",
+      "rightDisable": "Admin ruang kerja dapat mengelola fitur AI yang didukung di Pengaturan → Transparansi AI.",
+      "rightRetention": "Kartu model menjelaskan penanganan dan penyimpanan data yang terdokumentasi; penyedia aktif dan pengaturan penerapan mungkin berbeda.",
       "modelCardsLine": "Baca <link>kartu model lengkap</link> untuk setiap fitur, termasuk identitas model, data yang dikirim, dan retensi.",
-      "versionLine": "Versi pengungkapan {version}. Diwajibkan oleh EU AI Act Pasal 50.",
+      "versionLine": "Pemberitahuan transparansi versi {version}.",
       "acknowledge": "Saya mengerti, lanjutkan"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "Transparansi AI",
-      "subtitle": "Pengungkapan wajib untuk setiap fitur AI di ruang kerja ini. Diwajibkan oleh <link>EU AI Act Pasal 50</link> (berlaku 2026-08-02)."
+      "subtitle": "Informasi transparansi produk untuk fitur AI tersedia di ruang kerja ini. Lihat <link>Kartu Model AI</link>."
     },
     "oversight": {
       "title": "Sikap pengawasan-manusia",
-      "description": "Mengontrol apakah output AI dapat diterapkan secara otomatis atau harus selalu ditinjau oleh manusia sebelum diterapkan ke data ruang kerja.",
+      "description": "Mengontrol apakah tindakan AI berkemampuan menulis yang didukung memenuhi syarat untuk penerapan otomatis atau tetap dalam pratinjau untuk ditinjau oleh manusia.",
       "reviewRequiredLabel": "Tinjauan diperlukan (direkomendasikan)",
       "autoApplyLabel": "Terapkan otomatis",
-      "reviewRequiredDescription": "Setiap saran AI diantrekan untuk persetujuan manusia eksplisit sebelum data ruang kerja diubah. Saran triase dipratinjau, tidak pernah diterapkan.",
-      "autoApplyDescription": "Fitur yang mendukungnya dapat menerapkan output AI berkepercayaan tinggi tanpa tinjauan manusia eksplisit. Log audit tetap mencatat setiap aksi.",
+      "reviewRequiredDescription": "Tindakan AI berkemampuan menulis yang didukung akan tetap dalam pratinjau hingga manusia yang berwenang menyetujuinya.",
+      "autoApplyDescription": "Tindakan yang didukung memenuhi syarat untuk penerapan otomatis hanya jika kontrol penulisan dan persetujuan terpisah juga mengizinkannya; jika tidak, mereka tetap dalam pratinjau.",
       "toggleAria": "Alihkan sikap pengawasan-manusia"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Data yang dikirim",
       "retentionLabel": "Retensi",
       "readModelCard": "Baca kartu model lengkap",
-      "footer": "<strong>{userFacing}</strong> dari {total} fitur menghadap-pengguna dan harus membawa lencana <em>Dihasilkan dengan AI</em> sesuai Pasal 50."
+      "footer": "<strong>{userFacing}</strong> dari {total} fitur yang terdokumentasi menghasilkan keluaran untuk pengguna. Di TaskNebula, keluaran yang dihasilkan AI yang didukung diberi label <em>Dihasilkan dengan AI</em>."
     },
     "import": {
       "metaTitle": "Impor isu · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Tutup menu navigasi",
         "items": {
           "features": "Fitur",
-          "compare": "Bandingkan",
           "selfHost": "Host sendiri",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Or self-host in two commands",
         "quickstartAria": "Self-host quickstart commands",
         "copyQuickstart": "Copy self-host quickstart",
-        "selfHostMeta": "Free forever self-hosted · Three containers: Postgres, Redis, one web image",
+        "selfHostMeta": "Gratis selamanya saat di-host sendiri · Stack Compose kecil dengan Postgres, Redis, web, dan layanan opsional",
         "demoPill": "Interactive demo below",
         "chips": {
           "cmdk": "Cmd+K everywhere",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Features",
-          "compare": "Compare",
           "selfHost": "Self-host",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI spec",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "Satu perintah menjalankan stack Compose kecil. Data inti tersimpan di Postgres, ekspor cukup dengan pg_dump, dan secara default tidak ada data yang dikirim keluar — tanpa ketergantungan vendor.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Self-hosting adalah jalur bawaan. Dengan Docker, jalankan stack Compose kecil yang berisi Postgres 16 dan pgvector, Redis 7, image web neuraparse/tasknebula, serta layanan bawaan atau opsional yang Anda aktifkan. Migrasi berjalan saat boot, GET /api/health menjadi endpoint pemeriksaan, dan quickstart terbuka di localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Tracker inti — isu, board, sprint, dokumen, pencarian, REST API, dan spesifikasi OpenAPI — dapat di-host sendiri. Login OAuth masih memerlukan adaptor database, jadi gunakan autentikasi kredensial untuk saat ini. Kolaborasi realtime sudah terhubung melalui Docker/Compose, tetapi deployment Anda tetap memerlukan URL yang dapat dijangkau dan smoke test langsung. AI dan MCP masih berstatus preview. Kekurangannya kami lacak di docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Kembali ke TaskNebula",
-    "disclosureBadge": "Pengungkapan EU AI Act Pasal 50",
+    "disclosureBadge": "Informasi transparansi AI",
     "title": "Kartu Model AI",
-    "intro": "TaskNebula menerapkan fitur AI berikut untuk pengguna akhir. Untuk masing-masing, kami memublikasikan tujuan penggunaan, identitas model, data yang dikirim pada setiap panggilan, kebijakan retensi, dan sikap pengawasan manusia bawaan kami. Halaman ini merupakan catatan transparansi publik dan berlaku untuk semua penerapan TaskNebula. Versi pengungkapan <version></version>.",
-    "lastReviewed": "Terakhir ditinjau 2026-05-14. Penegakan regulasi dimulai 2026-08-02.",
+    "intro": "Halaman ini menjelaskan fitur AI dan konfigurasi default TaskNebula yang terdokumentasi. Model aktual, penanganan data, retensi, dan kontrol peninjauan dapat bervariasi berdasarkan ruang kerja dan penerapan; konfirmasikan pengaturan aktif dengan administrator Anda. Pemberitahuan transparansi versi <version></version>.",
+    "lastReviewed": "Terakhir diulas pada 12-08-2026. Pasal 50 Peraturan (UE) 2024/1689 berlaku mulai 02-08-2026.",
     "onThisPage": "Pada halaman ini",
     "model": "Model",
     "provider": "Penyedia",
@@ -6778,7 +6670,53 @@
     "footerContact": "Ada pertanyaan tentang transparansi AI, hak subjek data, atau kartu model ini? Kirim email ke <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Informasi transparansi produk untuk fitur TaskNebula AI, termasuk tujuan, konfigurasi default, penanganan data, dan kontrol tinjauan."
+    },
+    "dataSent": "Data yang digunakan",
+    "retention": "Penanganan dan penyimpanan data",
+    "features": {
+      "draft": {
+        "name": "Draf item pekerjaan proyek",
+        "summary": "Membuat draf terbitan yang dapat diedit dari perintah teks bebas.",
+        "purpose": "Membantu seseorang mengubah ide kasar atau laporan menjadi draf isu terstruktur yang tetap dapat diedit sebelum dibuat.",
+        "dataSent": "Perintah, nama proyek, dan jenis isu serta prioritas yang tersedia digunakan untuk menyiapkan draf.",
+        "retention": "TaskNebula saat ini tidak menerapkan masa berlaku otomatis untuk catatan terkait yang dijalankan agen. Retensi sisi penyedia bergantung pada penyedia aktif."
+      },
+      "assist": {
+        "name": "Asisten item pekerjaan proyek",
+        "summary": "Meringkas, menulis ulang, menyarankan langkah selanjutnya, atau menyarankan label untuk suatu masalah.",
+        "purpose": "Membantu seseorang meningkatkan konten masalah sambil menjaga agar penerapan saran tetap eksplisit.",
+        "dataSent": "Judul dan deskripsi terbitan ditambah label atau komentar terkini yang diperlukan oleh tindakan yang dipilih.",
+        "retention": "TaskNebula saat ini tidak menerapkan masa berlaku otomatis untuk catatan terkait yang dijalankan agen. Retensi sisi penyedia bergantung pada penyedia aktif."
+      },
+      "triage": {
+        "name": "Triase Backlog",
+        "summary": "Mengusulkan perubahan prioritas dan label terbatas untuk masalah simpanan yang memenuhi syarat.",
+        "purpose": "Membantu triager manusia meninjau simpanan secara berkelompok; proses dengan gerbang persetujuan tetap berupa pratinjau.",
+        "dataSent": "Kunci masalah backlog, judul, deskripsi, prioritas, label, dan tanggal jatuh tempo termasuk dalam konteks perencanaan berbatas.",
+        "retention": "TaskNebula saat ini tidak menerapkan masa berlaku otomatis untuk catatan terkait yang dijalankan agen. Retensi sisi penyedia bergantung pada penyedia aktif."
+      },
+      "ask": {
+        "name": "Q dan A panel samping AI",
+        "summary": "Menjawab pertanyaan dari masalah organisasi atau proyek dan dokumen yang diambil untuk permintaan saat ini.",
+        "purpose": "Memberikan jawaban yang hanya dapat dibaca dan dikutip dari konteks TaskNebula yang tersedia bagi penelepon.",
+        "dataSent": "Pertanyaan dan cuplikan masalah atau dokumen yang dibatasi diambil untuk organisasi yang dipilih dan proyek opsional.",
+        "retention": "Status percakapan disimpan di memori browser untuk sesi halaman saat ini dan tidak dapat dilanjutkan. Retensi sisi penyedia bergantung pada penyedia aktif."
+      },
+      "summary": {
+        "name": "Pembuatan Ringkasan",
+        "summary": "Menghasilkan ringkasan sesuai permintaan jika fitur tersebut tersedia.",
+        "purpose": "Membantu seseorang memindai TaskNebula konten yang dipilih tanpa mengganti materi sumber.",
+        "dataSent": "Konten yang dipilih secara eksplisit untuk ringkasan dan metadata cakupan yang diperlukan oleh permintaan.",
+        "retention": "Saat ini tidak ada masa berlaku otomatis khusus fitur yang diterapkan. Retensi sisi penyedia bergantung pada penyedia aktif."
+      },
+      "embedding": {
+        "name": "Representasi vektor pencarian semantik",
+        "summary": "Membuat penyematan vektor untuk pengindeksan pencarian semantik yang dikonfigurasi.",
+        "purpose": "Meningkatkan pengambilan dengan mewakili teks sumber yang dipilih sebagai vektor pencarian.",
+        "dataSent": "Teks sumber yang dipilih dan pengidentifikasi yang diperlukan untuk memproses dan menyimpan pekerjaan penyematan.",
+        "retention": "Masalah, komentar, dan penyematan proyek menggunakan referensi terkait kaskade. Operator harus memverifikasi pembersihan untuk setiap jenis konten dan penyedia yang diaktifkan."
+      }
     }
   },
   "presence": {

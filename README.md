@@ -72,14 +72,14 @@ and self-update details, use [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Features
 
-| Area                   | Highlights                                                                                   |
-| ---------------------- | -------------------------------------------------------------------------------------------- |
-| **Project management** | Kanban, backlog, sprints, epics, subtasks, custom fields, issue links, attachments, imports  |
-| **Collaboration**      | Comments, mentions, watchers, reactions, docs, project chat, presence, email notifications   |
-| **AI assistance**      | Draft-with-AI, per-issue assist, native fallback planner, agent activity, approval gates     |
-| **Admin & governance** | Multi-org roles, granular permissions, audit logs, registration controls, webhooks, API keys |
-| **Analytics**          | Burndown, velocity, cycle time, throughput, project health, time-in-status, dashboard cards  |
-| **Self-hosting**       | Docker-first deploy, Postgres, Redis, health checks, optional LiveKit and cron sidecar       |
+| Area                   | Highlights                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| **Project management** | Kanban, backlog, sprints, epics, subtasks, custom fields, issue links, attachments, imports   |
+| **Collaboration**      | Comments, reactions, docs, project chat, presence, realtime updates, collaborative editing    |
+| **AI assistance**      | Draft/issue assist, cited workspace Ask, native planner, agent activity, fail-closed previews |
+| **Admin & governance** | Multi-org roles, audit logs, registration controls, webhooks, API-key and policy scaffolding  |
+| **Analytics**          | Burndown, velocity, cycle time, throughput, project health, time-in-status, dashboard cards   |
+| **Self-hosting**       | Docker-first deploy, Postgres, Redis, health checks, optional LiveKit and cron sidecar        |
 
 Importers currently cover **Jira**, **Linear**, **GitHub**, and **CSV**.
 
@@ -107,16 +107,16 @@ they are ready.
 
 ## Docker Image
 
-| Item              | Value                                                                             |
-| ----------------- | --------------------------------------------------------------------------------- |
-| Repository        | [`neuraparse/tasknebula`](https://hub.docker.com/r/neuraparse/tasknebula)         |
-| Recommended tag   | `latest` for demos; use a release tag for repeatable installs                     |
-| Platform          | `linux/amd64`                                                                     |
-| Runtime port      | `3000`                                                                            |
-| Health endpoint   | `GET /api/health`                                                                 |
-| Required services | PostgreSQL 16 + `pgvector`, Redis 7                                               |
-| Optional services | LiveKit voice rooms, cron sidecar, SMTP, OAuth providers, OpenAI / Anthropic keys |
-| Inspect digest    | `docker buildx imagetools inspect neuraparse/tasknebula:<tag>`                    |
+| Item              | Value                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| Repository        | [`neuraparse/tasknebula`](https://hub.docker.com/r/neuraparse/tasknebula)            |
+| Recommended tag   | `latest` for demos; use a release tag for repeatable installs                        |
+| Platform          | `linux/amd64`                                                                        |
+| Runtime port      | `3000`                                                                               |
+| Health endpoint   | `GET /api/health`                                                                    |
+| Required services | PostgreSQL 16 + `pgvector`, Redis 7                                                  |
+| Optional services | LiveKit voice rooms, cron sidecar, SMTP, experimental OAuth, OpenAI / Anthropic keys |
+| Inspect digest    | `docker buildx imagetools inspect neuraparse/tasknebula:<tag>`                       |
 
 ---
 
@@ -146,15 +146,18 @@ repeatable deployment. Use `latest` only for quick demos.
 
 ## Docs
 
-| Need                   | Link                                         |
-| ---------------------- | -------------------------------------------- |
-| Full release history   | [CHANGELOG.md](CHANGELOG.md)                 |
-| Deployment guide       | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)     |
-| Architecture           | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Roadmap                | [docs/ROADMAP_2026.md](docs/ROADMAP_2026.md) |
-| Release process        | [docs/RELEASE.md](docs/RELEASE.md)           |
-| Contributing           | [CONTRIBUTING.md](CONTRIBUTING.md)           |
-| AI agent/project guide | [CLAUDE.md](CLAUDE.md)                       |
+| Need                   | Link                                           |
+| ---------------------- | ---------------------------------------------- |
+| Full release history   | [CHANGELOG.md](CHANGELOG.md)                   |
+| Documentation index    | [docs/README.md](docs/README.md)               |
+| Current status         | [docs/STATUS.md](docs/STATUS.md)               |
+| Deployment guide       | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)       |
+| Architecture           | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)   |
+| Agent runtime contract | [docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md) |
+| Roadmap                | [docs/ROADMAP_2026.md](docs/ROADMAP_2026.md)   |
+| Release process        | [docs/RELEASE.md](docs/RELEASE.md)             |
+| Contributing           | [CONTRIBUTING.md](CONTRIBUTING.md)             |
+| AI agent/project guide | [CLAUDE.md](CLAUDE.md)                         |
 
 ---
 
@@ -172,9 +175,16 @@ pnpm dev
 Before pushing code, run:
 
 ```bash
+pnpm --filter @tasknebula/mcp-server build
+node scripts/i18n-check.mjs
+pnpm hygiene:check
+pnpm ui:check
+pnpm docs:check
 pnpm type-check
 pnpm lint
 pnpm test
+pnpm --filter @tasknebula/web openapi:check
+git diff --check
 ```
 
 ---

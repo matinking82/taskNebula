@@ -1,7 +1,7 @@
 /**
  * /ai-model-cards — public, unauthenticated AI Model Cards page.
  *
- * Required by EU AI Act Article 50 (in force 2026-08-02). Each card describes
+ * Public product-transparency page. Each card describes
  * an AI feature TaskNebula deploys to end-users: purpose, model identity,
  * data sent, retention, and human-oversight default.
  *
@@ -21,63 +21,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('title'),
     description: t('description'),
   };
-}
-
-/** Minimal markdown renderer — supports paragraphs, headings, lists, and bold. */
-function renderMarkdown(md: string): React.ReactNode {
-  const lines = md.split('\n');
-  const out: React.ReactNode[] = [];
-  let listBuffer: string[] = [];
-
-  function flushList(key: string) {
-    if (listBuffer.length === 0) return;
-    out.push(
-      <ul key={`ul-${key}`} className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
-        {listBuffer.map((item, i) => (
-          <li key={i} dangerouslySetInnerHTML={{ __html: inline(item) }} />
-        ))}
-      </ul>
-    );
-    listBuffer = [];
-  }
-
-  function inline(s: string): string {
-    return s
-      .replace(/`([^`]+)`/g, '<code class="font-mono text-foreground/90">$1</code>')
-      .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-foreground">$1</strong>')
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  }
-
-  lines.forEach((raw, idx) => {
-    const line = raw.trimEnd();
-    if (!line.trim()) {
-      flushList(`b-${idx}`);
-      return;
-    }
-    if (line.startsWith('## ')) {
-      flushList(`h-${idx}`);
-      out.push(
-        <h3 key={`h-${idx}`} className="mb-2 mt-4 text-base font-semibold">
-          {line.slice(3)}
-        </h3>
-      );
-      return;
-    }
-    if (line.startsWith('- ')) {
-      listBuffer.push(line.slice(2));
-      return;
-    }
-    flushList(`p-${idx}`);
-    out.push(
-      <p
-        key={`p-${idx}`}
-        className="text-muted-foreground text-sm"
-        dangerouslySetInnerHTML={{ __html: inline(line) }}
-      />
-    );
-  });
-  flushList('tail');
-  return out;
 }
 
 export default async function AiModelCardsPage() {
@@ -118,7 +61,7 @@ export default async function AiModelCardsPage() {
                   href={`#${card.id}`}
                   className="hover:text-foreground focus-visible:ring-ring text-muted-foreground block rounded-sm py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2"
                 >
-                  {card.name}
+                  {t(`features.${card.id}.name`)}
                 </a>
               </li>
             ))}
@@ -139,9 +82,11 @@ export default async function AiModelCardsPage() {
 
               <div className="min-w-0">
                 <header>
-                  <h2 className="text-xl font-semibold tracking-tight">{card.name}</h2>
+                  <h2 className="text-xl font-semibold tracking-tight">
+                    {t(`features.${card.id}.name`)}
+                  </h2>
                   <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-                    {card.purpose}
+                    {t(`features.${card.id}.purpose`)}
                   </p>
                 </header>
 
@@ -170,7 +115,20 @@ export default async function AiModelCardsPage() {
                   </div>
                 </dl>
 
-                <div className="prose-sm space-y-2">{renderMarkdown(card.markdown)}</div>
+                <div className="grid gap-5 text-sm sm:grid-cols-2">
+                  <div>
+                    <h3 className="text-foreground font-medium">{t('dataSent')}</h3>
+                    <p className="text-muted-foreground mt-1 leading-6">
+                      {t(`features.${card.id}.dataSent`)}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-foreground font-medium">{t('retention')}</h3>
+                    <p className="text-muted-foreground mt-1 leading-6">
+                      {t(`features.${card.id}.retention`)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </section>
           ))}

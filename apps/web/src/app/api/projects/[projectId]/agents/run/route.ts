@@ -42,7 +42,10 @@ export async function POST(
   const { projectId } = await params;
   const access = await getProjectAgentAccess(session.user.id, projectId);
   if (!access.canManage || !access.project) {
-    return NextResponse.json({ error: 'You do not have permission to run project agents.' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'You do not have permission to run project agents.' },
+      { status: 403 }
+    );
   }
 
   try {
@@ -106,7 +109,10 @@ export async function POST(
     });
 
     if (!systemControl.globalEnabled) {
-      return NextResponse.json({ error: 'Agents are paused globally by the admin team.' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Agents are paused globally by the admin team.' },
+        { status: 409 }
+      );
     }
 
     if (!workspaceSettings.enabled) {
@@ -114,11 +120,17 @@ export async function POST(
     }
 
     if (!projectSettings.enabled) {
-      return NextResponse.json({ error: 'Project AI agents are disabled for this project.' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Project AI agents are disabled for this project.' },
+        { status: 409 }
+      );
     }
 
     if (!effectiveSettings.capabilities[kind]) {
-      return NextResponse.json({ error: 'This agent capability is disabled for the project.' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'This agent capability is disabled for the project.' },
+        { status: 409 }
+      );
     }
 
     if (!runAvailability.canRun) {
@@ -177,6 +189,7 @@ export async function POST(
         organization.settings as Record<string, unknown> | null,
         effectiveSettings.provider
       ),
+      signal: request.signal,
     });
 
     if (result.run.status === 'failed') {
@@ -204,7 +217,10 @@ export async function POST(
     return NextResponse.json(result, { status: result.httpStatus || 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
     }
 
     console.error('Failed to run project agent:', error);

@@ -10,7 +10,7 @@ Steps:
 
 1. Run `git status` and `git diff` to see what's staged/unstaged. Summarize what changed.
 2. Confirm you are on `main` (this repo pushes directly to main — no branch/PR). Run `git pull --rebase` first to avoid non-fast-forward rejections.
-3. Verify before pushing: `pnpm type-check && pnpm lint && pnpm test` (or `/verify`). If anything fails, stop and report — do not push.
+3. Run `/verify`. If anything fails, stop and report — do not push.
 4. Stage the relevant files and commit with a Conventional Commit message (`type(scope): subject`, ≤120 chars) derived from $ARGUMENTS. Author is Neura Parse `<hello@neuraparse.com>`.
 5. Push with `git push origin main`.
 6. Report the pushed commit hash.

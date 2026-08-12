@@ -4138,19 +4138,19 @@
       "generatedWithAi": "AI-val generálva",
       "ariaLabel": "AI által generált tartalom. {detail}",
       "tooltipTitle": "AI által generált kimenet",
-      "disclosure": "EU AI Act 50. cikk szerinti közzététel. Lásd a <link>modellkártyákat</link>."
+      "disclosure": "AI átláthatósági információk. Lásd: <link>AI modellkártyák</link>."
     },
     "disclosure": {
       "title": "AI-val készülsz interakcióba lépni",
       "description": "Néhány TaskNebula-funkció harmadik fél AI-modelljeit használja szöveg, javaslatok és összefoglalók generálására. Mielőtt folytatnád, kérjük, olvasd el, mit jelent ez számodra.",
       "whatRunsTitle": "Mi fut a munkaterületeden",
-      "rightsTitle": "A jogaid",
-      "rightLabelled": "Minden AI-kimenet <label>AI-val generálva</label> jelölést kap.",
-      "rightReview": "Bármely AI-javaslatot felülvizsgálhatsz és elutasíthatsz, mielőtt alkalmazásra kerülne.",
-      "rightDisable": "A munkaterület-adminisztrátorok bármely AI-funkciót letilthatnak a Beállítások → AI-átláthatóság menüben.",
-      "rightRetention": "A bemenetek/kimenetek a modellkártya megőrzési szabályzata szerint vannak megőrizve, és soha nem kerülnek értékesítésre.",
+      "rightsTitle": "Mire számíthatsz",
+      "rightLabelled": "A TaskNebula-ban a támogatott, felhasználó felé mutató mesterséges intelligencia által generált kimenet az <label>AI-val generálva</label> címkét viseli.",
+      "rightReview": "A jóváhagyással zárt írási műveletek előnézetben maradnak mindaddig, amíg egy felhatalmazott ember jóvá nem hagyja őket.",
+      "rightDisable": "A Workspace-adminisztrátorok a támogatott mesterségesintelligencia-szolgáltatásokat a Beállítások → AI Átláthatóság menüpontban kezelhetik.",
+      "rightRetention": "A modellkártyák leírják a dokumentált adatkezelést és -megőrzést; az aktív szolgáltató és a telepítési beállítások változhatnak.",
       "modelCardsLine": "Olvasd el az egyes funkciók <link>teljes modellkártyáit</link>, beleértve a modell azonosságát, a küldött adatokat és a megőrzést.",
-      "versionLine": "Közzétételi verzió: {version}. Az EU AI Act 50. cikke szerint kötelező.",
+      "versionLine": "Átlátszósági közlemény {version} verzió.",
       "acknowledge": "Megértettem, folytatás"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "AI-átláthatóság",
-      "subtitle": "Kötelező közzétételek a munkaterület minden AI-funkciójához. Az <link>EU AI Act 50. cikke</link> (2026-08-02-től hatályos) szerint kötelező."
+      "subtitle": "Az ezen a munkaterületen elérhető mesterséges intelligencia-funkciók termékátlátszósági információi. Lásd: <link>AI modellkártyák</link>."
     },
     "oversight": {
       "title": "Emberi felügyeleti hozzáállás",
-      "description": "Szabályozza, hogy az AI-kimenetek automatikusan alkalmazhatók-e, vagy mindig embernek kell felülvizsgálnia őket a munkaterületi adatokra való alkalmazás előtt.",
+      "description": "Azt szabályozza, hogy a támogatott, írásképes mesterséges intelligencia-műveletek jogosultak-e az automatikus alkalmazásra, vagy az előnézetben maradjanak-e emberi ellenőrzés céljából.",
       "reviewRequiredLabel": "Felülvizsgálat szükséges (ajánlott)",
       "autoApplyLabel": "Automatikus alkalmazás",
-      "reviewRequiredDescription": "Minden AI-javaslat explicit emberi jóváhagyásra sorba kerül, mielőtt bármilyen munkaterületi adat módosulna. Az osztályozási javaslatok előnézetben jelennek meg, soha nem kerülnek alkalmazásra.",
-      "autoApplyDescription": "Az ezt támogató funkciók explicit emberi felülvizsgálat nélkül alkalmazhatnak nagy bizonyosságú AI-kimeneteket. A naplózás továbbra is minden műveletet rögzít.",
+      "reviewRequiredDescription": "A támogatott, írásképes AI-műveletek előnézetben maradnak, amíg egy felhatalmazott ember jóvá nem hagyja őket.",
+      "autoApplyDescription": "A támogatott műveletek csak akkor jogosultak automatikus alkalmazásra, ha a külön írási és jóváhagyási vezérlők is lehetővé teszik; ellenkező esetben előnézetben maradnak.",
       "toggleAria": "Emberi felügyeleti hozzáállás be-/kikapcsolása"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Küldött adatok",
       "retentionLabel": "Megőrzés",
       "readModelCard": "Teljes modellkártya elolvasása",
-      "footer": "{total} funkció közül <strong>{userFacing}</strong> felhasználói felé irányul, és az 50. cikk szerint viselnie kell az <em>AI-val generálva</em> jelölést."
+      "footer": "Az {total} dokumentált jellemzők közül <strong>{userFacing}</strong> kimenet a felhasználók számára. A TaskNebulában a támogatott mesterséges intelligencia által generált kimenet az <em>AI-val generálva</em> címkét viseli."
     },
     "import": {
       "metaTitle": "Feladatok importálása · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Navigationsmenü schließen",
         "items": {
           "features": "Funktionen",
-          "compare": "Vergleichen",
           "selfHost": "Self-hosting",
           "faq": "FAQ"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Oder in zwei Befehlen selbst hosten",
         "quickstartAria": "Self-hosting-Schnellstartbefehle",
         "copyQuickstart": "Self-hosting-Schnellstart kopieren",
-        "selfHostMeta": "Für immer kostenlos selbst gehostet · Drei Container: Postgres, Redis, ein Web-Image",
+        "selfHostMeta": "Saját üzemeltetésben örökre ingyenes · Kis Compose stack Postgres, Redis, web és opcionális szolgáltatásokkal",
         "demoPill": "Interaktive Demo unten",
         "chips": {
           "cmdk": "Cmd+K überall",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Funktionen",
-          "compare": "Vergleichen",
           "selfHost": "Self-hosting",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI-Spezifikation",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-hosting",
         "title": "Deine Arbeit. Dein Server. Deine Daten.",
-        "description": "Drei Container und ein Befehl. Alles liegt in deinem Postgres, Export ist nur ein pg_dump entfernt, und nichts funkt nach Hause — kein Vendor-Lock-in per Design.",
+        "description": "Egy parancs elindít egy kis Compose stacket. Az alapadatok Postgresben maradnak, az export csak egy pg_dump, és alapértelmezés szerint semmi nem küld adatot kifelé — nincs szolgáltatói függés.",
         "cards": {
           "postgres": {
             "title": "Ein Postgres, ein Web-Image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Vergleichen",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "Alle vier sind leistungsfähige Tools. Hier steht genau, wo TaskNebula anders ist — standardmäßig offen, von dir hostbar, AI-native. Nicht mehr, nicht weniger.",
-        "tableAria": "Tabelle zum Funktionsvergleich",
-        "tableCaption": "Funktionsvergleich zwischen TaskNebula, Jira, Linear und Plane. Jede Zelle ist mit Ja, Teilweise oder Nein markiert und enthält eine kurze Erläuterung.",
-        "featureHeader": "Funktion",
-        "marks": {
-          "yes": "Ja",
-          "partial": "Teilweise",
-          "no": "Nein"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Anbieterdetails spiegeln öffentliche Dokumentation und Preisseiten im Juni 2026 wider und können sich ändern. Jira ist eine Marke von Atlassian, Linear von Linear Orbit und Plane von Plane Software — alle sind solide Produkte, keines ist mit TaskNebula verbunden."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "A saját üzemeltetés az alapértelmezett út. Dockerrel egy kis Compose stacket indíthatsz Postgres 16 és pgvector, Redis 7, a neuraparse/tasknebula web image, valamint az általad bekapcsolt beépített vagy opcionális szolgáltatások használatával. A migrációk induláskor lefutnak, a GET /api/health az ellenőrző endpoint, a gyorsindítás pedig a localhost:3000 címen nyílik meg."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Az alapvető tracker — feladatok, táblák, sprintek, dokumentumok, keresés, REST API és OpenAPI-specifikáció — saját infrastruktúrán futtatható. Az OAuth-bejelentkezéshez még adatbázis-adapter kell, ezért egyelőre hitelesítő adatos belépést használj. A valós idejű együttműködés Docker/Compose-on keresztül be van kötve, de a telepítéshez továbbra is elérhető URL és élő smoke teszt szükséges. Az AI és az MCP továbbra is preview. A hiányosságokat a docs/STATUS.md fájlban követjük."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Vissza a TaskNebulához",
-    "disclosureBadge": "EU AI Act 50. cikk szerinti közzététel",
+    "disclosureBadge": "AI átláthatósági információk",
     "title": "AI modellkártyák",
-    "intro": "A TaskNebula az alábbi AI-funkciókat teszi elérhetővé a végfelhasználók számára. Mindegyikhez közzétesszük a tervezett célt, a modell azonosítóját, a minden hívásnál elküldött adatokat, a megőrzési szabályzatot, valamint az alapértelmezett emberi felügyeleti hozzáállásunkat. Ez az oldal egy nyilvános átláthatósági nyilvántartás, amely minden TaskNebula-telepítésre vonatkozik. Közzétételi verzió: <version></version>.",
-    "lastReviewed": "Utoljára felülvizsgálva: 2026-05-14. A szabályozás érvényesítése 2026-08-02-án kezdődik.",
+    "intro": "Ez az oldal a TaskNebula dokumentált AI funkcióit és alapértelmezett konfigurációját írja le. A tényleges modellek, adatkezelés, megőrzés és áttekintés vezérlők munkaterületenként és telepítésenként változhatnak; erősítse meg az aktív beállításokat a rendszergazdával. Átlátszósági közlemény <version></version> verzió.",
+    "lastReviewed": "Utolsó értékelés: 2026-08-12. Az (EU) 2024/1689 rendelet 50. cikke 2026-08-02-tól alkalmazandó.",
     "onThisPage": "Ezen az oldalon",
     "model": "Modell",
     "provider": "Szolgáltató",
@@ -6778,7 +6670,53 @@
     "footerContact": "Kérdése van az AI átláthatóságról, az érintetti jogokról vagy ezekről a modellkártyákról? Írjon e-mailt ide: <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Termék átláthatósági információk a TaskNebula AI funkcióihoz, beleértve a célt, a konfigurált alapértelmezéseket, az adatkezelést és a felülvizsgálati vezérlőket."
+    },
+    "dataSent": "Felhasznált adatok",
+    "retention": "Adatkezelés és adatmegőrzés",
+    "features": {
+      "draft": {
+        "name": "Projektmunka-tétel tervezet",
+        "summary": "Szerkeszthető problémavázlatokat hoz létre egy szabad szöveges promptból.",
+        "purpose": "Segít a személynek egy hozzávetőleges ötletet vagy jelentést strukturált problémavázlatokká alakítani, amelyek szerkeszthetők maradnak a létrehozás előtt.",
+        "dataSent": "A tervezet elkészítéséhez használt prompt, projekt neve és elérhető problématípusok és prioritások.",
+        "retention": "Az TaskNebula jelenleg nem kényszeríti ki a kapcsolódó ügynök által futtatott rekordok automatikus lejáratát. A szolgáltató oldali megtartása az aktív szolgáltatótól függ."
+      },
+      "assist": {
+        "name": "Projektmunka-elem asszisztens",
+        "summary": "Összegzi, átírja, javasolja a következő lépéseket vagy címkéket javasol egy problémához.",
+        "purpose": "Segít a személynek javítani a probléma tartalmát, miközben a javaslat alkalmazását explicit módon kezeli.",
+        "dataSent": "A probléma címe és leírása, valamint a kiválasztott művelethez szükséges címkék vagy legutóbbi megjegyzések.",
+        "retention": "Az TaskNebula jelenleg nem kényszeríti ki a kapcsolódó ügynök által futtatott rekordok automatikus lejáratát. A szolgáltató oldali megtartása az aktív szolgáltatótól függ."
+      },
+      "triage": {
+        "name": "Lemaradás Triage",
+        "summary": "Korlátozott prioritás- és címkemódosításokat javasol a megfelelő lemaradási problémák esetén.",
+        "purpose": "Segíti a humán triagert, hogy felülvizsgálja a lemaradást tételenként; a jóváhagyással zárt futtatások előnézetek maradnak.",
+        "dataSent": "A hátralékos problémakulcsok, címek, leírások, prioritások, címkék és határidők a korlátozott tervezési kontextusban szerepelnek.",
+        "retention": "Az TaskNebula jelenleg nem kényszeríti ki a kapcsolódó ügynök által futtatott rekordok automatikus lejáratát. A szolgáltató oldali megtartása az aktív szolgáltatótól függ."
+      },
+      "ask": {
+        "name": "AI oldalsó panel Q és A",
+        "summary": "Válaszol a szervezeti vagy projektproblémákkal kapcsolatos kérdésekre és az aktuális kérelemhez letöltött dokumentumokra.",
+        "purpose": "Csak olvasható, idézett válaszokat biztosít a hívó fél számára elérhető TaskNebula-ös kontextusból.",
+        "dataSent": "A kiválasztott szervezethez és opcionális projekthez letöltött kérdés és a korlátozott probléma vagy dokumentumrészletek.",
+        "retention": "A beszélgetés állapota a böngésző memóriájában marad az aktuális oldalmunka során, és nem folytatható. A szolgáltató oldali megtartása az aktív szolgáltatótól függ."
+      },
+      "summary": {
+        "name": "Összegzés Generáció",
+        "summary": "Igény szerint összefoglalókat készít, ahol a funkció elérhető.",
+        "purpose": "Segít egy személynek beolvasni a kiválasztott TaskNebula tartalmat a forrásanyag cseréje nélkül.",
+        "dataSent": "Az összefoglalásra kifejezetten kiválasztott tartalom és a kérelem által megkövetelt hatókör metaadatai.",
+        "retention": "Jelenleg nincs kényszerítve a szolgáltatásspecifikus automatikus lejárat. A szolgáltató oldali megtartása az aktív szolgáltatótól függ."
+      },
+      "embedding": {
+        "name": "Szemantikus keresési vektoros reprezentációk",
+        "summary": "Vektoros beágyazásokat hoz létre a konfigurált szemantikus keresési indexeléshez.",
+        "purpose": "Javítja a visszakeresést a kiválasztott forrásszöveg keresési vektorként való megjelenítésével.",
+        "dataSent": "Kiválasztott forrásszöveg és a beágyazási feladat feldolgozásához és tárolásához szükséges azonosítók.",
+        "retention": "A problémák, megjegyzések és projektbeágyazások lépcsőzetes hivatkozásokat használnak. Az üzemeltetőknek minden engedélyezett tartalomtípusnál és szolgáltatónál ellenőrizniük kell a tisztítást."
+      }
     }
   },
   "presence": {

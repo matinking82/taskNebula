@@ -7,7 +7,6 @@ import { GITHUB_URL, Shell, focusRingClass } from './primitives';
 
 const navItems = [
   { labelKey: 'features', href: '#board' },
-  { labelKey: 'compare', href: '#compare' },
   { labelKey: 'selfHost', href: '#self-host' },
   { labelKey: 'faq', href: '#faq' },
 ] as const;

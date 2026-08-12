@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * AiDisclosureModal — first-time AI involvement notice (EU AI Act Article 50).
+ * AiDisclosureModal — versioned product-transparency notice for AI features.
  *
  * Rendered once per (user, workspace, disclosure-version). When the user
  * acknowledges, the version is POST'd to /api/ai/disclosures and persisted
@@ -28,6 +28,7 @@ import { USER_FACING_AI_FEATURES } from '@/config/ai-model-cards';
 
 export function AiDisclosureModal() {
   const t = useTranslations('aiFeatures');
+  const tCards = useTranslations('aiModelCards.features');
   const { needsAcknowledgement, version, acknowledge } = useAiDisclosure();
   const [busy, setBusy] = useState(false);
   // Local open state so the dialog can close immediately after click while
@@ -75,7 +76,8 @@ export function AiDisclosureModal() {
             <ul className="text-muted-foreground list-disc space-y-1 pl-5">
               {USER_FACING_AI_FEATURES.map((f) => (
                 <li key={f.id}>
-                  <span className="text-foreground">{f.name}</span> — {f.summary}
+                  <span className="text-foreground">{tCards(`${f.id}.name`)}</span> —{' '}
+                  {tCards(`${f.id}.summary`)}
                 </li>
               ))}
             </ul>

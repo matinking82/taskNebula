@@ -1,12 +1,20 @@
 ---
-description: Run the full local verification gate — type-check, lint, and tests
-allowed-tools: Bash(pnpm type-check:*), Bash(pnpm lint:*), Bash(pnpm test:*)
+description: Run the complete TaskNebula local verification gate
+allowed-tools: Bash(pnpm --filter @tasknebula/mcp-server build:*), Bash(node scripts/i18n-check.mjs:*), Bash(pnpm hygiene:check:*), Bash(pnpm ui:check:*), Bash(pnpm docs:check:*), Bash(pnpm type-check:*), Bash(pnpm lint:*), Bash(pnpm test:*), Bash(pnpm --filter @tasknebula/web openapi:check:*), Bash(git diff --check:*)
 ---
 
-Run the TaskNebula verification gate from the repo root and report results.
+Run every gate from the repository root and report each result independently:
 
-1. `pnpm type-check`
-2. `pnpm lint`
-3. `pnpm test`
+1. `pnpm --filter @tasknebula/mcp-server build`
+2. `node scripts/i18n-check.mjs`
+3. `pnpm hygiene:check`
+4. `pnpm ui:check`
+5. `pnpm docs:check`
+6. `pnpm type-check`
+7. `pnpm lint`
+8. `pnpm test`
+9. `pnpm --filter @tasknebula/web openapi:check`
+10. `git diff --check`
 
-Run all three even if an earlier one fails (so the user sees every failure at once). Then summarize: which passed, which failed, and for each failure the key error with `file:line`. If everything passes, say so in one line. Do not attempt fixes unless asked.
+Do not hide a later result because an earlier gate failed. Do not modify files
+unless the user separately asked for fixes.

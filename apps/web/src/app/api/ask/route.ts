@@ -1,12 +1,12 @@
 /**
  * POST /api/ask — Ask TaskNebula RAG Q&A.
  *
- * Body: { query: string; projectId?: string; scope?: 'all' | 'issues' | 'docs' }
+ * Body: { query: string; organizationId: string; projectId?: string; scope?: 'all' | 'issues' | 'docs' }
  *
  * Responds with a Server-Sent Events stream. Frame types:
  *   - data: {"type":"sources","sources":[...]}    citations the model can use
  *   - data: {"type":"token","text":"..."}          one streamed token chunk
- *   - data: {"type":"citations","citations":[...]}  parsed [TN-..]/[DOC-..] refs
+ *   - data: {"type":"citations","citations":[...],"unresolved":[...]} parsed refs
  *   - data: {"type":"done","usage":{...}}          terminal frame
  *   - data: {"type":"error","error":"...","code":"..."} terminal failure frame
  *
@@ -19,7 +19,6 @@ import { and, eq, db, organizationMembers, llmCallAudit } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { aiDisabledResponse, isAiFeatureEnabled } from '@/lib/ai/feature-gate';
 import { runAsk, AskError, type AskUsage } from '@/lib/agents/ask';
-import { parseCitations } from '@/lib/agents/citation-parser';
 import { consumeRateLimit } from '@/lib/server/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -29,37 +28,24 @@ const bodySchema = z.object({
   query: z.string().min(1).max(2000),
   projectId: z.string().min(1).max(64).optional().nullable(),
   scope: z.enum(['all', 'issues', 'docs']).optional(),
-  organizationId: z.string().min(1).max(64).optional(),
+  organizationId: z.string().min(1).max(64),
 });
 
 function sseFrame(event: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
 }
 
-async function resolveOrganizationId(
-  userId: string,
-  requested?: string | null
-): Promise<string | null> {
-  if (requested) {
-    const [member] = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, userId),
-          eq(organizationMembers.organizationId, requested),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-    return member?.organizationId ?? null;
-  }
-  // No org passed: use the user's first membership. The UI should always
-  // pass it explicitly; this is just a safety net.
+async function resolveOrganizationId(userId: string, requested: string): Promise<string | null> {
   const [member] = await db
     .select({ organizationId: organizationMembers.organizationId })
     .from(organizationMembers)
-    .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active')))
+    .where(
+      and(
+        eq(organizationMembers.userId, userId),
+        eq(organizationMembers.organizationId, requested),
+        eq(organizationMembers.status, 'active')
+      )
+    )
     .limit(1);
   return member?.organizationId ?? null;
 }
@@ -126,6 +112,7 @@ export async function POST(request: NextRequest) {
       organizationId,
       projectId: payload.projectId ?? null,
       scope: payload.scope ?? 'all',
+      signal: request.signal,
     });
   } catch (err) {
     if (err instanceof AskError) {
@@ -157,9 +144,6 @@ export async function POST(request: NextRequest) {
       };
       request.signal.addEventListener('abort', onAbort);
 
-      // Accumulate the answer text so we can run the citation parser once
-      // the model has finished streaming.
-      let answer = '';
       let lastUsage: AskUsage = {
         model: '',
         inputTokens: 0,
@@ -179,7 +163,8 @@ export async function POST(request: NextRequest) {
           if (event.type === 'sources') {
             controller.enqueue(sseFrame(event));
           } else if (event.type === 'token') {
-            answer += event.text;
+            controller.enqueue(sseFrame(event));
+          } else if (event.type === 'citations') {
             controller.enqueue(sseFrame(event));
           } else if (event.type === 'error') {
             status = 'error';
@@ -187,8 +172,6 @@ export async function POST(request: NextRequest) {
             controller.enqueue(sseFrame(event));
           } else if (event.type === 'done') {
             lastUsage = event.usage;
-            const citations = parseCitations(answer, bundle.sources);
-            controller.enqueue(sseFrame({ type: 'citations', citations }));
             controller.enqueue(sseFrame(event));
           }
         }

@@ -3,7 +3,7 @@
 /**
  * /settings/ai-transparency — workspace-scoped AI Transparency dashboard.
  *
- * Required by EU AI Act Article 50 (2026-08-02). Lists every AI feature
+ * Product-transparency and control dashboard. Lists every AI feature
  * currently exposed in the workspace and shows:
  *   - feature name + summary
  *   - model and provider
@@ -44,6 +44,7 @@ const FEATURE_SETTING_MAP: Partial<
 export function AiTransparencyClient({ organizationId }: { organizationId: string }) {
   const t = useTranslations('pagesSettings');
   const tConfig = useTranslations('settingsConfig');
+  const tCards = useTranslations('aiModelCards.features');
   const { toast } = useToast();
   const { data, isLoading, error } = useOrganizationAgentSettings(organizationId);
   const updateSettings = useUpdateOrganizationAgentSettings(organizationId);
@@ -179,14 +180,16 @@ export function AiTransparencyClient({ organizationId }: { organizationId: strin
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <CardTitle className="flex items-center gap-2 text-base">
-                      {card.name}
+                      {tCards(`${card.id}.name`)}
                       {!card.userFacing && (
                         <Badge variant="muted" size="sm">
                           {t('features.backgroundBadge')}
                         </Badge>
                       )}
                     </CardTitle>
-                    <CardDescription className="mt-1">{card.summary}</CardDescription>
+                    <CardDescription className="mt-1">
+                      {tCards(`${card.id}.summary`)}
+                    </CardDescription>
                   </div>
                   <Switch
                     checked={isFeatureEnabled(card.id)}
@@ -194,7 +197,9 @@ export function AiTransparencyClient({ organizationId }: { organizationId: strin
                     disabled={
                       !canManage || updateSettings.isPending || !FEATURE_SETTING_MAP[card.id]
                     }
-                    aria-label={t('features.toggleFeatureAria', { name: card.name })}
+                    aria-label={t('features.toggleFeatureAria', {
+                      name: tCards(`${card.id}.name`),
+                    })}
                   />
                 </div>
               </CardHeader>
@@ -214,16 +219,12 @@ export function AiTransparencyClient({ organizationId }: { organizationId: strin
                   </Badge>
                 </Field>
                 <Field label={t('features.dataSentLabel')} className="sm:col-span-2">
-                  <ul className="text-muted-foreground list-disc space-y-0.5 pl-4">
-                    {card.dataSent.map((d) => (
-                      <li key={d}>{d}</li>
-                    ))}
-                  </ul>
+                  <p className="text-muted-foreground">{tCards(`${card.id}.dataSent`)}</p>
                 </Field>
                 <Field label={t('features.retentionLabel')} className="sm:col-span-2">
                   <p className="text-muted-foreground inline-flex items-start gap-1.5">
                     <Clock3 className="mt-0.5 h-3 w-3 shrink-0" />
-                    {card.retention}
+                    {tCards(`${card.id}.retention`)}
                   </p>
                 </Field>
                 <div className="pt-1 sm:col-span-2">

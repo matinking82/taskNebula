@@ -1,6 +1,6 @@
 # apps/web — Next.js full-stack app
 
-Next.js 15 (App Router) + React 19. UI **and** the REST API (`src/app/api/**`, ~245 routes).
+Next.js 15 (App Router) + React 19. UI **and** the REST API live in this workspace.
 Root guide: `/CLAUDE.md`. Run commands from `apps/web/` unless noted.
 
 ## Commands
@@ -8,7 +8,7 @@ Root guide: `/CLAUDE.md`. Run commands from `apps/web/` unless noted.
 ```bash
 pnpm dev               # next dev (port 3000)
 pnpm build             # next build
-pnpm test              # jest (188 suites / ~1,200 tests — keep them green)
+pnpm test              # Jest
 pnpm tests:e2e         # playwright test (plural "tests:"); tests:e2e:ui for UI mode
 pnpm type-check        # tsc --noEmit
 pnpm lint              # next lint
@@ -45,3 +45,7 @@ pnpm openapi:gen       # regenerate public/openapi.json (openapi:check verifies 
   and browser evidence. `apps/web/DESIGN_SYSTEM.md` defines tokens/components — `rounded-md` (4px) default,
   `rounded-sm` pills, `rounded-lg` cards; semantic `accent-*` colors; dark mode first-class. See
   `.claude/rules/frontend.md` + `.claude/rules/api.md`.
+- **Agent runtime**: `src/lib/agents/graph-runtime.ts` and
+  `research-graph.ts` provide tested finite routing/checkpoint primitives.
+  They are not yet the durable production worker for every AI path;
+  `docs/AGENT_RUNTIME.md` is the maturity contract.

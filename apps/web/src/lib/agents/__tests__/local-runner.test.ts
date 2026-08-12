@@ -1,4 +1,5 @@
 import {
+  buildLocalAgentEnvironment,
   buildLocalAgentPrompt,
   getLocalAgentRunnerStatus,
   isLocalAgentEndpoint,
@@ -30,6 +31,28 @@ describe('local agent runner config', () => {
   it('detects local endpoint URLs', () => {
     expect(isLocalAgentEndpoint('local://codex')).toBe(true);
     expect(isLocalAgentEndpoint('https://example.test/agent')).toBe(false);
+  });
+
+  it('passes only process essentials and the selected provider credential', () => {
+    const environment = buildLocalAgentEnvironment('codex', {
+      PATH: '/usr/bin',
+      HOME: '/tmp/agent-home',
+      OPENAI_API_KEY: 'codex-key',
+      ANTHROPIC_API_KEY: 'claude-key',
+      DATABASE_URL: 'postgres://secret',
+      AUTH_SECRET: 'auth-secret',
+      AWS_SECRET_ACCESS_KEY: 'cloud-secret',
+    });
+
+    expect(environment).toMatchObject({
+      PATH: '/usr/bin',
+      HOME: '/tmp/agent-home',
+      OPENAI_API_KEY: 'codex-key',
+    });
+    expect(environment).not.toHaveProperty('ANTHROPIC_API_KEY');
+    expect(environment).not.toHaveProperty('DATABASE_URL');
+    expect(environment).not.toHaveProperty('AUTH_SECRET');
+    expect(environment).not.toHaveProperty('AWS_SECRET_ACCESS_KEY');
   });
 
   it('reports disabled when no env or provider switch enables the runner', () => {

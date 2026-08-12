@@ -2,7 +2,7 @@
  * AiBadge — render + tooltip metadata tests.
  *
  * Verifies that AI-output surfaces produce a visible, machine-readable badge
- * (EU AI Act Article 50 requirement) and that the tooltip text is composed
+ * (TaskNebula's product provenance policy) and that the tooltip text is composed
  * from the supplied model + feature + timestamp.
  */
 
@@ -18,9 +18,7 @@ function withQueryClient(ui: React.ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return (
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>
-  );
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
 }
 
 describe('AiBadge', () => {
@@ -38,9 +36,7 @@ describe('AiBadge', () => {
   it('builds the aria-label from model + feature + timestamp', () => {
     const fixed = new Date('2026-05-14T10:32:00');
     render(
-      withQueryClient(
-        <AiBadge feature="Draft Issue" model="Claude Sonnet" generatedAt={fixed} />
-      )
+      withQueryClient(<AiBadge feature="Draft Issue" model="Claude Sonnet" generatedAt={fixed} />)
     );
     const badge = screen.getByTestId('ai-badge');
     const aria = badge.getAttribute('aria-label') ?? '';
@@ -51,9 +47,7 @@ describe('AiBadge', () => {
   });
 
   it('renders a custom label override', () => {
-    render(
-      withQueryClient(<AiBadge label="AI-assisted" feature="Assist" model="x" />)
-    );
+    render(withQueryClient(<AiBadge label="AI-assisted" feature="Assist" model="x" />));
     expect(screen.getByText('AI-assisted')).toBeInTheDocument();
   });
 

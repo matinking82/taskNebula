@@ -3,9 +3,11 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/hooks/use-toast';
+import { useOrganization } from '@/lib/hooks/use-organization';
 import {
   SidecarContext,
   type SidecarContextValue,
+  type SidecarCitation,
   type SidecarEntity,
   type SidecarMessage,
 } from '@/lib/ai/sidecar-context';
@@ -17,7 +19,7 @@ type AskStreamEvent =
   | { type: 'error'; error?: string }
   | { type: 'done' }
   | { type: 'sources'; sources?: unknown[] }
-  | { type: 'citations'; citations?: unknown[] };
+  | { type: 'citations'; citations?: SidecarCitation[]; unresolved?: string[] };
 
 function parseAskFrame(frame: string): AskStreamEvent | null {
   const data = frame
@@ -39,7 +41,7 @@ function parseAskFrame(frame: string): AskStreamEvent | null {
 async function consumeAskStream(
   response: Response,
   onToken: (text: string) => void
-): Promise<string> {
+): Promise<{ answer: string; citations: SidecarCitation[]; unresolved: string[] }> {
   if (!response.ok || !response.body) {
     throw new Error('ask_request_failed');
   }
@@ -48,6 +50,8 @@ async function consumeAskStream(
   const decoder = new TextDecoder();
   let buffer = '';
   let answer = '';
+  let citations: SidecarCitation[] = [];
+  let unresolved: string[] = [];
 
   const consumeFrames = (flush: boolean) => {
     const frames = buffer.split(/\r?\n\r?\n/);
@@ -61,6 +65,9 @@ async function consumeAskStream(
       if (event.type === 'token' && event.text) {
         answer += event.text;
         onToken(event.text);
+      } else if (event.type === 'citations') {
+        citations = Array.isArray(event.citations) ? event.citations : [];
+        unresolved = Array.isArray(event.unresolved) ? event.unresolved : [];
       }
     }
   };
@@ -78,7 +85,7 @@ async function consumeAskStream(
 
   buffer += decoder.decode();
   if (buffer.trim()) consumeFrames(true);
-  return answer;
+  return { answer, citations, unresolved };
 }
 
 interface AiSidecarProviderProps {
@@ -106,6 +113,7 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
   const t = useTranslations('aiFeatures');
   const tErrors = useTranslations('errorPages');
   const { toast } = useToast();
+  const currentOrganizationId = useOrganization((state) => state.currentOrganizationId);
   const [open, setOpenState] = useState(false);
   const [entity, setEntity] = useState<SidecarEntity | null>(null);
   const [messages, setMessages] = useState<SidecarMessage[]>([]);
@@ -170,17 +178,19 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
       ]);
 
       try {
+        if (!currentOrganizationId) throw new Error('ask_organization_required');
         const projectId = entity?.kind === 'project' ? entity.id : undefined;
         const response = await fetch('/api/ask', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             query: trimmed,
+            organizationId: currentOrganizationId,
             ...(projectId ? { projectId } : {}),
           }),
         });
 
-        const answer = await consumeAskStream(response, (text) => {
+        const result = await consumeAskStream(response, (text) => {
           setMessages((prev) =>
             prev.map((message) =>
               message.id === assistantId
@@ -190,7 +200,18 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
           );
         });
 
-        if (!answer.trim()) throw new Error('ask_empty_response');
+        if (!result.answer.trim()) throw new Error('ask_empty_response');
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? {
+                  ...message,
+                  citations: result.citations,
+                  unresolvedCitations: result.unresolved,
+                }
+              : message
+          )
+        );
       } catch {
         setMessages((prev) =>
           prev.map((message) =>
@@ -203,7 +224,7 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
         });
       }
     },
-    [entity, toast, t, tErrors]
+    [currentOrganizationId, entity, toast, t, tErrors]
   );
 
   // The command palette emits this event when the user chooses its Ask AI
@@ -242,7 +263,7 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
     <SidecarContext.Provider value={value}>
       {children}
       <AiSidecar />
-      {/* EU AI Act Article 50 — first-time disclosure modal. Self-gates on
+      {/* Versioned product-transparency notice. Self-gates on
           the current disclosure version + per-user acknowledgement. */}
       <AiDisclosureModal />
     </SidecarContext.Provider>

@@ -4138,19 +4138,19 @@
       "generatedWithAi": "Luotu tekoälyllä",
       "ariaLabel": "Tekoälyn luoma sisältö. {detail}",
       "tooltipTitle": "Tekoälyn luoma tuotos",
-      "disclosure": "EU:n tekoälyasetuksen 50 artiklan tiedonanto. Katso <link>mallikortit</link>."
+      "disclosure": "AI läpinäkyvyystiedot. Katso <link>Tekoälymallikortit</link>."
     },
     "disclosure": {
       "title": "Olet vuorovaikutuksessa tekoälyn kanssa",
       "description": "Jotkin TaskNebula-ominaisuudet käyttävät kolmannen osapuolen tekoälymalleja tekstin, ehdotusten ja yhteenvetojen luomiseen. Lue ennen jatkamista, mitä se sinulle tarkoittaa.",
       "whatRunsTitle": "Mitä työtilassasi suoritetaan",
-      "rightsTitle": "Oikeutesi",
-      "rightLabelled": "Jokainen tekoälytuotos merkitään <label>Luotu tekoälyllä</label>.",
-      "rightReview": "Voit tarkistaa ja hylätä minkä tahansa tekoälyehdotuksen ennen sen käyttöönottoa.",
-      "rightDisable": "Työtilan ylläpitäjät voivat poistaa minkä tahansa tekoälyominaisuuden käytöstä kohdassa Asetukset → Tekoälyn läpinäkyvyys.",
-      "rightRetention": "Syötteet/tuotokset säilytetään mallikortin säilytyskäytännön mukaisesti, eikä niitä koskaan myydä.",
+      "rightsTitle": "Mitä voit odottaa",
+      "rightLabelled": "TaskNebulassa tuetun, käyttäjille suunnatun tekoälyn luoman lähdön tunniste on <label>Luotu tekoälyllä</label>.",
+      "rightReview": "Hyväksynnän piiriin kuuluvat kirjoitustoiminnot pysyvät esikatselussa, kunnes valtuutettu henkilö hyväksyy ne.",
+      "rightDisable": "Workspace-järjestelmänvalvojat voivat hallita tuettuja tekoälyominaisuuksia kohdassa Asetukset → AI Transparency.",
+      "rightRetention": "Mallikortit kuvaavat dokumentoitua tietojen käsittelyä ja säilyttämistä; aktiivisen palveluntarjoajan ja käyttöönottoasetukset voivat vaihdella.",
       "modelCardsLine": "Lue <link>täydelliset mallikortit</link> jokaiselle ominaisuudelle, mukaan lukien mallin identiteetti, lähetetty data ja säilytys.",
-      "versionLine": "Tiedonannon versio {version}. EU:n tekoälyasetuksen 50 artiklan edellyttämä.",
+      "versionLine": "Läpinäkyvyysilmoituksen versio {version}.",
       "acknowledge": "Ymmärrän, jatka"
     },
     "draft": {
@@ -4661,15 +4661,15 @@
     },
     "aiTransparency": {
       "title": "Tekoälyn läpinäkyvyys",
-      "subtitle": "Pakolliset tiedonannot jokaiselle tämän työtilan tekoälyominaisuudelle. Edellytetty <link>EU:n tekoälyasetuksen 50 artiklassa</link> (voimassa 2.8.2026)."
+      "subtitle": "Tässä työtilassa saatavilla olevien tekoälyominaisuuksien tuotteen läpinäkyvyystiedot. Katso <link>Tekoälymallikortit</link>."
     },
     "oversight": {
       "title": "Ihmisvalvonnan asento",
-      "description": "Ohjaa, voidaanko tekoälytuotokset ottaa käyttöön automaattisesti vai onko ihmisen aina tarkistettava ne ennen niiden soveltamista työtilan tietoihin.",
+      "description": "Hallitsee, ovatko tuetut kirjoituskykyiset tekoälytoiminnot kelvollisia käytettäväksi automaattisesti vai jäävätkö ne esikatseluun ihmisen tarkastettavaksi.",
       "reviewRequiredLabel": "Tarkistus vaadittu (suositeltu)",
       "autoApplyLabel": "Ota käyttöön automaattisesti",
-      "reviewRequiredDescription": "Jokainen tekoälyehdotus asetetaan jonoon nimenomaista ihmisen hyväksyntää varten ennen kuin mitään työtilan tietoja muutetaan. Luokitteluehdotukset esikatsellaan, ei koskaan oteta käyttöön.",
-      "autoApplyDescription": "Sitä tukevat ominaisuudet voivat ottaa käyttöön korkean varmuuden tekoälytuotoksia ilman nimenomaista ihmisen tarkistusta. Tarkastusloki tallentaa silti jokaisen toiminnon.",
+      "reviewRequiredDescription": "Tuetut kirjoituskykyiset tekoälytoiminnot säilyvät esikatselussa, kunnes valtuutettu ihminen hyväksyy ne.",
+      "autoApplyDescription": "Tuetut toiminnot ovat kelvollisia automaattiseen soveltamiseen vain, jos myös erilliset kirjoitus- ja hyväksymisohjaimet sallivat sen. muuten ne jäävät esikatseluun.",
       "toggleAria": "Vaihda ihmisvalvonnan asento"
     },
     "features": {
@@ -4683,7 +4683,7 @@
       "dataSentLabel": "Lähetetty data",
       "retentionLabel": "Säilytys",
       "readModelCard": "Lue koko mallikortti",
-      "footer": "<strong>{userFacing}</strong> / {total} ominaisuutta on käyttäjälle näkyviä, ja niissä on oltava <em>Luotu tekoälyllä</em> -merkki 50 artiklan mukaisesti."
+      "footer": "<strong>{userFacing}</strong> {total} dokumentoidusta ominaisuudesta tuottaa tuloksia käyttäjille. TaskNebulassa tuetun tekoälyn luoman tulosteen nimi on <em>Luotu tekoälyllä</em>."
     },
     "import": {
       "metaTitle": "Tuo töitä · TaskNebula",
@@ -5066,7 +5066,6 @@
         "closeMenuAria": "Stäng navigeringsmenyn",
         "items": {
           "features": "Ominaisuudet",
-          "compare": "Vertaa",
           "selfHost": "Itsehostaus",
           "faq": "UKK"
         }
@@ -5080,7 +5079,7 @@
         "selfHostKicker": "Eller självhosta med två kommandon",
         "quickstartAria": "Snabbstartskommandon för självhosting",
         "copyQuickstart": "Kopiera snabbstart för självhosting",
-        "selfHostMeta": "Gratis för alltid som självhostad · Tre containrar: Postgres, Redis, en webbimage",
+        "selfHostMeta": "Ikuisesti ilmainen itse ylläpidettynä · Pieni Compose-pino, jossa Postgres, Redis, web ja valinnaiset palvelut",
         "demoPill": "Interaktiv demo nedan",
         "chips": {
           "cmdk": "Cmd+K överallt",
@@ -5107,7 +5106,6 @@
         },
         "links": {
           "features": "Funktioner",
-          "compare": "Jämför",
           "selfHost": "Självhosta",
           "faq": "FAQ",
           "openapiSpec": "OpenAPI-specifikation",
@@ -5150,7 +5148,7 @@
       "selfHost": {
         "kicker": "Self-host",
         "title": "Your work. Your server. Your data.",
-        "description": "Three containers and one command. Everything lives in your Postgres, exporting is a pg_dump away, and nothing phones home — no vendor lock-in by design.",
+        "description": "Yksi komento käynnistää pienen Compose-pinon. Ydintiedot ovat Postgresissa, vienti onnistuu yhdellä pg_dumpilla eikä mikään lähetä tietoja ulos oletuksena — ei toimittajalukkoa.",
         "cards": {
           "postgres": {
             "title": "One Postgres, one web image",
@@ -5297,112 +5295,6 @@
           }
         }
       },
-      "comparison": {
-        "kicker": "Compare",
-        "title": "TaskNebula vs Jira vs Linear vs Plane",
-        "description": "All four are capable tools. Here is exactly where TaskNebula differs — open by default, yours to host, AI-native. Nothing more, nothing less.",
-        "tableAria": "Feature comparison table",
-        "tableCaption": "Feature comparison between TaskNebula, Jira, Linear, and Plane. Each cell is marked Yes, Partial, or No, followed by a short detail.",
-        "featureHeader": "Feature",
-        "marks": {
-          "yes": "Yes",
-          "partial": "Partial",
-          "no": "No"
-        },
-        "rows": {
-          "openSource": {
-            "feature": "Open source (MIT)",
-            "notes": {
-              "tasknebula": "Entire codebase, MIT",
-              "jira": "Proprietary",
-              "linear": "Proprietary",
-              "plane": "AGPL-3.0 core"
-            }
-          },
-          "selfHost": {
-            "feature": "Self-host (one Docker Compose)",
-            "notes": {
-              "tasknebula": "Postgres + Redis + one web image",
-              "jira": "Cloud-first; DC phased out",
-              "linear": "Cloud only",
-              "plane": "Docker / Kubernetes"
-            }
-          },
-          "price": {
-            "feature": "Price",
-            "notes": {
-              "tasknebula": "Free, unlimited users, self-hosted",
-              "jira": "Free ≤10 users, then per-seat",
-              "linear": "Free tier, then per-seat",
-              "plane": "Free ≤12 users, then per-seat"
-            }
-          },
-          "aiAgents": {
-            "feature": "AI agents native + MCP server",
-            "notes": {
-              "tasknebula": "Built-in agents + MIT MCP server",
-              "jira": "Rovo + remote MCP, cloud-only",
-              "linear": "AI + remote MCP server",
-              "plane": "Plane AI (credits) + MCP"
-            }
-          },
-          "keyboard": {
-            "feature": "Keyboard-first",
-            "notes": {
-              "tasknebula": "Command palette + shortcuts",
-              "jira": "Limited shortcuts",
-              "linear": "Best-in-class",
-              "plane": "Command-K palette"
-            }
-          },
-          "realtime": {
-            "feature": "Realtime collab",
-            "notes": {
-              "tasknebula": "Live cursors via Yjs",
-              "jira": "Live sync, no co-editing",
-              "linear": "Live sync",
-              "plane": "Live sync"
-            }
-          },
-          "import": {
-            "feature": "Jira / Linear import",
-            "notes": {
-              "tasknebula": "CSV + API import",
-              "jira": "Imports to Jira",
-              "linear": "Jira import built-in",
-              "plane": "Jira / Linear importers"
-            }
-          },
-          "sprints": {
-            "feature": "Sprints / Cycles",
-            "notes": {
-              "tasknebula": "Sprints + backlog",
-              "jira": "Scrum + Kanban",
-              "linear": "Cycles",
-              "plane": "Cycles + modules"
-            }
-          },
-          "structure": {
-            "feature": "Labels / Components / Versions",
-            "notes": {
-              "tasknebula": "First-class, all three",
-              "jira": "All three",
-              "linear": "Labels + projects",
-              "plane": "Labels + modules"
-            }
-          },
-          "api": {
-            "feature": "API / Projects-as-code",
-            "notes": {
-              "tasknebula": "Open REST + OpenAPI spec",
-              "jira": "REST API, no IaC",
-              "linear": "GraphQL API",
-              "plane": "REST API"
-            }
-          }
-        },
-        "footnote": "Vendor details reflect public documentation and pricing pages as of June 2026 and may change. Jira is a trademark of Atlassian, Linear of Linear Orbit, and Plane of Plane Software — all are solid products, none affiliated with TaskNebula."
-      },
       "faq": {
         "kicker": "FAQ",
         "title": "Fair questions, straight answers.",
@@ -5415,7 +5307,7 @@
           },
           "selfHost": {
             "question": "Can I self-host it?",
-            "answer": "That is the default. Bring Docker and you get three containers — Postgres 16 with pgvector, Redis 7, and the neuraparse/tasknebula web image. Migrations run on boot, GET /api/health is your probe endpoint, and a one-line compose quickstart gets you to localhost:3000. There is no hosted-only feature you lose by running it yourself."
+            "answer": "Itse ylläpito on oletuspolku. Dockerilla käynnistät pienen Compose-pinon, johon kuuluvat Postgres 16 ja pgvector, Redis 7, neuraparse/tasknebula-web-image sekä käyttöön ottamasi mukana tulevat tai valinnaiset palvelut. Migraatiot ajetaan käynnistyksessä, GET /api/health toimii tarkistuspisteenä ja pika-aloitus avautuu osoitteessa localhost:3000."
           },
           "aiKeys": {
             "question": "Do I need the AI features? Can I bring my own keys?",
@@ -5435,7 +5327,7 @@
           },
           "productionReady": {
             "question": "Is it production-ready?",
-            "answer": "The core tracker — issues, boards, sprints, docs, search, permissions, REST API, and OpenAPI spec — is solid and self-hostable. Some edges are still maturing: OAuth login needs a DB adapter, so use credentials auth for now; realtime collab env vars are not yet plumbed into the Docker images; and parts of the AI/MCP surface are preview. We track all of it openly in docs/STATUS.md."
+            "answer": "Ydinseuranta — tehtävät, taulut, sprintit, dokumentit, haku, REST API ja OpenAPI-määritys — voidaan ylläpitää itse. OAuth-kirjautuminen tarvitsee vielä tietokanta-adapterin, joten käytä toistaiseksi tunnuskirjautumista. Reaaliaikainen yhteistyö on kytketty Docker/Composeen, mutta käyttöönotto tarvitsee edelleen saavutettavan URL-osoitteen ja toimivan smoke-testin. AI ja MCP ovat yhä preview-vaiheessa. Seuraamme puutteita tiedostossa docs/STATUS.md."
           },
           "dataVisibility": {
             "question": "Who can see my data?",
@@ -6765,10 +6657,10 @@
   },
   "aiModelCards": {
     "back": "Takaisin TaskNebulaan",
-    "disclosureBadge": "EU AI Act Article 50 -ilmoitus",
+    "disclosureBadge": "AI läpinäkyvyystiedot",
     "title": "Tekoälymallikortit",
-    "intro": "TaskNebula ottaa loppukäyttäjille käyttöön seuraavat tekoälyominaisuudet. Julkaisemme jokaisesta käyttötarkoituksen, mallin tunnistetiedot, jokaisella kutsulla lähetettävät tiedot, säilytyskäytännön sekä oletusarvoisen ihmisen valvonnan tason. Tämä sivu on julkinen läpinäkyvyysseloste ja koskee kaikkia TaskNebula-käyttöönottoja. Ilmoituksen versio <version></version>.",
-    "lastReviewed": "Viimeksi tarkistettu 2026-05-14. Sääntelyn täytäntöönpano alkaa 2026-08-02.",
+    "intro": "Tällä sivulla kuvataan TaskNebulan dokumentoidut tekoälyominaisuudet ja oletuskokoonpano. Todelliset mallit, tietojen käsittely, säilytys- ja tarkistussäätimet voivat vaihdella työtilan ja käyttöönoton mukaan. vahvista aktiiviset asetukset järjestelmänvalvojaltasi. Läpinäkyvyysilmoituksen versio <version></version>.",
+    "lastReviewed": "Viimeksi tarkistettu 2026-08-12. Asetuksen (EU) 2024/1689 50 artiklaa sovelletaan 2026-08-02 alkaen.",
     "onThisPage": "Tällä sivulla",
     "model": "Malli",
     "provider": "Tarjoaja",
@@ -6778,7 +6670,53 @@
     "footerContact": "Kysymyksiä tekoälyn läpinäkyvyydestä, rekisteröidyn oikeuksista tai näistä mallikorteista? Lähetä sähköpostia osoitteeseen <link></link>.",
     "meta": {
       "title": "AI Model Cards — TaskNebula",
-      "description": "Public AI transparency disclosures for every AI feature TaskNebula deploys, as required by EU AI Act Article 50."
+      "description": "Tuotteen läpinäkyvyystiedot TaskNebula AI -ominaisuuksista, mukaan lukien tarkoitus, määritetyt oletusasetukset, tietojen käsittely ja tarkistusohjaimet."
+    },
+    "dataSent": "Käytetty data",
+    "retention": "Tietojen käsittely ja säilyttäminen",
+    "features": {
+      "draft": {
+        "name": "Projektin työkohteen luonnos",
+        "summary": "Luo muokattavat ongelmaluonnokset vapaan tekstin kehotteesta.",
+        "purpose": "Auttaa henkilöä muuttamaan karkean idean tai raportin jäsennellyiksi ongelmaluonnoksiksi, joita voidaan muokata ennen luomista.",
+        "dataSent": "Luonnoksen valmistelussa käytetty kehote, projektin nimi ja käytettävissä olevat ongelmatyypit ja prioriteetit.",
+        "retention": "TaskNebula ei tällä hetkellä pakota automaattista vanhenemista asiaan liittyville agentin suorittamille tietueille. Palveluntarjoajan puolen säilyttäminen riippuu aktiivisesta palveluntarjoajasta."
+      },
+      "assist": {
+        "name": "Projektityöassistentti",
+        "summary": "Tekee yhteenvedon, kirjoittaa uudelleen, ehdottaa seuraavia vaiheita tai ehdottaa tunnisteita ongelmalle.",
+        "purpose": "Auttaa henkilöä parantamaan ongelman sisältöä ja pitämään ehdotuksen soveltamisen selkeänä.",
+        "dataSent": "Ongelman nimi ja kuvaus sekä valitun toiminnon edellyttämät tunnisteet tai viimeaikaiset kommentit.",
+        "retention": "TaskNebula ei tällä hetkellä pakota automaattista vanhenemista asiaan liittyville agentin suorittamille tietueille. Palveluntarjoajan puolen säilyttäminen riippuu aktiivisesta palveluntarjoajasta."
+      },
+      "triage": {
+        "name": "Jäljellä oleva Triage",
+        "summary": "Ehdottaa rajoitettuja prioriteetti- ja tunnistemuutoksia kelvollisiin ruuhkaongelmiin.",
+        "purpose": "Auttaa inhimillistä triageria tarkastelemaan ruuhkaa erissä; hyväksynnät pysyvät esikatseluina.",
+        "dataSent": "Rajalliseen suunnittelukontekstiin sisältyvät ruuhkaongelmaavaimet, otsikot, kuvaukset, prioriteetit, tunnisteet ja eräpäivät.",
+        "retention": "TaskNebula ei tällä hetkellä pakota automaattista vanhenemista asiaan liittyville agentin suorittamille tietueille. Palveluntarjoajan puolen säilyttäminen riippuu aktiivisesta palveluntarjoajasta."
+      },
+      "ask": {
+        "name": "AI-sivupaneeli Q ja A",
+        "summary": "Vastaa kysymyksiin organisaatio- tai projektikysymyksistä ja asiakirjoista, jotka on haettu nykyistä pyyntöä varten.",
+        "purpose": "Tarjoaa vain luku -muotoisia, lainattuja vastauksia soittajan käytettävissä olevasta kontekstista TaskNebula.",
+        "dataSent": "Valittua organisaatiota ja valinnaista projektia varten haettu kysymys ja rajattu ongelma tai asiakirjan katkelmat.",
+        "retention": "Keskustelutila säilytetään selaimen muistissa nykyisen sivuistunnon ajan, eikä sitä voida jatkaa. Palveluntarjoajan puolen säilyttäminen riippuu aktiivisesta palveluntarjoajasta."
+      },
+      "summary": {
+        "name": "Yhteenveto sukupolvi",
+        "summary": "Tuottaa pyynnöstä yhteenvedot, jos ominaisuus on saatavilla.",
+        "purpose": "Auttaa henkilöä skannaamaan valitun TaskNebula sisällön korvaamatta lähdemateriaalia.",
+        "dataSent": "Yhteenvetoa varten nimenomaan valittu sisältö ja pyynnön edellyttämät laajuuden metatiedot.",
+        "retention": "Ominaisuuskohtaista automaattista vanhenemista ei tällä hetkellä pakoteta. Palveluntarjoajan puolen säilyttäminen riippuu aktiivisesta palveluntarjoajasta."
+      },
+      "embedding": {
+        "name": "Semanttisen haun vektoriesitykset",
+        "summary": "Luo vektori upotuksia määritettyä semanttista hakua varten.",
+        "purpose": "Parantaa hakua esittämällä valittua lähdetekstiä hakuvektorina.",
+        "dataSent": "Valittu lähdeteksti ja upotustyön käsittelyyn ja tallentamiseen tarvittavat tunnisteet.",
+        "retention": "Ongelma-, kommentti- ja projektiupotuksissa käytetään peräkkäin linkitettyjä viittauksia. Operaattoreiden on varmistettava jokaisen käyttöönotetun sisältötyypin ja palveluntarjoajan puhdistus."
+      }
     }
   },
   "presence": {

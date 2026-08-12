@@ -121,5 +121,13 @@ describe('citation-parser', () => {
       const answer = '[TN-TASK-42] [DOC-doc_99]';
       expect(findUnresolvedCitations(answer, sources)).toEqual([]);
     });
+
+    it('accepts a document id even when the source also has a different alias', () => {
+      const aliased: CitationSource[] = [
+        { type: 'doc', id: 'doc_99', key: 'release', title: 'Release', snippet: 'Steps.' },
+      ];
+
+      expect(findUnresolvedCitations('[DOC-doc_99] [DOC-release]', aliased)).toEqual([]);
+    });
   });
 });

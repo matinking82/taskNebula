@@ -1,277 +1,163 @@
-# TaskNebula Deployment Guide
+# TaskNebula deployment
 
-This guide covers deploying TaskNebula to production environments.
+**Verified:** 2026-08-12
 
-## Table of Contents
+This guide is portable and intentionally contains no operator-specific domain,
+port map, credential, or topology. Use ignored environment/Compose overrides
+for a real installation.
 
-- [Prerequisites](#prerequisites)
-- [Environment Variables](#environment-variables)
-- [Deployment Options](#deployment-options)
-  - [Vercel (Recommended)](#vercel-recommended)
-  - [Docker](#docker)
-  - [Self-Hosted](#self-hosted)
-- [Database Setup](#database-setup)
-- [Post-Deployment](#post-deployment)
-- [Monitoring](#monitoring)
-- [Troubleshooting](#troubleshooting)
+## Supported baseline
 
-## Prerequisites
+- Node.js 22+ and pnpm 9+ for source builds
+- PostgreSQL 16 with pgvector
+- Docker Compose for the maintained self-hosted stack
+- Redis for multi-instance SSE/presence/rate-limit behavior
+- Optional Hocuspocus for collaborative editing and LiveKit for voice
 
-- Node.js 20+
-- PostgreSQL 16+
-- pnpm 9+
-- Domain name (for production)
-- SSL certificate (for production)
+## Configuration
 
-## Environment Variables
+Copy `.env.example` to an ignored `.env` and replace every production secret.
+At minimum the Compose stack requires:
 
-Copy `.env.example` to `.env` and configure:
+- `APP_URL`: browser-visible base URL;
+- `AUTH_SECRET`: strong random session/collaboration signing secret;
+- Postgres database/user/password values;
+- `REDIS_PASSWORD`;
+- production-safe LiveKit credentials when the bundled voice service is used.
 
-### Required Variables
+Generate secrets outside the repository, for example:
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:password@host:5432/database
-
-# Auth
-AUTH_SECRET=your-secret-key-here  # Generate with: openssl rand -base64 32
-AUTH_URL=https://yourdomain.com
-
-# OAuth Providers (at least one required)
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
-
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Application
-NEXT_PUBLIC_APP_URL=https://yourdomain.com
-NEXT_PUBLIC_APP_NAME=TaskNebula
+openssl rand -base64 32
+openssl rand -hex 32
 ```
 
-### Optional Variables
+External OAuth, AI, email, Sentry, integrations, collaboration, and voice
+variables are optional capability settings. Google/GitHub sign-in is not
+production-ready until the documented Auth.js database-adapter/user lifecycle
+gap is closed; credentials auth is the current reliable bootstrap path.
+
+Never commit `.env`, a Compose override containing secrets, certificates,
+database dumps, or live URLs.
+
+## Docker Compose
+
+The root Compose stack runs Postgres, Redis, LiveKit, and the web image. It
+pulls `neuraparse/tasknebula:latest` by default; set `TASKNEBULA_IMAGE` to an
+immutable version or local tag for reproducible deployment.
 
 ```bash
-# AI Features
-OPENAI_API_KEY=your-openai-api-key
-
-# Email
-RESEND_API_KEY=your-resend-api-key
-EMAIL_FROM=noreply@yourdomain.com
-
-# Caching
-REDIS_URL=redis://localhost:6379
-
-# Self-hosted voice rooms
-LIVEKIT_URL=http://host.docker.internal:7880
-LIVEKIT_PUBLIC_HOST=rtc.yourdomain.com
-NEXT_PUBLIC_LIVEKIT_URL=wss://rtc.yourdomain.com
-LIVEKIT_NODE_IP=
-LIVEKIT_API_KEY=replace-me
-LIVEKIT_API_SECRET=replace-me
-
-# Optional external TURN relay
-TURN_URL=turns://turn.yourdomain.com:5349
-TURN_USERNAME=replace-me
-TURN_PASSWORD=replace-me
-
-# Monitoring
-NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
+cp .env.example .env
+# edit .env and replace secrets/default production values
+docker compose up -d
+docker compose ps
+curl --fail http://localhost:3000/api/health
 ```
 
-## Deployment Options
+The web entrypoint runs journaled migrations. Do not run `db:generate`; that
+script does not exist because migrations after `0012` are hand-written.
 
-### Vercel (Recommended)
-
-1. **Install Vercel CLI**
-
-   ```bash
-   pnpm add -g vercel
-   ```
-
-2. **Login to Vercel**
-
-   ```bash
-   vercel login
-   ```
-
-3. **Deploy**
-
-   ```bash
-   cd apps/web
-   vercel --prod
-   ```
-
-4. **Configure Environment Variables**
-   - Go to Vercel Dashboard → Settings → Environment Variables
-   - Add all required environment variables
-   - Redeploy
-
-5. **Setup Database**
-   - Use Vercel Postgres or external PostgreSQL
-   - Run migrations:
-     ```bash
-     pnpm --filter=@tasknebula/db db:migrate:prod
-     ```
-
-### Docker
-
-1. **Build Image**
-
-   ```bash
-   docker build -t tasknebula:latest .
-   ```
-
-2. **Run with Docker Compose**
-
-   ```bash
-   docker-compose up -d
-   ```
-
-   The local compose stack provisions PostgreSQL, Redis, and a self-hosted LiveKit server for project voice rooms.
-
-3. **Run Migrations**
-
-   ```bash
-   docker-compose exec web pnpm --filter=@tasknebula/db db:migrate:prod
-   ```
-
-4. **Seed Production Data**
-   ```bash
-   docker-compose exec web pnpm --filter=@tasknebula/db db:seed:prod
-   ```
-
-### Self-Hosted
-
-1. **Install Dependencies**
-
-   ```bash
-   pnpm install --frozen-lockfile
-   ```
-
-2. **Build Application**
-
-   ```bash
-   pnpm build
-   ```
-
-3. **Run Migrations**
-
-   ```bash
-   pnpm --filter=@tasknebula/db db:migrate:prod
-   pnpm --filter=@tasknebula/db db:seed:prod
-   ```
-
-4. **Start Application**
-
-   ```bash
-   pnpm --filter=@tasknebula/web start
-   ```
-
-5. **Provision Realtime Services**
-
-- Redis is required for multi-instance SSE fanout and room presence.
-- LiveKit is required for voice rooms.
-- For Docker deployments, run LiveKit on the host network. LiveKit’s official deployment guide says Dockerized environments should use host networking for optimal performance.
-- The bundled compose stack auto-detects `LIVEKIT_NODE_IP` inside the LiveKit container when left blank.
-- For same-machine localhost development, keep `LIVEKIT_PUBLIC_HOST=127.0.0.1`.
-- For LAN testing from another device, set `LIVEKIT_PUBLIC_HOST` to your machine IP, for example `192.168.1.103`.
-- For production, pin your own `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` and terminate TLS in front of the LiveKit WebSocket endpoint.
-- LiveKit includes an embedded TURN server; use `TURN_*` only if you operate a separate TURN relay for stricter network environments.
-
-5. **Setup Process Manager (PM2)**
-   ```bash
-   pnpm add -g pm2
-   pm2 start "pnpm --filter=@tasknebula/web start" --name tasknebula
-   pm2 save
-   pm2 startup
-   ```
-
-## Database Setup
-
-### PostgreSQL
-
-1. **Create Database**
-
-   ```sql
-   CREATE DATABASE tasknebula;
-   CREATE USER tasknebula_user WITH PASSWORD 'your-password';
-   GRANT ALL PRIVILEGES ON DATABASE tasknebula TO tasknebula_user;
-   ```
-
-2. **Run Migrations**
-
-   ```bash
-   pnpm --filter=@tasknebula/db db:migrate:prod
-   ```
-
-3. **Seed Initial Data**
-   ```bash
-   pnpm --filter=@tasknebula/db db:seed:prod
-   ```
-
-### Supabase
-
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Copy the connection string
-3. Set `DATABASE_URL` environment variable
-4. Run migrations as above
-
-## Post-Deployment
-
-### 1. Verify Health
+To build the current checkout rather than pull an image:
 
 ```bash
-curl https://yourdomain.com/api/health
+docker compose build web
+docker compose up -d --no-deps web
 ```
 
-### 2. Create First Organization
+Recreating only `web` preserves the database and supporting services. Review
+new SQL, take a database backup, and preserve a rollback image before applying
+a release to a persistent installation.
 
-- Visit your domain
-- Sign in with OAuth
-- Create your first organization
+### Collaborative editing
 
-### 3. Configure OAuth Callbacks
+Enable the collab overlay and provide a browser-reachable WebSocket URL:
 
-- GitHub: `https://yourdomain.com/api/auth/callback/github`
-- Google: `https://yourdomain.com/api/auth/callback/google`
+```bash
+docker compose -f docker-compose.yml -f docker-compose.collab.yml up -d
+```
 
-## Monitoring
+Set `NEXT_PUBLIC_COLLAB_ENABLED=true` and
+`NEXT_PUBLIC_HOCUSPOCUS_URL=wss://collab.example.com`. Because these public
+values participate in the Next.js client build, rebuild the web image when
+they change. Hocuspocus must share the auth secret and database; Redis is
+required for multiple Hocuspocus instances.
 
-### Health Checks
+### Voice
+
+LiveKit/WebRTC needs more than a healthy HTTP container. Configure a
+browser-reachable `NEXT_PUBLIC_LIVEKIT_URL`, strong API key/secret, advertised
+node IP, UDP/TCP ranges, TLS, and TURN behavior for the target network. Verify
+from a second device/network before calling voice production-ready.
+
+## Source deployment
+
+For a non-Compose Node deployment:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @tasknebula/mcp-server build
+pnpm build
+pnpm db:migrate
+pnpm --filter @tasknebula/web start
+```
+
+Supply `DATABASE_URL`, auth/app URL, and optional service credentials through
+the process manager. The deployment is responsible for Postgres backups,
+Redis/Hocuspocus/LiveKit lifecycle, TLS/reverse proxying, restarts, and log/
+trace export.
+
+The repository also supports a Next.js/Vercel-style web deployment, but it does
+not provision the Postgres, collaboration, voice, worker, or deployment
+secrets automatically. Validate long-running/streaming behavior against the
+chosen platform limits.
+
+## Database safety
+
+- Migrations live in `packages/db/drizzle` and are applied by
+  `packages/db/src/migrate.ts`.
+- Never run `db:reset`, dev seed, `db:push`, truncate, or restore over a
+  persistent environment during routine deployment.
+- Review idempotency, locks, table rewrites, backfill cost, rollback, and the
+  strictly increasing journal timestamp before rollout.
+- Take a custom-format backup and test restore procedures; a backup that has
+  never been restored is unverified.
+
+## Post-deployment checks
+
+At minimum:
+
+```bash
+docker compose ps
+curl --fail https://app.example.com/api/health
+curl --fail https://app.example.com/api/ready
+```
+
+Then verify with a safe fixture/account:
+
+- credentials sign-in, organization and project access;
+- issue create/update and board/SSE refresh;
+- dark/light and 320px/desktop core routes;
+- email/integration/provider flows that are enabled;
+- Hocuspocus two-client editing when collaboration is enabled;
+- LiveKit two-device audio when voice is enabled;
+- Redis-backed behavior across replicas when running more than one web process.
+
+Keep screenshots, logs, backups, hostnames, and rollback notes outside tracked
+source.
+
+## Monitoring and rollback
 
 - Health: `GET /api/health`
 - Readiness: `GET /api/ready`
-- Metrics: `GET /api/metrics`
+- Metrics: `GET /api/metrics` (protect exposure at the network/auth boundary)
+- Structured application logs: web process/container output
+- Detailed signals: [`OBSERVABILITY.md`](OBSERVABILITY.md)
 
-### Logs
+Rollback immediately when migrations fail, health/readiness is not green, the
+web process restarts repeatedly, or core smoke tests regress. Restore the prior
+immutable web image first; restore a database only when the migration rollback
+plan requires it and the recovery consequences are understood.
 
-```bash
-# Docker
-docker-compose logs -f web
-
-# PM2
-pm2 logs tasknebula
-```
-
-## Troubleshooting
-
-### Database Connection Issues
-
-- Verify `DATABASE_URL` is correct
-- Check database is running
-- Verify network connectivity
-
-### OAuth Issues
-
-- Verify callback URLs are correct
-- Check client IDs and secrets
-- Ensure `AUTH_URL` matches your domain
-
-### Build Failures
-
-- Clear cache: `pnpm clean`
-- Reinstall: `rm -rf node_modules && pnpm install`
-- Check Node.js version: `node --version`
-
-For more help, see [GitHub Issues](https://github.com/neuraparse/taskNebula/issues)
+Release/publishing instructions are separate in [`RELEASE.md`](RELEASE.md).
+Building or deploying a local checkout never authorizes GitHub or registry
+publication.

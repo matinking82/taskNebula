@@ -1,264 +1,191 @@
-# TaskNebula Design System — Agent Contract (v0.2.1 square-sharp refresh)
+# TaskNebula Design System
 
-> **STATUS:** Authoritative reference for refactor agents. Read this before touching any component.
-> Do NOT modify `globals.css`, `tailwind.config.ts`, or this file. All agents consume this contract.
+**Verified:** 2026-08-12
 
-## Design Intent — v0.2.1 refresh
+This is the implementation contract for TaskNebula's web UI. Read
+[`DESIGN.md`](DESIGN.md) first: it owns product intent, page archetypes, flow
+evidence, and acceptance. This document owns reusable visual and interaction
+decisions.
 
-**Square-ish, modern, quietly colorful, minimal.** Think Linear × Vercel × Raycast × Arc.
-Key change from v0.2.0: radii are now **near-sharp** (2/4/6 px). The UI should read as
-precise and architectural — flat planes with soft motion, never candy-ish.
+The authority chain is:
 
-1. **Radii are tight.** Default = 4px. Cards = 6px. Pills = 2px. Never use `rounded-xl/2xl`
-   on new markup; keep only for hero surfaces that already use it.
-2. **Color appears for meaning, not decoration.** Use `primary` for action intent and the
-   `accent-*` family only for semantic categories (live, warning, destructive, data).
-3. **Less chrome. More signal.** Consolidate section headers, trim nested cards, reduce
-   chevrons/icons. If a row has >4 visual elements, drop the lowest-value.
-4. **Motion is soft + snappy.** Use `duration-150` with `ease-snap` for interactives; use
-   `animate-blur-in` / `animate-pop-in` / `animate-fade-up` for entrances. Reserve
-   `animate-aurora` for hero backgrounds only.
-5. **Realtime is visible.** Use `.live-pill` or `.realtime-ping` wrapping a status dot for
-   anything that updates in realtime (presence, notifications, websocket state).
-
-### Non-negotiable principles
-
-1. **Less border, more whitespace.** Remove redundant dividers/cards. Let spacing do the separating.
-2. **One primary hue per surface.** Don't sprinkle five colors; use `primary` for interactive intent,
-   accent-\* only for semantic (status, priority, category).
-3. **Typography carries hierarchy.** Weight and size before color. Muted text = `text-muted-foreground`.
-4. **Motion is soft.** Spring easings (`ease-smooth`, `ease-bounce-soft`), 200–400ms, never longer.
-5. **Dark mode is first-class.** Test both. Warm near-black base, not pure `#000` and not flat gray.
-6. **Reduce visual noise.** Prefer one focal element per section. Cut "card-within-card" nesting.
-
----
-
-## Token Reference (use these — don't hardcode colors)
-
-### Surfaces
-| Token | Purpose |
-|---|---|
-| `bg-background` | Page root |
-| `bg-card` | Elevated content (cards, popovers, dropdowns) |
-| `bg-surface` | Subtle inset (code blocks, alert blocks) |
-| `bg-surface-2` | Deeper inset (nested panels) |
-| `bg-muted` | Neutral pill / chip bg |
-| `bg-accent` | Hover state neutral |
-
-### Text
-| Token | Purpose |
-|---|---|
-| `text-foreground` | Primary text |
-| `text-muted-foreground` | Secondary / captions |
-| `text-primary` | Interactive / brand emphasis |
-
-### Primary + semantic
-| Token | Purpose |
-|---|---|
-| `bg-primary text-primary-foreground` | Main CTA, active nav |
-| `bg-primary/10 text-primary` | Soft active state, selected chips |
-| `bg-success / bg-warning / bg-destructive / bg-info` | Status buttons |
-| `text-success / text-warning / text-destructive / text-info` | Status text |
-
-### Accent palette (semantic hues — use sparingly)
-| Token | Meaning hint |
-|---|---|
-| `text-accent-blue` / `bg-accent-blue/10` | Info, neutral accent |
-| `text-accent-violet` / `bg-accent-violet/10` | Workflow, automation |
-| `text-accent-cyan` / `bg-accent-cyan/10` | Analytics, data |
-| `text-accent-emerald` / `bg-accent-emerald/10` | Success, live status |
-| `text-accent-amber` / `bg-accent-amber/10` | Warning, pending |
-| `text-accent-rose` / `bg-accent-rose/10` | Critical, destructive |
-| `text-accent-indigo` / `bg-accent-indigo/10` | Brand variant |
-
-### Borders
-| Token | Purpose |
-|---|---|
-| `border-border` | Default hairline |
-| `border-border-strong` | Emphasized edge |
-| `border-primary/20` | Selected / focused surface |
-| `ring-2 ring-ring` | Focus ring (keyboard) |
-
-### Shadows
-| Token | Use |
-|---|---|
-| `shadow-xs` | Resting cards |
-| `shadow-sm` | Dropdowns, popovers |
-| `shadow-md` | Hover lift, modals inline |
-| `shadow-lg` | Dialogs, floating panels |
-| `shadow-glow` / `shadow-glow-primary` | Brand emphasis (rare) |
-
-### Radius (v0.2.1 — square-ish)
-| Token | Pixels | Use |
-|---|---|---|
-| `rounded-sm` | 2px | Pills, tiny chips, tags |
-| `rounded-md` | 4px | Buttons, inputs, menus, dropdowns |
-| `rounded-lg` | 6px | Cards, modals, dialogs |
-| `rounded-xl` | 10px | Large panels / hero surfaces only |
-| `rounded-2xl` | 16px | Reserve for showcase hero only |
-| `rounded-full` | — | Avatars, dots, status indicators |
-
-**Rule:** prefer `rounded-md` (4px) as default for anything interactive. Do not add
-`rounded-xl`/`rounded-2xl` to new markup unless the element is a hero.
-
-### Gradients (for hero / emphasis only, not everywhere)
-- `bg-gradient-primary` (indigo → violet)
-- `bg-gradient-accent` (emerald → cyan)
-- `bg-gradient-warm` (amber → rose)
-- `bg-gradient-mesh` (soft multi-point aurora)
-- `text-gradient-primary`, `text-gradient-accent` (on display headings)
-
-### Helper utilities (in globals.css)
-- `.surface-card` / `.surface-card-hover` — pre-made card (now 6px radius)
-- `.surface-inset` — inset muted surface
-- `.surface-glass` — translucent blur panel
-- `.chip` / `.chip-accent` — neutral / primary badge
-- **`.chip-blue` / `.chip-violet` / `.chip-cyan` / `.chip-emerald` / `.chip-amber` / `.chip-rose`** — semantic chips (v0.2.1)
-- **`.panel-info` / `.panel-success` / `.panel-warn` / `.panel-danger`** — soft accent alert panels (v0.2.1)
-- **`.row-interactive`** — hoverable list row, supports `data-active="true"` (v0.2.1)
-- **`.icon-tile`** + `.icon-tile-accent-{blue|violet|emerald|amber|rose|cyan}` — small square-ish icon tile (v0.2.1)
-- **`.live-pill`** — emerald realtime pill with breathing dot (v0.2.1)
-- **`.realtime-ping`** — wrap a dot with this to add an outward ping (v0.2.1)
-- **`.progress-bar-indeterminate`** — looping sweep progress (v0.2.1)
-- `.kicker` — small uppercase label (sections)
-- `.dot-grid`, `.dot-grid-dense` — subtle bg pattern
-- `.bg-aurora` — hero background glow
-- `.shimmer` — skeleton loader
-- `.stagger > *` — stagger fade-up children
-- `.status-dot` + `.status-live | .status-warn | .status-idle | .status-danger`
-- `.priority-critical | .priority-high | .priority-medium | .priority-low`
-
----
-
-## Animation Contract
-
-**Use Tailwind's built-ins or these custom ones only. Never write new keyframes.**
-
-Entrance:
-- `animate-fade-in` — simple opacity
-- `animate-fade-up` — opacity + translateY(12px→0), 500ms spring
-- `animate-fade-down` — from above
-- `animate-scale-in` — 96% → 100%
-- `animate-slide-in-from-*` — directional
-- **`animate-blur-in`** — blur(8px)+fade, 550ms spring (v0.2.1 — for panels/heroes)
-- **`animate-pop-in`** — 92%→100% with bounce-soft (v0.2.1 — for toasts, modals)
-- **`animate-alert-in`** — top-down snap for alerts (v0.2.1)
-- **`animate-toast-in`** — bottom-up pop for toasts (v0.2.1)
-- **`animate-page-enter`** — blur+translate for route transitions (v0.2.1)
-- `.stagger > *` — auto-delay children
-
-Ambient (sparingly):
-- `animate-pulse-subtle` — 2.2s gentle opacity pulse
-- `animate-pulse-ring` — focus ring pulse
-- `animate-gradient-pan` — moving gradient (with `bg-gradient-*`)
-- `animate-aurora` — hero mesh drift
-- **`animate-dot-breathe`** — 2.4s status dot breath (v0.2.1)
-
-Transitions (v0.2.1 snappier defaults):
-- `transition-all duration-150 ease-snap` — default for interactive (buttons, rows, chips)
-- `transition-all duration-200 ease-smooth` — for larger surfaces (cards)
-- `transition-colors duration-150` — color-only changes
-- Hover lift: `hover:-translate-y-0.5` (not `active:scale-95`)
-
-**Reduced motion:** all animations auto-disable via `@media (prefers-reduced-motion)`. Don't guard manually.
-
----
-
-## Component Patterns
-
-### Buttons (use `<Button>` from `@/components/ui/button`)
-- Primary action: `variant="default"`
-- Secondary: `variant="outline"`
-- Tertiary: `variant="ghost"`
-- Destructive: `variant="destructive"`
-- Height scale: `sm` (32px), `default` (36px), `lg` (40px), `xl` (44px)
-- **Never** write custom button markup when `<Button>` fits.
-
-### Cards
-- Prefer `className="surface-card surface-card-hover p-6"` over re-declaring border+bg+shadow
-- Don't nest cards inside cards unless necessary; use `surface-inset` for subtle panels
-
-### Badges / Chips
-- Neutral: `<span className="chip">Label</span>`
-- Accent/selected: `<span className="chip-accent">Label</span>`
-- Semantic: build with `bg-accent-{hue}/10 text-accent-{hue} border border-accent-{hue}/20 rounded-full px-2.5 py-0.5 text-[11px]`
-
-### Section headers
-```tsx
-<div className="space-y-2">
-  <span className="kicker">Category</span>
-  <h2 className="text-2xl font-semibold tracking-tight text-balance">Title</h2>
-  <p className="text-sm text-muted-foreground max-w-2xl">Subtitle</p>
-</div>
+```text
+DESIGN.md (intent and evidence)
+  -> DESIGN_SYSTEM.md (token and component contract)
+    -> src/app/globals.css + tailwind.config.ts (token implementation)
+      -> src/components/ui (reusable mechanics)
+        -> domain components and routes
 ```
 
-### Status indicators
-```tsx
-<span className="status-dot status-live" />   {/* green pulse */}
-<span className="status-dot status-warn" />   {/* amber */}
-<span className="status-dot status-danger" /> {/* rose */}
-<span className="status-dot status-idle" />   {/* gray */}
+If code and this contract disagree, verify the intended behavior and repair
+both in the same change. Neither a stale document nor an incidental CSS value
+wins silently.
+
+## Core language
+
+TaskNebula is square-ish, calm, dense, and architectural.
+
+- Typography and spacing establish hierarchy before color or shadow.
+- One primary blue communicates action. Semantic color communicates real
+  state, priority, risk, or category.
+- Navigation recedes; work, ownership, provenance, and the next handoff lead.
+- Use fewer surfaces and borders. Avoid nested generic cards.
+- Dark mode and keyboard behavior are first-class.
+- Gradients, glass, dot grids, glows, and ornamental icon tiles are not product
+  decoration. A public hero may earn a restrained exception through
+  `DESIGN.md` evidence.
+
+## Tokens
+
+Use semantic Tailwind tokens; do not add arbitrary hex values when a token
+exists.
+
+| Intent                     | Preferred tokens                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| Page and elevated surface  | `bg-background`, `bg-card`, `bg-surface`, `bg-surface-2`                                       |
+| Primary and secondary text | `text-foreground`, `text-muted-foreground`                                                     |
+| Action                     | `bg-primary`, `text-primary`, `text-primary-foreground`                                        |
+| Neutral interaction        | `bg-muted`, `bg-accent`                                                                        |
+| Status                     | `success`, `warning`, `destructive`, `info` token families                                     |
+| Category                   | `accent-blue`, `accent-violet`, `accent-cyan`, `accent-emerald`, `accent-amber`, `accent-rose` |
+| Edge and focus             | `border-border`, `border-border-strong`, `ring-ring`                                           |
+
+Accent hues are semantic and sparse. They do not create a rainbow navigation
+or a grid of interchangeable colored cards.
+
+### Radius
+
+The values are implemented by CSS variables and Tailwind:
+
+| Token          |    Value | Use                                          |
+| -------------- | -------: | -------------------------------------------- |
+| `rounded-sm`   |      2px | compact tags, status chips, small metadata   |
+| `rounded-md`   |      4px | buttons, inputs, menus, interactive defaults |
+| `rounded-lg`   |      6px | cards, dialogs, substantial panels           |
+| `rounded-xl`   |     10px | exceptional public/hero surface only         |
+| `rounded-full` | circular | avatars, dots, genuinely circular controls   |
+
+Do not use `rounded-full` to turn every label into a pill. Do not introduce
+`rounded-xl` or `rounded-2xl` on ordinary product cards.
+
+### Elevation
+
+- Resting product surfaces usually need no shadow or `shadow-xs`.
+- Menus/popovers use `shadow-sm`; dialogs may use `shadow-lg`.
+- Hover must not make content jump. Prefer border/color response over large
+  lift or scale effects.
+- Glow shadows are reserved for an explicitly approved public emphasis, not
+  authenticated product state.
+
+## Motion
+
+Motion explains state, location, or response; it is not a finish layer.
+
+- Interactive feedback: 150–200ms.
+- Animate named properties (`transition-colors`, `transition-opacity`,
+  `transition-transform`). Product UI does not use `transition-all`.
+- An entrance may run up to 400ms only when it clarifies location or a major
+  state change. Existing 500ms+ entrance utilities are legacy, not defaults.
+- Ambient animation is reserved for real live/pending state and must not
+  compete with the work.
+- Never hide required information until an animation completes.
+- Every motion path must remain usable with `prefers-reduced-motion`.
+
+Use existing easing/timing tokens. Add a new keyframe only when a reusable,
+evidence-backed behavior cannot be expressed with current primitives.
+
+## Composition primitives
+
+### Buttons and controls
+
+Use the primitives in `src/components/ui` before writing custom markup.
+
+- Primary: `Button` default variant.
+- Secondary: `outline`.
+- Tertiary: `ghost`.
+- Destructive: `destructive` with explicit confirmation/recovery where needed.
+- Keep a stable label or accessible name during pending state; disable duplicate
+  submission and show completion or actionable failure.
+
+### Cards and panels
+
+- A card groups one coherent decision or object. It is not the default wrapper
+  for every section.
+- Prefer one outer surface plus spacing or `surface-inset` to card-in-card
+  nesting.
+- `surface-card`, `surface-inset`, and `row-interactive` are implementation
+  helpers, not permission to make every page a card grid.
+- The existing user-selectable glass appearance is legacy compatibility. New
+  components must remain legible without relying on blur and should not add
+  new glass-only treatment.
+
+### Badges and status
+
+A badge is earned by status or compact metadata. Use a status dot plus concise
+text when that is clearer. Never encode state by color alone.
+
+### Typography and numbers
+
+- Use size and weight before color for hierarchy.
+- Identifiers and machine evidence may use the mono family; prose does not.
+- Comparisons, metrics, times, and aligned counts use `tabular-nums`.
+- Long-form text keeps a readable measure.
+
+### Focus and accessibility
+
+- Reuse Radix/shadcn focus behavior. Custom controls need a visible
+  `focus-visible` ring and semantic element/role.
+- Focus returns after a dialog closes and moves to the failing field after
+  validation when appropriate.
+- Hover-only actions also appear on focus and remain available to touch.
+- Check 320px and 390px widths plus at least one RTL locale for layout changes.
+
+## Page-specific modifiers
+
+`.dashboard-carbon` is an existing dashboard-scoped density/visual modifier.
+It may square surfaces and tune typography inside that route; it is not a
+second global design system and must not leak into other archetypes. It still
+obeys semantic color, focus, i18n, responsive, and evidence requirements.
+
+## Internationalization
+
+All new user-facing text, accessible names, placeholders, toasts, and errors
+use `next-intl`. Examples in documentation describe structure rather than
+copy-pastable English JSX. Add each key with a real translation to all 30
+catalogs, preserve ICU placeholders, and run `node scripts/i18n-check.mjs`.
+
+Static lint catches only part of this rule; review configuration objects and
+props manually.
+
+## Replacement guide
+
+| Avoid                                | Use                                          |
+| ------------------------------------ | -------------------------------------------- |
+| arbitrary gray/hex utilities         | semantic surface/text tokens                 |
+| heavy nested shadows and borders     | spacing plus one accountable surface         |
+| generic `transition-all`             | property-specific transition                 |
+| `rounded-xl/2xl` generic cards       | `rounded-lg`                                 |
+| non-circular `rounded-full` controls | `rounded-md` or `rounded-sm`                 |
+| decorative gradient/glass/icon tile  | hierarchy or real work topology              |
+| mixed icon sizes in one row          | one consistent Lucide size                   |
+| simulated success                    | persisted success or explicit retry/recovery |
+| hardcoded visible copy               | `next-intl` key in all catalogs              |
+
+## Change and verification
+
+Token changes belong in the shared implementation and must update this
+contract when they alter behavior. Route-specific preferences stay local.
+
+Run from the repository root:
+
+```bash
+pnpm ui:check
+node scripts/i18n-check.mjs
+pnpm --filter @tasknebula/web type-check
+pnpm --filter @tasknebula/web lint
+pnpm --filter @tasknebula/web test
 ```
 
-### Focus rings
-- All interactive elements: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`
-- Already baked into `<Button>`, `<Input>`, `<Select>`, etc. Only add for custom buttons.
-
----
-
-## What to REMOVE / REPLACE
-
-When you encounter these patterns, clean them up:
-
-| Remove | Replace with |
-|---|---|
-| `bg-gray-50 / bg-zinc-*` arbitrary classes | `bg-surface` / `bg-muted` tokens |
-| Hardcoded hex colors | token variable |
-| Multiple stacked cards (card-in-card-in-card) | Single card, use spacing |
-| `border border-gray-200` | `border border-border` |
-| `text-gray-500 / text-slate-400` | `text-muted-foreground` |
-| `shadow-lg shadow-2xl` (heavy shadows) | `shadow-sm` / `shadow-md` |
-| Raw `animate-bounce` / `animate-ping` for decoration | `animate-pulse-subtle` or remove |
-| `active:scale-95` stale click effect | remove (use subtle color change or keep default) |
-| `rounded-full` on non-circular buttons | `rounded-md` |
-| **`rounded-xl` / `rounded-2xl` on generic cards** | `rounded-lg` (6px) — v0.2.1 |
-| **`rounded-xl` on buttons/inputs** | `rounded-md` (4px) — v0.2.1 |
-| Mixed icon sizes on one row | uniform `h-4 w-4` |
-| "icon + label + chevron + badge + kbd" crammed rows | pick 2–3 max |
-| Empty states with icon + heading + body + 2 buttons | icon + one line + one button |
-
-### Clutter rules (user explicitly asked for less)
-- If a page has >3 distinct vertical sections above the fold, consolidate.
-- If a list row has >4 visual elements (icon, title, meta, 3 chips, menu), drop the lowest-value ones.
-- Stat tiles: max 4 per row, each ≤ 140px tall, 1 number + 1 label + optional trend.
-- Don't use `mb-*` + `space-y-*` + `gap-*` all at once; pick one spacing mechanism per container.
-
----
-
-## Do NOT
-
-- ❌ Edit `apps/web/src/app/globals.css`, `tailwind.config.ts`, or `components/providers.tsx`
-- ❌ Add new CSS files or new keyframes
-- ❌ Install new npm packages
-- ❌ Run `git commit`, `git push`, or any docker command
-- ❌ Change the theme provider setup or `next-themes` wiring
-- ❌ Introduce emojis into source files (user explicitly said no emojis in code)
-- ❌ Change routing, API contracts, data fetching, or business logic
-- ❌ Delete files unless they become fully unused as a side-effect of your UI refactor
-
-## DO
-
-- ✅ Replace hardcoded colors with tokens
-- ✅ Use `surface-card`, `chip`, `kicker`, `stagger`, etc.
-- ✅ Add `animate-fade-up`, stagger, or `transition-all duration-200 ease-smooth` where it feels natural
-- ✅ Simplify markup — fewer wrappers, fewer cards
-- ✅ Tighten copy / shorten rows if they feel crowded
-- ✅ Ensure dark + light mode both look intentional (check `bg-background`, not `bg-white`)
-- ✅ Keep accessibility: `aria-label`, focus rings, semantic HTML, `prefers-reduced-motion`
-
----
-
-## Scope Discipline
-
-Each agent owns a specific file list. **Do not edit files outside your scope** — another agent owns them.
-If you notice an issue elsewhere, mention it in your final report but don't touch it.
+For visible changes, also exercise the real route with keyboard and pointer in
+light/dark, mobile/desktop, relevant loading/error states, and RTL when layout
+can change. Follow the maker/checker evidence loop in `DESIGN.md`.

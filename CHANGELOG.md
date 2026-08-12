@@ -6,6 +6,40 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+### Added
+
+- A typed bounded graph runtime with explicit routes/`END`, finite step,
+  node-visit, wall-time and no-progress guards, retry classification,
+  versioned checkpoints, cancellation, and HITL interrupt/resume tests.
+- A canonical bounded research topology and August 2026 agent-runtime maturity
+  contract, plus repository-wide documentation/link drift checks.
+- Thin repository instruction adapters for GitHub Copilot and Cursor.
+
+### Changed
+
+- Approval-gated project-agent mutations now fail closed to preview, Anthropic
+  provider readiness matches its shipped adapter, and local Claude/Codex
+  subprocesses receive an allowlisted provider-specific environment.
+- Ask Anthropic streaming and OpenAI/Anthropic project planning now propagate
+  request cancellation and enforce finite provider deadlines.
+- Ask prompt/parser/SSE/Sidecar citation handling now shares the canonical
+  `[TN-…]` / `[DOC-…]` grammar and surfaces unresolved markers.
+- Consolidated current status, roadmap, architecture, deployment, design, and
+  assistant rules into canonical August 2026 guides; removed superseded audits,
+  migration plans, installation duplicates, and 2025 snapshots.
+- Removed the invalid `db:generate` command from scripts, setup/reset flows,
+  Turbo, and Claude permissions; hand-written idempotent SQL remains the only
+  migration workflow after snapshot `0012`.
+- Workflow-builder roles, approval policy, and approved/rejected targets now
+  persist through a validated API and idempotent migration instead of resetting
+  on reload; common transition enforcement remains a separate rollout.
+- Removed the stale June 2026 third-party comparison matrix and its 30-locale
+  claim payload; marketing now limits itself to TaskNebula capabilities that
+  can be verified from this repository.
+- Reframed AI transparency and oversight copy as documented product policy
+  instead of mischaracterizing EU AI Act Article 50 as a blanket model-card or
+  human-approval requirement; corrected model and retention disclosures.
+
 ## [0.14.0] - 2026-07-27
 
 ### Added
@@ -572,7 +606,7 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 - **First-class labels, project versions/releases, and components** (migration `0054_jira_parity_layer.sql` + REST APIs). New tables: `labels` + `issue_labels` (with an idempotent backfill from the legacy `issues.labels` JSONB array), `project_versions` + `issue_fix_versions` / `issue_affects_versions`, and `components` + `issue_components`. UI is minimal for now — these land as schema + API.
 - **Issue resolution model**: `resolution` enum (fixed / wont_do / duplicate / cannot_reproduce / done), `resolvedAt`, and `flagged` fields on issues, so cycle-time analytics can distinguish Done from Won't Fix.
-- `docs/AUDIT_2026-06.md` — the June 2026 full-codebase audit (28 domain auditors + adversarial critic) with file/line evidence for every known gap.
+- A June 2026 full-codebase audit artifact (removed during the August 2026 documentation consolidation after its findings were triaged into the live status and roadmap).
 
 ### Fixed
 
@@ -580,7 +614,7 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - **Migration journal ordering silently skipped migrations 0044–0051 on upgrades.** `_journal.json` had non-monotonic `when` timestamps (0043 newer than 0044–0051), so drizzle's `created_at < folderMillis` rule skipped them on already-migrated databases. Timestamps renumbered strictly increasing; affected migrations are idempotent and re-run safely.
 - **Cmd+K palette returned 405 on every query.** The omnibar issued `GET /api/search/hybrid`, which only exports `POST`.
 - **`/api/search` returned 500.** The route referenced a non-existent `issues.status` column (schema has `statusId`) and used an invalid jsonb `LIKE` on labels.
-- **~20 cross-tenant authorization gaps closed** across workflows, sprint issues, permission/security schemes, project members, issue links/activities, hybrid search, the SSE event stream, analytics, watchers, and saved filters (see `docs/AUDIT_2026-06.md` Gap #1).
+- **~20 cross-tenant authorization gaps closed** across workflows, sprint issues, permission/security schemes, project members, issue links/activities, hybrid search, the SSE event stream, analytics, watchers, and saved filters (identified by the June 2026 audit).
 
 ### Changed
 

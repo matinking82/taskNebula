@@ -1,16 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, projects, workflows, workflowStatuses, workflowTransitions } from '@tasknebula/db';
+import { db, workflows, workflowStatuses, workflowTransitions } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { eq, and } from 'drizzle-orm';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
 import { canManageProject, canReadProject } from '@/lib/auth/access-control';
+import { z } from 'zod';
+
+const transitionInputSchema = z.object({
+  name: z.string().trim().min(1).max(255).optional(),
+  fromStatusId: z.string().min(1).max(128),
+  toStatusId: z.string().min(1).max(128),
+  allowedRoles: z
+    .array(z.enum(['admin', 'member', 'guest']))
+    .min(1)
+    .max(3)
+    .default(['admin', 'member']),
+  requiresApproval: z.boolean().default(false),
+  approverRoles: z
+    .array(z.enum(['admin', 'member']))
+    .min(1)
+    .max(2)
+    .default(['admin']),
+  approvedTargetStatusId: z.string().min(1).max(128).nullish(),
+  rejectedTargetStatusId: z.string().min(1).max(128).nullish(),
+  conditions: z.unknown().default([]),
+  validators: z.unknown().default([]),
+  postActions: z.unknown().default([]),
+});
+
+const replaceTransitionsSchema = z.object({
+  transitions: z.array(transitionInputSchema).max(500),
+});
 
 async function resolveWorkflowId(project: {
   id: string;
   organizationId: string;
   defaultWorkflowId: string | null;
 }) {
-  if (project.defaultWorkflowId) return project.defaultWorkflowId;
+  if (project.defaultWorkflowId) {
+    const [projectWorkflow] = await db
+      .select({ id: workflows.id })
+      .from(workflows)
+      .where(
+        and(
+          eq(workflows.id, project.defaultWorkflowId),
+          eq(workflows.organizationId, project.organizationId)
+        )
+      )
+      .limit(1);
+    return projectWorkflow?.id ?? null;
+  }
   const [defaultWorkflow] = await db
     .select()
     .from(workflows)
@@ -66,7 +105,8 @@ export async function GET(
 }
 
 // PUT /api/projects/[projectId]/workflow-transitions
-// Body: { transitions: Array<{ fromStatusId: string; toStatusId: string; name?: string; conditions?: any; validators?: any; postActions?: any }> }
+// Body is validated by replaceTransitionsSchema and replaces the workflow's
+// transitions in one transaction.
 // Replaces all transitions for the workflow atomically.
 export async function PUT(
   request: NextRequest,
@@ -103,11 +143,7 @@ export async function PUT(
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const rawTransitions = Array.isArray(body?.transitions) ? body.transitions : null;
-    if (!rawTransitions) {
-      return NextResponse.json({ error: 'transitions array is required' }, { status: 400 });
-    }
+    const body = replaceTransitionsSchema.parse(await request.json());
 
     const workflowStatusRows = await db
       .select({ id: workflowStatuses.id })
@@ -115,12 +151,15 @@ export async function PUT(
       .where(eq(workflowStatuses.workflowId, workflowId));
     const validStatusIds = new Set(workflowStatusRows.map((s) => s.id));
 
-    const normalized = rawTransitions.map((raw: any) => {
-      if (!raw?.fromStatusId || !raw?.toStatusId) {
-        throw new Error('transition missing fromStatusId or toStatusId');
-      }
+    const normalized = body.transitions.map((raw) => {
       if (!validStatusIds.has(raw.fromStatusId) || !validStatusIds.has(raw.toStatusId)) {
         throw new Error('transition references an unknown status for this workflow');
+      }
+      if (raw.approvedTargetStatusId && !validStatusIds.has(raw.approvedTargetStatusId)) {
+        throw new Error('approved target references an unknown status for this workflow');
+      }
+      if (raw.rejectedTargetStatusId && !validStatusIds.has(raw.rejectedTargetStatusId)) {
+        throw new Error('rejected target references an unknown status for this workflow');
       }
       return {
         workflowId,
@@ -128,11 +167,20 @@ export async function PUT(
           typeof raw.name === 'string' && raw.name.trim()
             ? raw.name.trim()
             : `Transition ${raw.fromStatusId} → ${raw.toStatusId}`,
-        fromStatusId: raw.fromStatusId as string,
-        toStatusId: raw.toStatusId as string,
-        conditions: raw.conditions ?? [],
-        validators: raw.validators ?? [],
-        postActions: raw.postActions ?? [],
+        fromStatusId: raw.fromStatusId,
+        toStatusId: raw.toStatusId,
+        allowedRoles: raw.allowedRoles,
+        requiresApproval: raw.requiresApproval,
+        approverRoles: raw.approverRoles,
+        approvedTargetStatusId: raw.requiresApproval
+          ? (raw.approvedTargetStatusId ?? raw.toStatusId)
+          : null,
+        rejectedTargetStatusId: raw.requiresApproval
+          ? (raw.rejectedTargetStatusId ?? raw.fromStatusId)
+          : null,
+        conditions: raw.conditions,
+        validators: raw.validators,
+        postActions: raw.postActions,
       };
     });
 
@@ -152,7 +200,12 @@ export async function PUT(
     return NextResponse.json({ transitions: saved });
   } catch (error) {
     console.error('Failed to save workflow transitions', error);
-    const message = error instanceof Error ? error.message : 'Failed to save workflow transitions';
+    const message =
+      error instanceof z.ZodError
+        ? 'Invalid workflow transition payload'
+        : error instanceof Error
+          ? error.message
+          : 'Failed to save workflow transitions';
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

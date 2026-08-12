@@ -64,11 +64,11 @@ export function formatAgentProviderStatus(
     return t('agentShared.providerStatus.customUnavailable');
   }
 
-  if (provider === 'anthropic' || provider === 'azure') {
+  if (provider === 'azure') {
     return t('agentShared.providerStatus.adapterUnavailable', values);
   }
 
-  if (provider === 'openai' && isNativePlaceholderModel(model)) {
+  if ((provider === 'openai' || provider === 'anthropic') && isNativePlaceholderModel(model)) {
     return t('agentShared.providerStatus.openaiModelInvalid', values);
   }
 

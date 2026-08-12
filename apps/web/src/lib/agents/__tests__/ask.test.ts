@@ -14,6 +14,7 @@ jest.mock('@tasknebula/db', () => ({
 
 import { runAsk, AskError, __internal } from '../ask';
 import type { AskEvent } from '../ask';
+import { db } from '@tasknebula/db';
 
 async function collect(events: AsyncGenerator<AskEvent>): Promise<AskEvent[]> {
   const out: AskEvent[] = [];
@@ -74,11 +75,22 @@ describe('runAsk — Claude streaming (mocked)', () => {
   }
 
   it('streams token frames and finishes with usage', async () => {
+    (db.execute as jest.Mock).mockResolvedValue([
+      {
+        id: 'issue-a',
+        key: 'A',
+        title: 'Source A',
+        description: 'Grounded context.',
+        content_text: 'Grounded context.',
+        excerpt: 'Grounded context.',
+        score: 1,
+      },
+    ]);
     const fetchImpl = jest.fn(async () =>
       makeSseResponse([
         `data: ${JSON.stringify({ type: 'message_start', message: { usage: { input_tokens: 42, output_tokens: 0 } } })}`,
         `data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hello ' } })}`,
-        `data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: '[Source: TN-A].' } })}`,
+        `data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: '[TN-A].' } })}`,
         `data: ${JSON.stringify({ type: 'message_delta', usage: { output_tokens: 9 } })}`,
         `data: [DONE]`,
       ])
@@ -93,13 +105,21 @@ describe('runAsk — Claude streaming (mocked)', () => {
     const types = events.map((e) => e.type);
     expect(types[0]).toBe('sources');
     expect(types).toContain('token');
+    expect(types).toContain('citations');
     expect(types[types.length - 1]).toBe('done');
 
     const tokens = events.filter(
       (e): e is Extract<AskEvent, { type: 'token' }> => e.type === 'token'
     );
     const joined = tokens.map((t) => t.text).join('');
-    expect(joined).toBe('Hello [Source: TN-A].');
+    expect(joined).toBe('Hello [TN-A].');
+
+    const citationEvent = events.find(
+      (e): e is Extract<AskEvent, { type: 'citations' }> => e.type === 'citations'
+    );
+    expect(citationEvent?.citations).toHaveLength(1);
+    expect(citationEvent?.citations[0]).toMatchObject({ type: 'issue', key: 'A' });
+    expect(citationEvent?.unresolved).toEqual([]);
 
     const done = events.find((e) => e.type === 'done') as Extract<AskEvent, { type: 'done' }>;
     expect(done.usage.model).toBeDefined();
@@ -107,6 +127,12 @@ describe('runAsk — Claude streaming (mocked)', () => {
     expect(done.usage.outputTokens).toBe(9);
     expect(done.usage.costUsd).toBeGreaterThan(0);
     expect(done.usage.promptHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('uses the same citation grammar in the prompt and parser contract', () => {
+    expect(__internal.SYSTEM_PROMPT).toContain('[TN-<key>]');
+    expect(__internal.SYSTEM_PROMPT).toContain('[DOC-<id>]');
+    expect(__internal.SYSTEM_PROMPT).not.toContain('[Source:');
   });
 
   it('emits an error frame when Anthropic returns 401', async () => {
@@ -122,6 +148,30 @@ describe('runAsk — Claude streaming (mocked)', () => {
       | undefined;
     expect(err).toBeDefined();
     expect(err!.code).toBe('provider_auth_failed');
+  });
+
+  it('bounds a stalled Anthropic stream and emits a timeout error', async () => {
+    const fetchImpl = jest.fn(async (_url: string, init?: RequestInit) => {
+      const stream = new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener(
+            'abort',
+            () => controller.error(init.signal?.reason ?? new Error('aborted')),
+            { once: true }
+          );
+        },
+      });
+      return new Response(stream, { status: 200 });
+    });
+    const bundle = await runAsk({
+      query: 'anything',
+      organizationId: 'org_1',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      providerTimeoutMs: 10,
+    });
+
+    const events = await collect(bundle.events);
+    expect(events.at(-1)).toMatchObject({ type: 'error', code: 'provider_timeout' });
   });
 
   it('throws AskError when no Anthropic key is configured', async () => {
@@ -191,7 +241,7 @@ describe('runAsk — internal helpers', () => {
     expect(message).toContain('[TN-TASK-9]');
     expect(message).toContain('[DOC-d1]');
     expect(message).toContain(
-      'Now answer the question. Remember: every claim ends with [Source: ...].'
+      'Now answer the question. Remember: every claim ends with its exact [TN-…] or [DOC-…] marker.'
     );
   });
 
@@ -202,7 +252,7 @@ describe('runAsk — internal helpers', () => {
 
   it('SYSTEM_PROMPT enforces the citation discipline', () => {
     expect(__internal.SYSTEM_PROMPT).toMatch(/Citation rules/);
-    expect(__internal.SYSTEM_PROMPT).toMatch(/\[Source: TN-/);
-    expect(__internal.SYSTEM_PROMPT).toMatch(/\[Source: DOC-/);
+    expect(__internal.SYSTEM_PROMPT).toMatch(/\[TN-/);
+    expect(__internal.SYSTEM_PROMPT).toMatch(/\[DOC-/);
   });
 });
