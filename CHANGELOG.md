@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-08-12
+
 ### Added
 
 - A typed bounded graph runtime with explicit routes/`END`, finite step,
@@ -21,6 +23,12 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
   leased approval-effect outbox with retry/reconciliation coverage.
 - A migration-owned `collab_documents` schema, dedicated frozen-lockfile
   Hocuspocus image, and database-aware readiness checks.
+- A durable `load_context → plan → execute → END` project-agent graph with
+  versioned checkpoints, leases, heartbeats, cancellation/resume APIs,
+  idempotent admission, transactional effect receipts, and restart recovery.
+- A tenant-scoped workflow-transition service shared by issue PATCH/board/MCP,
+  bulk operations, automation, approved agent actions, remote webhooks, Slack,
+  and janitor jobs.
 
 ### Changed
 
@@ -56,6 +64,12 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
   design tokens against the canonical design contract.
 - Revalidated key/ICU parity across all 30 locale catalogs; Turkish product
   copy received an additional linguistic pass.
+- The current 11-tool MCP REST surface now accepts organization-bound
+  `sk_live_*` API keys and applies active-user, membership, tenant, and route
+  permission checks instead of requiring a browser session.
+- Project-agent starts now return asynchronously, preserve a stable intent key,
+  and expose tenant-scoped polling, cancellation, and resume controls in the
+  settings UI and OpenAPI contract.
 
 ### Fixed
 
@@ -76,6 +90,12 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - The legacy `/issues` alias now redirects before React rendering, preventing
   streamed-tree hydration drift; settled settings tabs now preserve a single
   page heading and meet dark-theme text-contrast checks.
+- Status mutations now enforce exact persisted workflow edges, roles, project
+  transition permission, row locks, compare-and-swap history, and fail-closed
+  handling for unsupported approval/condition/validator policies.
+- Production browser verification fixed missing control names, unfocusable
+  scroll regions, low-contrast analytics/status text, verification-route
+  redirects, and a delayed disclosure race across desktop, mobile, and RTL.
 
 ### Security
 
@@ -88,6 +108,12 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - Public health responses no longer expose raw dependency errors, and setup
   scripts avoid world-readable generated secrets or inherited remote libpq
   targets during destructive reset operations.
+- Durable project-agent admission serializes UTC quotas and global concurrency;
+  provider attempts are deadline-bound, stale workers are lease-fenced, and
+  domain effects commit atomically with their receipts and audit evidence.
+- MCP-backed issue, project, search, and workload routes now fail closed on
+  malformed or invalid supplied credentials and prevent cross-organization
+  project visibility.
 
 ## [0.14.0] - 2026-07-27
 

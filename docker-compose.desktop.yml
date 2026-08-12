@@ -49,7 +49,7 @@ services:
     logging: *default-logging
 
   web:
-    image: ${TASKNEBULA_IMAGE:-neuraparse/tasknebula:0.14.0}
+    image: ${TASKNEBULA_IMAGE:-neuraparse/tasknebula:0.15.0}
     restart: unless-stopped
     depends_on:
       postgres:
