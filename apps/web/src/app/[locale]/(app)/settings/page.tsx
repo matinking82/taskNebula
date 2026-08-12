@@ -193,7 +193,7 @@ export default function SettingsPage() {
 
       <div className="animate-fade-up flex-1 overflow-y-auto p-6 lg:p-8">
         <div className="mx-auto w-full max-w-5xl" data-settings-tab={activeTab}>
-          <h1 className="sr-only">{tNav('settings')}</h1>
+          <h1 className="mb-6 text-2xl font-semibold tracking-tight">{tNav('settings')}</h1>
           {activeTabDenied ? (
             <NoAccessNotice />
           ) : (

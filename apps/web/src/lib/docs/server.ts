@@ -26,6 +26,7 @@ import {
   sanitizePublicDocumentContent,
   slugifyDocumentTitle,
 } from './content';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 export type OrgDocumentRole = 'owner' | 'admin' | 'member' | 'viewer' | 'guest' | null;
 type DocumentSpaceRecord = typeof documentSpaces.$inferSelect;
@@ -175,15 +176,13 @@ export async function getProjectDocumentPermissions(
 
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[member.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const toBool = (value: string | null | undefined) => value === 'true';
-
   return {
     canBrowse:
-      (toBool(member.canBrowseProject) || roleDefaults.canBrowseProject) &&
-      (toBool(member.canBrowseDocs) || roleDefaults.canBrowseDocs),
-    canCreate: toBool(member.canCreateDocs) || roleDefaults.canCreateDocs,
-    canEdit: toBool(member.canEditDocs) || roleDefaults.canEditDocs,
-    canDelete: toBool(member.canDeleteDocs) || roleDefaults.canDeleteDocs,
+      resolveProjectMemberPermission(member.canBrowseProject, roleDefaults.canBrowseProject) &&
+      resolveProjectMemberPermission(member.canBrowseDocs, roleDefaults.canBrowseDocs),
+    canCreate: resolveProjectMemberPermission(member.canCreateDocs, roleDefaults.canCreateDocs),
+    canEdit: resolveProjectMemberPermission(member.canEditDocs, roleDefaults.canEditDocs),
+    canDelete: resolveProjectMemberPermission(member.canDeleteDocs, roleDefaults.canDeleteDocs),
   };
 }
 
@@ -383,18 +382,24 @@ export async function listAccessibleDocumentSpaces(
       .innerJoin(projects, eq(projectMembers.projectId, projects.id))
       .where(and(eq(projectMembers.userId, userId), eq(projects.organizationId, organizationId)));
 
-    const toBool = (value: string | null | undefined) => value === 'true';
-
     for (const membership of memberships) {
       const roleDefaults =
         ROLE_DEFAULT_PERMISSIONS[membership.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
       const permissions = {
         canBrowse:
-          (toBool(membership.canBrowseProject) || roleDefaults.canBrowseProject) &&
-          (toBool(membership.canBrowseDocs) || roleDefaults.canBrowseDocs),
-        canCreate: toBool(membership.canCreateDocs) || roleDefaults.canCreateDocs,
-        canEdit: toBool(membership.canEditDocs) || roleDefaults.canEditDocs,
-        canDelete: toBool(membership.canDeleteDocs) || roleDefaults.canDeleteDocs,
+          resolveProjectMemberPermission(
+            membership.canBrowseProject,
+            roleDefaults.canBrowseProject
+          ) && resolveProjectMemberPermission(membership.canBrowseDocs, roleDefaults.canBrowseDocs),
+        canCreate: resolveProjectMemberPermission(
+          membership.canCreateDocs,
+          roleDefaults.canCreateDocs
+        ),
+        canEdit: resolveProjectMemberPermission(membership.canEditDocs, roleDefaults.canEditDocs),
+        canDelete: resolveProjectMemberPermission(
+          membership.canDeleteDocs,
+          roleDefaults.canDeleteDocs
+        ),
       };
 
       if (permissions.canBrowse) {

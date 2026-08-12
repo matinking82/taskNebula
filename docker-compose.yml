@@ -34,6 +34,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   redis:
     image: redis:7-alpine
@@ -59,6 +64,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
 
   livekit:
     image: livekit/livekit-server:v1.10.1
@@ -94,6 +100,7 @@ services:
       timeout: 5s
       start_period: 20s
       retries: 3
+    logging: *default-logging
 
   web:
     # Pull the published image by default (instant start). Override via
@@ -215,9 +222,10 @@ services:
       timeout: 10s
       start_period: 60s
       retries: 3
+    logging: *default-logging
 
-  # Default durability worker for post-approval effects. Keep this in the base
-  # lifecycle so a failed `after()` fast-path cannot strand an outbox row.
+  # Default durability reconciler for approval effects and project-agent graph
+  # runs. Keep this in the base lifecycle so restarts do not strand work.
   approval-reconciler:
     image: alpine:3.20
     container_name: tasknebula-approval-reconciler
@@ -237,8 +245,13 @@ services:
             --header="x-cron-secret: $$CRON_SECRET" \
             --post-data='' \
             "$$WEB_BASE_URL/api/cron/agent-approval-effects" || true
+          wget -qO /dev/null \
+            --header="x-cron-secret: $$CRON_SECRET" \
+            --post-data='' \
+            "$$WEB_BASE_URL/api/cron/agent-runs" || true
           sleep 60
         done
+    logging: *default-logging
 
   # Optional: lightweight cron sidecar that calls scheduled product jobs.
   # Comment out if you prefer Vercel Cron, k8s
@@ -267,8 +280,9 @@ services:
           exit 1
         fi
         apk add --no-cache curl > /dev/null && \
-        printf '0 8 * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/standup" -o /dev/null\n0 * * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/janitor" -o /dev/null\n30 * * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/embeddings" -o /dev/null\n17 */6 * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/version-check" -o /dev/null\n0 2 * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/cycle-rollover" -o /dev/null\n' > /etc/crontabs/root && \
+        printf '* * * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/agent-runs" -o /dev/null\n0 8 * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/standup" -o /dev/null\n0 * * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/janitor" -o /dev/null\n30 * * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/embeddings" -o /dev/null\n17 */6 * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/version-check" -o /dev/null\n0 2 * * * curl -fsS -X POST -H "x-cron-secret: $$CRON_SECRET" "$$WEB_BASE_URL/api/cron/cycle-rollover" -o /dev/null\n' > /etc/crontabs/root && \
         crond -f -l 8
+    logging: *default-logging
 
 volumes:
   postgres_data:

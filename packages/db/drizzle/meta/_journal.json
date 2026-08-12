@@ -442,6 +442,13 @@
       "when": 1779000000021,
       "tag": "0062_collab_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1779000000022,
+      "tag": "0063_durable_project_agent_runs",
+      "breakpoints": true
     }
   ]
 }

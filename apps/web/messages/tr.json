@@ -2434,7 +2434,10 @@
       "no_runs": "Henüz aracı çalıştırması yok. Bir proje sağlık taraması veya sprint planlama önizlemesi ile başlayın.",
       "writes_count": "{count} yazma",
       "no_summary": "Özet kaydedilmedi.",
-      "run_live": "Canlı çalıştır"
+      "run_live": "Canlı çalıştır",
+      "run_queued": "Ajan çalışması sıraya alındı",
+      "cancel_run": "Çalışmayı iptal et",
+      "resume_run": "Çalışmayı sürdür"
     },
     "agentGovernance": {
       "title": "AGENTOWNERS yönetişimi",
@@ -2552,7 +2555,9 @@
         "running": "Çalışıyor",
         "completed": "Tamamlandı",
         "failed": "Başarısız",
-        "unknown": "{status}"
+        "unknown": "{status}",
+        "pending": "Beklemede",
+        "cancelled": "İptal edildi"
       },
       "capabilities": {
         "project_tracking": {
@@ -5151,8 +5156,7 @@
         "description": "Tek komut küçük bir Compose yığınını başlatır. Çekirdek veriler Postgres’te kalır, dışa aktarma bir pg_dump uzağındadır ve varsayılan olarak hiçbir şey dışarı veri göndermez — tasarım gereği sağlayıcı bağımlılığı yoktur.",
         "cards": {
           "postgres": {
-            "title": "Bir Postgres, bir web imajı",
-            "body": "pgvector eklentili Postgres 16 aramayı güçlendirir; Redis 7 de yanında gelir. Mongo yok, Elastic yok, yan servis kalabalığı yok."
+            "title": "Bir Postgres, bir web imajı"
           },
           "migrations": {
             "title": "Migration’lar açılışta çalışır",
@@ -5172,46 +5176,18 @@
         "quickstartAria": "Kendi barındırma hızlı başlangıç komutları",
         "terminalNote": "Web imajı Postgres’i bekler, migration’ları çalıştırır, sonra <code>http://localhost:3000</code> üzerinde servis verir; açın ve ilk kurulum admin sihirbazını tamamlayın. İmaj: <imageLink>neuraparse/tasknebula</imageLink>."
       },
-      "migrate": {
-        "kicker": "Taşıma",
-        "title": "Jira veya Linear’dan bir öğleden sonra içinde geçin",
-        "description": "Araç değiştirmek geçmişinizi ya da sürecinizi kaybetmek anlamına gelmemeli. Elinizdekileri içe aktarın, TaskNebula’ya eşleyin ve ekibinizin zaten çalıştığı şekilde devam edin.",
-        "steps": {
-          "issues": {
-            "title": "İşlerinizi yanınıza alın",
-            "body": "Jira ve Linear’daki işleri açıklamaları, yorumları ve geçmişleriyle içe aktarın; düz bir CSV dökümüne sıkıştırmayın."
-          },
-          "labels": {
-            "title": "Etiketler ve sprintler de gelir",
-            "body": "Etiketler, bileşenler ve aktif sprintler birinci sınıf kayıtlar olarak gelir; panolarınız ve backlog’unuz ilk günden tanıdık görünür."
-          },
-          "fields": {
-            "title": "Sadece adları değil alanları eşleyin",
-            "body": "Durumları, öncelikleri ve özel alanları içe aktarım sırasında TaskNebula karşılıklarıyla eşleyin; yazmadan önce eşlemeyi gözden geçirin."
-          },
-          "workflow": {
-            "title": "Workflow’unuzu koruyun",
-            "body": "Durumlarınız, swimlane’leriniz ve alışkanlıklarınız sizinle gelir. Ekibi yeniden eğitmeden ya da süreci sıfırdan kurmadan araç değiştirin."
-          }
-        },
-        "note": "İçe aktarımlar kendi veritabanınıza karşı çalışır ve tamamen geri alınabilir; hiçbir şey sunucunuzdan ayrılmaz, eşleme doğru görünene kadar yeniden çalıştırabilirsiniz."
-      },
       "aiMcp": {
         "kicker": "AI-native",
         "title": "Ajanlar backlog üzerinde sizinle çalışır.",
-        "description": "TaskNebula ajan çağı için tasarlandı. Tüm çalışma alanınız hakkında soru sorun, AI’ın yeni işleri önceliklendirmesine ve tahmin etmesine izin verin, harici ajanlara birinci sınıf MCP sunucusu üzerinden gerçek araçlar verin.",
         "capabilities": {
           "ask": {
-            "title": "Çalışma alanınıza sorun",
-            "body": "/api/ask RAG endpoint’i işleriniz, dokümanlarınız ve yorumlarınız üzerinde doğal dille yanıt verir; pgvector ile geri getirmeye dayanır ve kaynaklara atıf verir."
+            "title": "Çalışma alanınıza sorun"
           },
           "triage": {
-            "title": "AI triage ve tahminler",
-            "body": "Önerilen öncelik, etiketler ve efor yeni işlere düşer; gerçek OpenAI ve Anthropic çağrıları, maliyet koruması ve tracing ile desteklenir. Kontrol sizde kalır: kabul edin veya reddedin."
+            "title": "AI triage ve tahminler"
           },
           "mcp": {
-            "title": "Ajanlar için MCP araçları",
-            "body": "@tasknebula/mcp-server backlog’u MCP üzerinden açar; HTTP /api/mcp veya stdio ile harici ajanlar iptal edilebilir anahtarlarla iş oluşturur, arar ve taşır."
+            "title": "Ajanlar için MCP araçları"
           }
         },
         "mock": {
@@ -5247,8 +5223,7 @@
             "body": "Backlog’dan sprint’e çekin, fix version ve component belirleyin, kapsamı tek bakışta okuyun. Planlama ayrı dokümanda değil, işin yanında yaşar."
           },
           "build": {
-            "title": "Ajanlarla birlikte geliştirin",
-            "body": "Ajanlar MCP üzerinden birinci sınıf ekip arkadaşlarıdır; işleri alır, yorum yapar ve insanlar gibi iş açar, her aksiyon ortak zaman çizelgesinde görünür."
+            "title": "Ajanlarla birlikte geliştirin"
           },
           "ship": {
             "title": "Yayınlayın ve sonucu takip edin",
@@ -5310,28 +5285,23 @@
             "answer": "Kendin barındırma varsayılan yoldur. Docker ile Postgres 16 ve pgvector, Redis 7, neuraparse/tasknebula web imajı ve etkinleştirdiğin paketli veya isteğe bağlı servislerden oluşan küçük bir Compose yığını başlatırsın. Migration’lar açılışta çalışır, GET /api/health kontrol endpoint’idir ve hızlı başlangıç localhost:3000 üzerinde açılır."
           },
           "aiKeys": {
-            "question": "AI özelliklerine ihtiyacım var mı? Kendi anahtarlarımı getirebilir miyim?",
-            "answer": "AI isteğe bağlıdır; hiçbir model anahtarı yapılandırmadan her pano, sprint ve doküman çalışır. İstediğinizde OpenAI veya Anthropic anahtarınızı ortam değişkeni olarak siz getirirsiniz; harcama ve veri konumu sizde kalır. Kontrolden çıkan bir prompt’un faturayı şişirmemesi için maliyet koruması vardır."
+            "question": "AI özelliklerine ihtiyacım var mı? Kendi anahtarlarımı getirebilir miyim?"
           },
           "aiReality": {
-            "question": "AI özellikleri bugün ne kadar gerçek?",
-            "answer": "Bunları açıkta geliştiriyoruz. Veri modeli ve endpoint’ler — triage önerileri, pgvector semantik arama ve /api/ask RAG endpoint’i — canlıdır ve gerçek OpenAI ile Anthropic çağrıları yapar. Bazı yüzeyler sağlamlaştırılırken hâlâ preview olarak etiketlidir; bunu kurulumdan sonra keşfetmenizdense burada açık söylemeyi tercih ederiz."
+            "question": "AI özellikleri bugün ne kadar gerçek?"
           },
           "mcpServer": {
-            "question": "MCP sunucusu nedir?",
-            "answer": "MCP (Model Context Protocol) sunucusu TaskNebula’yı araçlar olarak açar: iş oluşturma, arama, taşıma ve yorumlama. Böylece Claude Code ve Cursor gibi ajanlar takip aracınızı kullanabilir. Repo ile birlikte gelir; HTTP /api/mcp ya da @tasknebula/mcp-server üzerinden stdio çalışır ve MIT lisanslıdır. Not: uçtan uca ajan kimlik doğrulaması REST API’nin API anahtarlarını kabul etmesine bağlıdır; bu hâlâ bağlandığı için bugün preview kabul edin."
+            "question": "MCP sunucusu nedir?"
           },
           "imports": {
-            "question": "Jira veya Linear’dan içe aktarır mı?",
-            "answer": "Evet — Jira, Linear, GitHub ve CSV için importer’lar var. Her biri yazmadan önce alan eşlemesini inceleyebilmeniz için önizleme adımıyla çalışır; geçiş yaparken eski aracınızı salt okunur tutabilirsiniz."
+            "question": "Jira veya Linear’dan içe aktarır mı?"
           },
           "productionReady": {
             "question": "Production’a hazır mı?",
             "answer": "Çekirdek takip aracı — işler, panolar, sprintler, dokümanlar, arama, REST API ve OpenAPI tanımı — kendin barındırılabilir. OAuth girişi hâlâ bir DB adapter gerektiriyor; şimdilik credentials auth kullanın. Gerçek zamanlı iş birliği Docker/Compose üzerinden bağlandı, ancak kurulumunuzun erişilebilir bir URL’ye ve canlı bir smoke testine hâlâ ihtiyacı var. AI ve MCP preview olarak kalıyor. Eksikleri docs/STATUS.md içinde takip ediyoruz."
           },
           "dataVisibility": {
-            "question": "Verimi kim görebilir?",
-            "answer": "Siz karar verirsiniz. Kendiniz barındırdığınızda her şey altyapınızdaki Postgres’te yaşar ve düz bir pg_dump ile dışa aktarılır; eve telemetri gönderilmez. Ürün içinde çalışma alanları kuruluş bazında izole edilir; rol tabanlı erişim, izin şemaları ve audit log’ları vardır."
+            "question": "Verimi kim görebilir?"
           }
         }
       },
@@ -5345,28 +5315,18 @@
             "body": "Tüm panoyu tek Cmd+K paletinden yönetin: arayın, gezin ve tuşlardan ayrılmadan aksiyon çalıştırın. Kolonlar arasında sürükleyin, sprint planlayın ve burndown’ı aynı görünümde okuyun."
           },
           "import": {
-            "title": "Jira ve Linear’dan içe aktarın",
-            "body": "Backlog’unuzu yanınızda getirin; Jira, Linear ve CSV importer’ları işleri, durumları ve meta verileri eşler, böylece boş değil dolu başlarsınız."
+            "title": "Jira ve Linear’dan içe aktarın"
           },
-          "structure": {
-            "title": "Jira düzeyinde yapı",
-            "body": "Birinci sınıf etiketler, bileşenler, fix version’lar ve resolution modeli — backlog yapısı JSON string’lerde değil gerçek tablolarda ve REST API’lerinde saklanır."
-          },
-          "ai": {
-            "title": "AI-native ve denetlenebilir",
-            "body": "Maliyet koruması ve tracing arkasında gerçek OpenAI ve Anthropic çağrıları; triage önerileri, AI tahminleri ve pgvector üzerinde /api/ask RAG endpoint’i. Kara kutu yok."
-          },
+          "structure": {},
+          "ai": {},
           "agents": {
-            "title": "Ajanlar backlog üzerinde çalışır",
-            "body": "Gerçek MCP sunucusu — HTTP /api/mcp veya stdio — kod ajanlarının iş oluşturmasına, aramasına ve taşımasına izin verir. REST API, OpenAPI tanımı, iptal edilebilir anahtarlar ve webhooks ile desteklenir."
+            "title": "Ajanlar backlog üzerinde çalışır"
           },
           "realtime": {
-            "title": "Gerçek zamanlı işbirliği",
-            "body": "Spec’ler ve iş dokümanları canlı düzenlenir; Tiptap, Yjs presence ve çakışmasız birleşimler sayesinde iki kişi tek dokümanda sorunsuz çalışır."
+            "title": "Gerçek zamanlı işbirliği"
           },
           "selfHost": {
-            "title": "Dakikalar içinde kendin barındır",
-            "body": "Tek Docker imajı, Postgres ve veri sizin. Şemadan itibaren multi-tenant; her tablo kuruluş kapsamlıdır, vendor lock-in yoktur."
+            "title": "Dakikalar içinde kendin barındır"
           },
           "analytics": {
             "title": "Yürütmeye yakın analitik",
@@ -5684,6 +5644,17 @@
         "title": "TaskNebula — Açık kaynak, AI-native Jira ve Linear alternatifi",
         "description": "AI ajanlarının backlog üzerinde sizinle çalışması için MCP sunuculu, klavye öncelikli panolar, sprintler ve dokümanlar. MIT lisanslıdır — tek Docker Compose dosyasıyla kendiniz barındırabilirsiniz.",
         "skipToContent": "İçeriğe geç"
+      },
+      "productTruth": {
+        "aiSummary": "AI ve ajan özellikleri isteğe bağlıdır, yapılandırmaya bağlıdır ve bazıları hâlâ önizleme aşamasındadır.",
+        "ask": "Ask bugün işleri ve dokümanları arar. Anlamsal getirme için organizasyon sınırını koruyan bir embedding sağlayıcısı gerekir.",
+        "ai": "AI önerileri önizleme özellikleridir ve yapılandırılmış sağlayıcı kimlik bilgilerine bağlıdır. Uygulamadan önce her öneriyi inceleyin.",
+        "mcp": "Önizleme: Kaynaktan derlenen MCP paketi, organizasyona bağlı API anahtarlarıyla 11 aracı destekler. OAuth, çağrı başına denetim ve herkese açık paket dağıtımı henüz tamamlanmadı.",
+        "aiKeys": "AI isteğe bağlıdır. Kendi sağlayıcı anahtarlarınızı kullanın; bütçe kontrolleri riski azaltır ancak harcama tavanı garanti etmez.",
+        "data": "Kendi barındırdığınız uygulama verileri Postgres'inizi kullanır. Erişim kontrolleri vardır ancak kapsamları hâlâ gözden geçirilmelidir; isteğe bağlı entegrasyonlar yalnızca siz yapılandırdığınızda veri gönderir.",
+        "structureTitle": "Yapılandırılmış backlog alanları",
+        "structure": "Etiketler, bileşenler, düzeltme sürümleri ve çözümler birinci sınıf veritabanı ve API modellerine sahiptir. Zorlama hâlâ rotaya göre değişir.",
+        "realtime": "Yjs iş birliği; Hocuspocus, herkese açık URL'si ve eşleşen gizli değerler yapılandırılıp gerçek bir duman testi yapıldığında kullanılabilir."
       }
     },
     "intake": {
@@ -6660,7 +6631,7 @@
     "disclosureBadge": "Yapay zeka şeffaflığı bilgileri",
     "title": "AI Model Kartları",
     "intro": "Bu sayfada TaskNebula'nın belgelenmiş yapay zeka özellikleri ve varsayılan yapılandırması açıklanmaktadır. Gerçek modeller, veri işleme, saklama ve inceleme kontrolleri çalışma alanına ve dağıtıma göre değişiklik gösterebilir; etkin ayarları yöneticinizle onaylayın. Şeffaflık bildirimi sürümü <version></version>.",
-    "lastReviewed": "Son inceleme tarihi: 2026-08-12. (AB) 2024/1689 sayılı Yönetmeliğin 50. Maddesi 02.08.2026 tarihinden itibaren geçerlidir.",
+    "lastReviewed": "Son inceleme tarihi: 2026-08-12.",
     "onThisPage": "Bu sayfada",
     "model": "Model",
     "provider": "Sağlayıcı",
@@ -7036,5 +7007,28 @@
       "fetchOrganizations": "Organizasyonlar alınamadı",
       "fetchEpics": "Epicler alınamadı"
     }
+  },
+  "slackCommands": {
+    "userUnmapped": "Slack hesabınızı bir TaskNebula kullanıcısıyla eşleştiremedim. Yöneticinizden Slack profillerini TaskNebula hesaplarıyla eşleştirmesini isteyin.",
+    "statusUsage": "Kullanım: `/tn status TN-123 done`",
+    "statusUnavailable": "Bu durum değişikliği kullanılamıyor. Desteklenen durumlar için `/tn help` komutuna bakın.",
+    "notInstalled": "TaskNebula henüz bu Slack çalışma alanına kurulmamış. Bir yöneticiden Ayarlar → Entegrasyonlar bölümünden bağlantıyı kurmasını isteyin.",
+    "help": "*TaskNebula komutları*\n`/tn new başlık` — başlığınızla yeni kayıt penceresini açar\n`/tn list` — size atanmış açık kayıtları listeler\n`/tn search sorgu` — erişebildiğiniz en iyi 5 eşleşmeyi gösterir\n`/tn assign TN-123 @kullanıcı` — kaydı yeniden atar\n`/tn status TN-123 done` — kayıt durumunu değiştirir (backlog | in_progress | in_review | done | blocked)",
+    "unknownCommand": "Bilinmeyen komut.",
+    "noOpenAssigned": "Size atanmış açık kayıt yok.",
+    "openIssuesHeader": "Açık kayıtlarınız:",
+    "noStatus": "durum yok",
+    "searchUsage": "Kullanım: `/tn search sorgu`",
+    "searchNoMatches": "`{query}` ile eşleşen kayıt bulunamadı.",
+    "searchTopMatches": "`{query}` için en iyi eşleşmeler: {count}",
+    "searchSummary": "{query} için eşleşme sayısı: {count}",
+    "assignUsage": "Kullanım: `/tn assign TN-123 @kullanıcı`",
+    "invalidUserMention": "`{mention}` geçerli bir Slack kullanıcı etiketi gibi görünmüyor.",
+    "issueNotFound": "`{issueKey}` kaydı bu çalışma alanında bulunamadı.",
+    "assigneeUnmapped": "Bu Slack kullanıcısını bir TaskNebula hesabıyla eşleştiremedim. Bir yöneticiden Ayarlar → Entegrasyonlar bölümünde eşlemeyi eklemesini isteyin.",
+    "assignmentSuccess": "*{issueKey}* kaydı <@{slackUserId}> kullanıcısına yeniden atandı (isteyen: <@{requestedBy}>).",
+    "statusSuccess": "*{issueKey}* kaydı *{statusName}* durumuna taşındı (isteyen: <@{requestedBy}>).",
+    "newUsage": "Kullanım: `/tn new başlık` — yeni kayıt penceresini açar.",
+    "newOpening": "Şu başlıkla yeni kayıt penceresi açılıyor: _{title}_"
   }
 }

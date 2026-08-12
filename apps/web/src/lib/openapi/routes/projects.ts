@@ -1,10 +1,6 @@
 import { z } from 'zod';
-import { registerRoute, TAGS } from '../registry';
-import {
-  ErrorResponseSchema,
-  ProjectListQuerySchema,
-  ProjectSchema,
-} from '../schemas';
+import { registerRoute, SESSION_OR_API_KEY_SECURITY, TAGS } from '../registry';
+import { ErrorResponseSchema, ProjectListQuerySchema, ProjectSchema } from '../schemas';
 
 // GET /api/projects
 registerRoute({
@@ -12,8 +8,9 @@ registerRoute({
   path: '/api/projects',
   summary: 'List projects accessible to the current user',
   description:
-    'Returns projects from organizations the caller is a member of, optionally narrowed by `organizationId` and/or `teamId`. Super admins see all projects in the scope.',
+    'Returns projects from organizations the caller is a member of, optionally narrowed by `organizationId` and/or `teamId`. Browser-session super admins can see all projects in the requested scope; API keys remain confined to their organization.',
   tags: [TAGS.Projects],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: { query: ProjectListQuerySchema },
   responses: {
     '200': {

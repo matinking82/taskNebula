@@ -46,6 +46,7 @@ import { auth } from '@/auth';
 import { publishEvent } from '@/lib/realtime/events';
 import type { TriageSuggestionPayload } from '@/lib/agents/triage';
 import { guardAgentAction } from '@/lib/agent-policy/guard';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 const applyBodySchema = z.object({
   suggestionId: z.string().optional(),
@@ -90,7 +91,7 @@ async function callerCanEdit(userId: string, projectId: string): Promise<boolean
   if (!pm) return false;
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[pm.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  return pm.canEditIssues === 'true' || roleDefaults.canEditIssues;
+  return resolveProjectMemberPermission(pm.canEditIssues, roleDefaults.canEditIssues);
 }
 
 async function autoApplyConfidenceFor(organizationId: string): Promise<number> {

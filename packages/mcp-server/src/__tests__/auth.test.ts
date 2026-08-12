@@ -17,10 +17,12 @@ describe('resolveStdioAuth', () => {
 });
 
 describe('resolveHttpAuth', () => {
-  it('extracts bearer token from Headers', () => {
-    const headers = new Headers({ Authorization: 'Bearer abc.def.ghi' });
-    const ctx = resolveHttpAuth({ headers }, { TASKNEBULA_API_URL: 'https://x' } as NodeJS.ProcessEnv);
-    expect(ctx.accessToken).toBe('abc.def.ghi');
+  it('extracts a TaskNebula bearer key from Headers', () => {
+    const headers = new Headers({ Authorization: 'Bearer sk_live_abc123' });
+    const ctx = resolveHttpAuth({ headers }, {
+      TASKNEBULA_API_URL: 'https://x',
+    } as NodeJS.ProcessEnv);
+    expect(ctx.accessToken).toBe('sk_live_abc123');
     expect(ctx.apiUrl).toBe('https://x');
   });
 
@@ -34,4 +36,13 @@ describe('resolveHttpAuth', () => {
     const ctx = resolveHttpAuth({ headers });
     expect(ctx.accessToken).toBeUndefined();
   });
+
+  it.each(['Bearer opaque-oauth-token', 'Bearer sk_live_'])(
+    'rejects a bearer credential that is not a usable TaskNebula key: %s',
+    (authorization) => {
+      const headers = new Headers({ Authorization: authorization });
+      const ctx = resolveHttpAuth({ headers });
+      expect(ctx.accessToken).toBeUndefined();
+    }
+  );
 });

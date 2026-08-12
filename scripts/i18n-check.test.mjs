@@ -34,3 +34,18 @@ test('rejects argument type, plural kind, offset, and selector drift', () => {
   assert.match(output, /exactSelectors: expected .*exact==0\|=2.*got .*exact==0\|=3/);
   assert.match(output, /selectSelectors: expected .*closed\|open\|other.*got .*open\|other/);
 });
+
+test('rejects obsolete public marketing claim keys in every catalog', () => {
+  const result = runFixture('stale-marketing');
+  const output = `${result.stdout}\n${result.stderr}`;
+
+  assert.equal(result.status, 1, output);
+  assert.match(
+    output,
+    /en: obsolete marketing claim key\(s\): publicPages\.landing\.migrate\.description/
+  );
+  assert.match(
+    output,
+    /tr: obsolete marketing claim key\(s\): publicPages\.landing\.migrate\.description/
+  );
+});

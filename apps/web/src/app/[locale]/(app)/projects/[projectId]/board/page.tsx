@@ -145,6 +145,7 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={t('allIssues')}
                 className="text-muted-foreground hover:bg-muted hover:text-foreground h-5 w-5"
                 onClick={() => setSelectedSprintId(undefined)}
               >

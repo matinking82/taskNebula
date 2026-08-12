@@ -1,23 +1,27 @@
-// QUAL-21 TS-strict-migration: file untouched intentionally; surfaces 8 errors
-// under `exactOptionalPropertyTypes`. See docs/TS_STRICT_MIGRATION.md.
 import { createId } from '@paralleldrive/cuid2';
 import {
+  agentRunEffects,
   agentRuns,
-  createActivity,
-  createAuditLog,
+  auditLogs,
   db,
   desc,
   eq,
+  issueActivities,
   issues,
+  organizations,
   projects,
   sprints,
+  systemSettings,
   workflowStatuses,
 } from '@tasknebula/db';
-import { and, count, gte } from 'drizzle-orm';
+import { and, gt, isNull, sql } from 'drizzle-orm';
 import { publishEvent } from '@/lib/realtime/events';
 import { emitAgentLog, emitAgentStatus } from '@/lib/websocket/server';
 import {
   resolveEffectiveProjectAgentSettings,
+  normalizeProjectAgentSettings,
+  normalizeSystemAgentControlSettings,
+  normalizeWorkspaceAgentSettings,
   type AgentRunKind,
   type EffectiveProjectAgentSettings,
   type ProjectAgentSettings,
@@ -27,6 +31,7 @@ import {
 import { buildSprintBatchPlan, deriveTriagePriority, getRunKindSummary } from './planner';
 import {
   AgentExecutionError,
+  serializeAgentProviderPrompt,
   generateAgentPlan,
   normalizeAgentLabels,
   type AgentProviderPlan,
@@ -38,16 +43,35 @@ import { BudgetExhaustedError, estimatePromptTokens, runWithBudget } from '@/lib
 import type { AgentModelConfigRecord } from './model-configs';
 import type { ProjectContext, ProjectIssueRow, ProjectSprintRow } from './types';
 import { resolveAgentExecutionPolicy, type AgentWriteDisposition } from './execution-policy';
+import {
+  createInitialProjectAgentState,
+  PROJECT_AGENT_GRAPH_VERSION,
+  runProjectAgentGraph,
+  type ProjectAgentExecutionResult,
+  type ProjectAgentLogEntry,
+} from './project-agent-graph';
+import {
+  ProjectAgentAdmissionError,
+  ProjectAgentIdempotencyConflict,
+  ProjectAgentLeaseLost,
+  getProjectAgentRun,
+  loadAgentOrganizationSettings,
+  processDurableProjectAgentRuns,
+  serializeProjectAgentRunEnvelope,
+  startDurableProjectAgentRun,
+  type DurableAgentRun,
+  type DurableProjectAgentInput,
+  type ProjectAgentLeaseContext,
+} from './project-agent-run-store';
+import { resolveProviderApiKeyFromSettings } from './credentials';
+import { getSystemAgentControlSettingsFromDb } from './system';
+import { SYSTEM_AGENT_CONTROL_KEY } from './system';
 
-type AgentLogEntry = {
-  logIndex: number;
-  type: 'system' | 'stdout' | 'stderr';
-  content: string;
-  timestamp: string;
-};
+type AgentLogEntry = ProjectAgentLogEntry;
+type AgentTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 type RunResponse = {
-  run: typeof agentRuns.$inferSelect;
+  run: ReturnType<typeof serializeProjectAgentRunEnvelope>['run'];
   output: Record<string, unknown>;
   dryRun: boolean;
   forcedDryRun: boolean;
@@ -75,7 +99,210 @@ function nextLog(logs: AgentLogEntry[], content: string, type: AgentLogEntry['ty
   return entry;
 }
 
-async function loadProjectContext(projectId: string): Promise<ProjectContext | null> {
+async function assertActiveEffectLease(
+  tx: AgentTransaction,
+  params: {
+    runId: string;
+    organizationId: string;
+    projectId: string;
+    leaseOwner: string;
+    signal: AbortSignal;
+    kind: AgentRunKind;
+  }
+) {
+  params.signal.throwIfAborted();
+  const [owned] = await tx
+    .select({ id: agentRuns.id })
+    .from(agentRuns)
+    .where(
+      and(
+        eq(agentRuns.id, params.runId),
+        eq(agentRuns.organizationId, params.organizationId),
+        eq(agentRuns.projectId, params.projectId),
+        eq(agentRuns.graphVersion, PROJECT_AGENT_GRAPH_VERSION),
+        eq(agentRuns.status, 'running'),
+        eq(agentRuns.leaseOwner, params.leaseOwner),
+        gt(agentRuns.leaseExpiresAt, new Date()),
+        isNull(agentRuns.cancelRequestedAt)
+      )
+    )
+    .limit(1)
+    .for('update');
+  params.signal.throwIfAborted();
+  if (!owned) throw new ProjectAgentLeaseLost();
+
+  const [[organization], [project], [systemSetting]] = await Promise.all([
+    tx
+      .select({ settings: organizations.settings })
+      .from(organizations)
+      .where(eq(organizations.id, params.organizationId))
+      .limit(1),
+    tx
+      .select({ settings: projects.settings })
+      .from(projects)
+      .where(
+        and(eq(projects.id, params.projectId), eq(projects.organizationId, params.organizationId))
+      )
+      .limit(1),
+    tx
+      .select({ value: systemSettings.value })
+      .from(systemSettings)
+      .where(eq(systemSettings.key, SYSTEM_AGENT_CONTROL_KEY))
+      .limit(1),
+  ]);
+  if (!organization || !project)
+    throw new AgentExecutionError('Agent policy context is missing.', 'policy_revoked', 409);
+  const workspace = normalizeWorkspaceAgentSettings(
+    (organization.settings as Record<string, unknown> | null)?.aiAgents
+  );
+  const projectPolicy = normalizeProjectAgentSettings(
+    (project.settings as Record<string, unknown> | null)?.aiAgents
+  );
+  const system = normalizeSystemAgentControlSettings(systemSetting?.value);
+  const effective = resolveEffectiveProjectAgentSettings(workspace, projectPolicy, system);
+  const writePolicy = resolveAgentExecutionPolicy({
+    kind: params.kind,
+    requestedDryRun: false,
+    allowWriteActions: effective.allowWriteActions,
+    requireApprovalForWrites: effective.requireApprovalForWrites,
+    aiOversight: effective.aiOversight,
+  });
+  if (
+    !system.globalEnabled ||
+    !workspace.enabled ||
+    !projectPolicy.enabled ||
+    !effective.capabilities[params.kind] ||
+    writePolicy.dryRun
+  ) {
+    throw new AgentExecutionError(
+      'Project agent write policy was revoked before the effect committed.',
+      'policy_revoked',
+      409
+    );
+  }
+}
+
+export type ProjectAgentIssueEffectInput = {
+  runId: string;
+  organizationId: string;
+  projectId: string;
+  issueId: string;
+  userId: string;
+  leaseOwner: string;
+  signal: AbortSignal;
+  kind: Extract<AgentRunKind, 'backlog_triage' | 'bulk_sprint_creation'>;
+  effectKey: string;
+  effectType: 'issue_triage' | 'sprint_assign_issue';
+  effectPayload: Record<string, unknown>;
+  expected: {
+    priority?: ProjectIssueRow['priority'];
+    labels?: unknown;
+    sprintId?: string | null;
+  };
+  set: {
+    priority?: ProjectIssueRow['priority'];
+    labels?: string[];
+    sprintId?: string | null;
+  };
+  activity: {
+    type: 'updated';
+    field: 'priority' | 'sprintId';
+    oldValue: string | null;
+    newValue: string | null;
+    metadata: Record<string, unknown>;
+  };
+  audit: {
+    action: 'issue.priority_changed' | 'sprint.issue_added';
+    resourceType: 'issue' | 'sprint';
+    resourceId: string;
+    changes: Record<string, unknown>;
+    metadata: Record<string, unknown>;
+  };
+  staleMessage: string;
+};
+
+/**
+ * Apply one issue effect with the durable receipt, lease/policy fence, stale
+ * context CAS, activity and audit in the same database transaction.
+ */
+export async function applyProjectAgentIssueEffect(params: ProjectAgentIssueEffectInput) {
+  return db.transaction(async (tx) => {
+    await assertActiveEffectLease(tx, params);
+    const [receipt] = await tx
+      .insert(agentRunEffects)
+      .values({
+        id: createId(),
+        organizationId: params.organizationId,
+        projectId: params.projectId,
+        runId: params.runId,
+        effectKey: params.effectKey,
+        effectType: params.effectType,
+        payload: params.effectPayload,
+      })
+      .onConflictDoNothing({
+        target: [agentRunEffects.runId, agentRunEffects.effectKey],
+      })
+      .returning({ id: agentRunEffects.id });
+    if (!receipt) return false;
+
+    const predicates = [
+      eq(issues.id, params.issueId),
+      eq(issues.projectId, params.projectId),
+      eq(issues.organizationId, params.organizationId),
+    ];
+    if (params.expected.priority !== undefined) {
+      predicates.push(eq(issues.priority, params.expected.priority));
+    }
+    if ('labels' in params.expected) {
+      predicates.push(sql`${issues.labels} = ${JSON.stringify(params.expected.labels)}::jsonb`);
+    }
+    if ('sprintId' in params.expected) {
+      predicates.push(
+        params.expected.sprintId === null
+          ? isNull(issues.sprintId)
+          : eq(issues.sprintId, params.expected.sprintId!)
+      );
+    }
+
+    const [updatedIssue] = await tx
+      .update(issues)
+      .set({ ...params.set, updatedAt: new Date(), updatedBy: params.userId })
+      .where(and(...predicates))
+      .returning({ id: issues.id });
+    if (!updatedIssue) throw new Error(params.staleMessage);
+
+    await tx.insert(issueActivities).values({
+      id: createId(),
+      issueId: params.issueId,
+      userId: params.userId,
+      type: params.activity.type,
+      field: params.activity.field,
+      oldValue: params.activity.oldValue,
+      newValue: params.activity.newValue,
+      metadata: params.activity.metadata,
+      createdBy: params.userId,
+      updatedBy: params.userId,
+    });
+    await tx.insert(auditLogs).values({
+      id: createId(),
+      userId: params.userId,
+      organizationId: params.organizationId,
+      action: params.audit.action,
+      resourceType: params.audit.resourceType,
+      resourceId: params.audit.resourceId,
+      projectId: params.projectId,
+      issueId: params.issueId,
+      changes: params.audit.changes,
+      metadata: params.audit.metadata,
+    });
+    return true;
+  });
+}
+
+async function loadProjectContext(
+  projectId: string,
+  organizationId?: string
+): Promise<ProjectContext | null> {
   const [project] = await db
     .select({
       id: projects.id,
@@ -84,7 +311,11 @@ async function loadProjectContext(projectId: string): Promise<ProjectContext | n
       key: projects.key,
     })
     .from(projects)
-    .where(eq(projects.id, projectId))
+    .where(
+      organizationId
+        ? and(eq(projects.id, projectId), eq(projects.organizationId, organizationId))
+        : eq(projects.id, projectId)
+    )
     .limit(1);
 
   if (!project) {
@@ -108,7 +339,11 @@ async function loadProjectContext(projectId: string): Promise<ProjectContext | n
       })
       .from(issues)
       .leftJoin(workflowStatuses, eq(issues.statusId, workflowStatuses.id))
-      .where(eq(issues.projectId, projectId)),
+      .where(
+        organizationId
+          ? and(eq(issues.projectId, projectId), eq(issues.organizationId, organizationId))
+          : eq(issues.projectId, projectId)
+      ),
     db
       .select({
         id: sprints.id,
@@ -127,64 +362,6 @@ async function loadProjectContext(projectId: string): Promise<ProjectContext | n
     issues: projectIssues,
     sprints: projectSprints,
   };
-}
-
-async function createAgentRunRecord(params: {
-  organizationId: string;
-  projectId: string;
-  initiatedBy: string;
-  kind: AgentRunKind;
-  mode: EffectiveProjectAgentSettings['executionMode'];
-  dryRun: boolean;
-  input?: Record<string, unknown>;
-}) {
-  const [run] = await db
-    .insert(agentRuns)
-    .values({
-      id: createId(),
-      organizationId: params.organizationId,
-      projectId: params.projectId,
-      initiatedBy: params.initiatedBy,
-      kind: params.kind,
-      mode: params.mode,
-      dryRun: params.dryRun,
-      status: 'running',
-      input: params.input ?? {},
-      output: {},
-      logs: [],
-      startedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .returning();
-
-  return run!;
-}
-
-async function finalizeAgentRun(params: {
-  runId: string;
-  status: 'completed' | 'failed' | 'cancelled';
-  logs: AgentLogEntry[];
-  output?: Record<string, unknown>;
-  summary?: string;
-  writeActionsCount?: number;
-  error?: string;
-}) {
-  const [run] = await db
-    .update(agentRuns)
-    .set({
-      status: params.status,
-      logs: params.logs,
-      output: params.output ?? {},
-      summary: params.summary,
-      writeActionsCount: params.writeActionsCount ?? 0,
-      error: params.error ?? null,
-      completedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(agentRuns.id, params.runId))
-    .returning();
-
-  return run!;
 }
 
 type ProjectTrackingMetrics = {
@@ -491,6 +668,8 @@ async function runBacklogTriage(params: {
   dryRun: boolean;
   logs: AgentLogEntry[];
   generatedPlan?: TriageProviderPlan;
+  leaseOwner: string;
+  signal: AbortSignal;
 }) {
   const backlogIssues = params.context.issues.filter(
     (issue) => !issue.sprintId && issue.statusCategory !== 'done'
@@ -535,54 +714,54 @@ async function runBacklogTriage(params: {
 
   let writeActionsCount = 0;
   for (const proposal of proposals) {
-    await db
-      .update(issues)
-      .set({
+    params.signal.throwIfAborted();
+    const applied = await applyProjectAgentIssueEffect({
+      runId: params.runId,
+      organizationId: params.context.project.organizationId,
+      projectId: params.context.project.id,
+      issueId: proposal.issue.id,
+      userId: params.userId,
+      leaseOwner: params.leaseOwner,
+      signal: params.signal,
+      kind: 'backlog_triage',
+      effectKey: `triage:${proposal.issue.id}`,
+      effectType: 'issue_triage',
+      effectPayload: {
+        issueId: proposal.issue.id,
         priority: proposal.targetPriority,
         labels: proposal.nextLabels,
-        updatedAt: new Date(),
-        updatedBy: params.userId,
-      })
-      .where(eq(issues.id, proposal.issue.id));
-
-    await createActivity({
-      issueId: proposal.issue.id,
-      userId: params.userId,
-      type: 'updated',
-      field: 'priority',
-      oldValue: proposal.issue.priority,
-      newValue: proposal.targetPriority,
-      metadata: {
-        source: 'agent',
-        runId: params.runId,
-        labels: proposal.nextLabels,
       },
+      expected: { priority: proposal.issue.priority, labels: proposal.issue.labels },
+      set: { priority: proposal.targetPriority, labels: proposal.nextLabels },
+      activity: {
+        type: 'updated',
+        field: 'priority',
+        oldValue: proposal.issue.priority,
+        newValue: proposal.targetPriority,
+        metadata: { source: 'agent', runId: params.runId, labels: proposal.nextLabels },
+      },
+      audit: {
+        action: 'issue.priority_changed',
+        resourceType: 'issue',
+        resourceId: proposal.issue.id,
+        changes: {
+          priority: { from: proposal.issue.priority, to: proposal.targetPriority },
+          labels: { from: proposal.issue.labels, to: proposal.nextLabels },
+        },
+        metadata: { source: 'agent', runId: params.runId },
+      },
+      staleMessage: 'Triage target no longer belongs to this project or changed after planning.',
     });
 
-    await createAuditLog({
-      userId: params.userId,
-      organizationId: params.context.project.organizationId,
-      action: 'issue.priority_changed',
-      resourceType: 'issue',
-      resourceId: proposal.issue.id,
-      projectId: params.context.project.id,
-      issueId: proposal.issue.id,
-      changes: {
-        priority: { from: proposal.issue.priority, to: proposal.targetPriority },
-        labels: { from: proposal.issue.labels, to: proposal.nextLabels },
-      },
-      metadata: {
-        source: 'agent',
-        runId: params.runId,
-      },
-    });
-
-    publishEvent('issue.updated', params.userId, {
-      projectId: params.context.project.id,
-      issueId: proposal.issue.id,
-      organizationId: params.context.project.organizationId,
-    });
-
+    // The database mutation is exactly-once for this run. Realtime delivery
+    // remains best-effort and is emitted only by the transaction winner.
+    if (applied) {
+      publishEvent('issue.updated', params.userId, {
+        projectId: params.context.project.id,
+        issueId: proposal.issue.id,
+        organizationId: params.context.project.organizationId,
+      });
+    }
     writeActionsCount += 1;
   }
 
@@ -660,6 +839,8 @@ async function runBulkSprintCreation(params: {
   dryRun: boolean;
   logs: AgentLogEntry[];
   generatedPlan?: SprintPlanProviderPlan;
+  leaseOwner: string;
+  signal: AbortSignal;
 }) {
   const planning = await buildSprintPlanningOutput({
     context: params.context,
@@ -697,112 +878,154 @@ async function runBulkSprintCreation(params: {
   let writeActionsCount = 0;
   const createdSprints: Array<Record<string, unknown>> = [];
 
-  for (const plannedSprint of plannedSprints) {
-    const [createdSprint] = await db
-      .insert(sprints)
-      .values({
-        id: createId(),
+  for (const [sprintIndex, plannedSprint] of plannedSprints.entries()) {
+    params.signal.throwIfAborted();
+    const sprintEffect = await db.transaction(async (tx) => {
+      await assertActiveEffectLease(tx, {
+        runId: params.runId,
+        organizationId: params.context.project.organizationId,
         projectId: params.context.project.id,
-        name: plannedSprint.name,
-        goal: plannedSprint.goal,
-        startDate: new Date(plannedSprint.startDate),
-        endDate: new Date(plannedSprint.endDate),
-        status: 'planned',
-        createdBy: params.userId,
-        updatedBy: params.userId,
-      })
-      .returning();
+        leaseOwner: params.leaseOwner,
+        signal: params.signal,
+        kind: 'bulk_sprint_creation',
+      });
+      const sprintId = createId();
+      const effectKey = `sprint:${sprintIndex}`;
+      const [receipt] = await tx
+        .insert(agentRunEffects)
+        .values({
+          id: createId(),
+          organizationId: params.context.project.organizationId,
+          projectId: params.context.project.id,
+          runId: params.runId,
+          effectKey,
+          effectType: 'sprint_create',
+          payload: { sprintId, plannedSprint },
+        })
+        .onConflictDoNothing({
+          target: [agentRunEffects.runId, agentRunEffects.effectKey],
+        })
+        .returning({ payload: agentRunEffects.payload });
 
-    if (!createdSprint) {
-      throw new Error('Failed to create sprint');
-    }
+      if (!receipt) {
+        const [existing] = await tx
+          .select({ payload: agentRunEffects.payload })
+          .from(agentRunEffects)
+          .where(
+            and(
+              eq(agentRunEffects.runId, params.runId),
+              eq(agentRunEffects.effectKey, effectKey),
+              eq(agentRunEffects.organizationId, params.context.project.organizationId)
+            )
+          )
+          .limit(1);
+        const payload = existing?.payload as { sprintId?: unknown } | undefined;
+        if (typeof payload?.sprintId !== 'string') {
+          throw new Error('Persisted sprint effect is invalid.');
+        }
+        return { applied: false, sprintId: payload.sprintId };
+      }
+
+      const [createdSprint] = await tx
+        .insert(sprints)
+        .values({
+          id: sprintId,
+          projectId: params.context.project.id,
+          name: plannedSprint.name,
+          goal: plannedSprint.goal,
+          startDate: new Date(plannedSprint.startDate),
+          endDate: new Date(plannedSprint.endDate),
+          status: 'planned',
+          createdBy: params.userId,
+          updatedBy: params.userId,
+        })
+        .returning();
+      if (!createdSprint) throw new Error('Failed to create sprint');
+
+      await tx.insert(auditLogs).values({
+        id: createId(),
+        userId: params.userId,
+        organizationId: params.context.project.organizationId,
+        action: 'sprint.created',
+        resourceType: 'sprint',
+        resourceId: createdSprint.id,
+        projectId: params.context.project.id,
+        changes: {
+          name: { from: null, to: createdSprint.name },
+          status: { from: null, to: createdSprint.status },
+        },
+        metadata: { source: 'agent', runId: params.runId },
+      });
+      return { applied: true, sprintId: createdSprint.id };
+    });
 
     createdSprints.push({
-      id: createdSprint.id,
-      name: createdSprint.name,
+      id: sprintEffect.sprintId,
+      name: plannedSprint.name,
       issueKeys: plannedSprint.issueKeys,
     });
 
-    await createAuditLog({
-      userId: params.userId,
-      organizationId: params.context.project.organizationId,
-      action: 'sprint.created',
-      resourceType: 'sprint',
-      resourceId: createdSprint.id,
-      projectId: params.context.project.id,
-      changes: {
-        name: { from: null, to: createdSprint.name },
-        status: { from: null, to: createdSprint.status },
-      },
-      metadata: {
-        source: 'agent',
-        runId: params.runId,
-      },
-    });
-
-    publishEvent('sprint.created', params.userId, {
-      projectId: params.context.project.id,
-      sprintId: createdSprint.id,
-      organizationId: params.context.project.organizationId,
-    });
-
+    if (sprintEffect.applied) {
+      publishEvent('sprint.created', params.userId, {
+        projectId: params.context.project.id,
+        sprintId: sprintEffect.sprintId,
+        organizationId: params.context.project.organizationId,
+      });
+    }
     writeActionsCount += 1;
 
     if (params.effectiveSettings.autoAssignToPlannedSprints) {
       for (const issueKey of plannedSprint.issueKeys) {
+        params.signal.throwIfAborted();
         const issue = issueByKey.get(issueKey);
         if (!issue) {
           continue;
         }
 
-        await db
-          .update(issues)
-          .set({
-            sprintId: createdSprint.id,
-            updatedAt: new Date(),
-            updatedBy: params.userId,
-          })
-          .where(eq(issues.id, issue.id));
-
-        await createActivity({
-          issueId: issue.id,
-          userId: params.userId,
-          type: 'updated',
-          field: 'sprintId',
-          oldValue: issue.sprintId,
-          newValue: createdSprint.id,
-          metadata: {
-            source: 'agent',
-            runId: params.runId,
-            sprintName: createdSprint.name,
-          },
-        });
-
-        await createAuditLog({
-          userId: params.userId,
+        const assignmentApplied = await applyProjectAgentIssueEffect({
+          runId: params.runId,
           organizationId: params.context.project.organizationId,
-          action: 'sprint.issue_added',
-          resourceType: 'sprint',
-          resourceId: createdSprint.id,
           projectId: params.context.project.id,
           issueId: issue.id,
-          changes: {
-            sprintId: { from: issue.sprintId, to: createdSprint.id },
+          userId: params.userId,
+          leaseOwner: params.leaseOwner,
+          signal: params.signal,
+          kind: 'bulk_sprint_creation',
+          effectKey: `sprint-assign:${sprintIndex}:${issue.id}`,
+          effectType: 'sprint_assign_issue',
+          effectPayload: { sprintId: sprintEffect.sprintId, issueId: issue.id },
+          expected: { sprintId: issue.sprintId },
+          set: { sprintId: sprintEffect.sprintId },
+          activity: {
+            type: 'updated',
+            field: 'sprintId',
+            oldValue: issue.sprintId,
+            newValue: sprintEffect.sprintId,
+            metadata: {
+              source: 'agent',
+              runId: params.runId,
+              sprintName: plannedSprint.name,
+            },
           },
-          metadata: {
-            source: 'agent',
-            runId: params.runId,
-            issueKey: issue.key,
+          audit: {
+            action: 'sprint.issue_added',
+            resourceType: 'sprint',
+            resourceId: sprintEffect.sprintId,
+            changes: { sprintId: { from: issue.sprintId, to: sprintEffect.sprintId } },
+            metadata: { source: 'agent', runId: params.runId, issueKey: issue.key },
           },
+          staleMessage:
+            'Sprint assignment target no longer belongs to this project or changed after planning.',
         });
 
-        publishEvent('sprint.issues.changed', params.userId, {
-          projectId: params.context.project.id,
-          sprintId: createdSprint.id,
-          issueId: issue.id,
-          organizationId: params.context.project.organizationId,
-        });
-
+        if (assignmentApplied) {
+          publishEvent('sprint.issues.changed', params.userId, {
+            projectId: params.context.project.id,
+            sprintId: sprintEffect.sprintId,
+            issueId: issue.id,
+            organizationId: params.context.project.organizationId,
+          });
+        }
         writeActionsCount += 1;
       }
     }
@@ -822,29 +1045,8 @@ async function runBulkSprintCreation(params: {
   };
 }
 
-export async function getDailyAgentRunCount(organizationId: string) {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-
-  const [result] = await db
-    .select({ count: count() })
-    .from(agentRuns)
-    .where(and(eq(agentRuns.organizationId, organizationId), gte(agentRuns.createdAt, startOfDay)));
-
-  return Number(result?.count || 0);
-}
-
-export async function getRunningAgentRunCount() {
-  const [result] = await db
-    .select({ count: count() })
-    .from(agentRuns)
-    .where(eq(agentRuns.status, 'running'));
-
-  return Number(result?.count || 0);
-}
-
 export async function listProjectAgentRuns(projectId: string, limit = 12) {
-  return db
+  const rows = await db
     .select({
       id: agentRuns.id,
       kind: agentRuns.kind,
@@ -856,16 +1058,312 @@ export async function listProjectAgentRuns(projectId: string, limit = 12) {
       completedAt: agentRuns.completedAt,
       mode: agentRuns.mode,
       output: agentRuns.output,
-      error: agentRuns.error,
     })
     .from(agentRuns)
     .where(eq(agentRuns.projectId, projectId))
     .orderBy(desc(agentRuns.createdAt))
     .limit(limit);
+  return rows.map((run) => {
+    const output = (run.output ?? {}) as Record<string, unknown>;
+    const { error: _internalError, ...safeOutput } = output;
+    return {
+      ...run,
+      output: safeOutput,
+      errorCode: typeof output.errorCode === 'string' ? output.errorCode : null,
+    };
+  });
 }
 
-export async function runProjectAgent(params: {
+function durableRunInput(run: DurableAgentRun): DurableProjectAgentInput {
+  const input = run.input as Partial<DurableProjectAgentInput>;
+  if (
+    input.kind !== run.kind ||
+    !input.effectiveSettings ||
+    typeof input.projectKey !== 'string' ||
+    typeof input.forcedDryRun !== 'boolean' ||
+    typeof input.approvalRequired !== 'boolean' ||
+    !input.writeDisposition
+  ) {
+    throw new Error('Project agent run input is invalid.');
+  }
+  return input as DurableProjectAgentInput;
+}
+
+function unwrapAgentError(error: unknown): unknown {
+  let current = error;
+  const seen = new Set<unknown>();
+  while (current instanceof Error && current.cause && !seen.has(current.cause)) {
+    seen.add(current);
+    current = current.cause;
+  }
+  return current;
+}
+
+function classifyAgentError(error: unknown) {
+  const cause = unwrapAgentError(error);
+  if (cause instanceof BudgetExhaustedError) {
+    return { errorCode: `budget_${cause.code}`, httpStatus: 429 };
+  }
+  if (cause instanceof AgentExecutionError) {
+    return { errorCode: cause.code, httpStatus: cause.statusCode };
+  }
+  return { errorCode: 'agent_run_failed', httpStatus: 500 };
+}
+
+async function executeProjectAgentKind(params: {
+  run: DurableAgentRun;
+  input: DurableProjectAgentInput;
+  context: ProjectContext;
+  generatedPlan: AgentProviderPlan | null;
+  logs: AgentLogEntry[];
+  leaseOwner: string;
+  signal: AbortSignal;
+}): Promise<ProjectAgentExecutionResult> {
+  const generatedPlan = params.generatedPlan ?? undefined;
+  switch (params.run.kind) {
+    case 'project_tracking':
+      return runProjectTracking({
+        context: params.context,
+        logs: params.logs,
+        generatedPlan: generatedPlan?.kind === 'project_tracking' ? generatedPlan : undefined,
+      });
+    case 'backlog_triage':
+      return runBacklogTriage({
+        runId: params.run.id,
+        userId: params.run.initiatedBy,
+        context: params.context,
+        effectiveSettings: params.input.effectiveSettings,
+        dryRun: params.run.dryRun,
+        logs: params.logs,
+        generatedPlan: generatedPlan?.kind === 'backlog_triage' ? generatedPlan : undefined,
+        leaseOwner: params.leaseOwner,
+        signal: params.signal,
+      });
+    case 'sprint_planning':
+      return buildSprintPlanningOutput({
+        context: params.context,
+        effectiveSettings: params.input.effectiveSettings,
+        logs: params.logs,
+        generatedPlan:
+          generatedPlan?.kind === 'sprint_planning' ||
+          generatedPlan?.kind === 'bulk_sprint_creation'
+            ? generatedPlan
+            : undefined,
+      });
+    case 'bulk_sprint_creation':
+      return runBulkSprintCreation({
+        runId: params.run.id,
+        userId: params.run.initiatedBy,
+        context: params.context,
+        effectiveSettings: params.input.effectiveSettings,
+        dryRun: params.run.dryRun,
+        logs: params.logs,
+        generatedPlan:
+          generatedPlan?.kind === 'sprint_planning' ||
+          generatedPlan?.kind === 'bulk_sprint_creation'
+            ? generatedPlan
+            : undefined,
+        leaseOwner: params.leaseOwner,
+        signal: params.signal,
+      });
+  }
+}
+
+async function executeClaimedProjectAgentRun(
+  run: DurableAgentRun,
+  lease: ProjectAgentLeaseContext,
+  providerApiKeyOverride?: string | null
+) {
+  const input = durableRunInput(run);
+  const organizationSettings = await loadAgentOrganizationSettings(run.organizationId);
+  const systemControl = await getSystemAgentControlSettingsFromDb();
+  const [currentProject] = await db
+    .select({ settings: projects.settings })
+    .from(projects)
+    .where(and(eq(projects.id, run.projectId!), eq(projects.organizationId, run.organizationId)))
+    .limit(1);
+  const currentWorkspacePolicy = normalizeWorkspaceAgentSettings(
+    (organizationSettings as Record<string, unknown> | null)?.aiAgents
+  );
+  const currentProjectPolicy = normalizeProjectAgentSettings(
+    (currentProject?.settings as Record<string, unknown> | null)?.aiAgents
+  );
+  const currentEffectivePolicy = resolveEffectiveProjectAgentSettings(
+    currentWorkspacePolicy,
+    currentProjectPolicy,
+    systemControl
+  );
+  const currentWritePolicy = resolveAgentExecutionPolicy({
+    kind: run.kind,
+    requestedDryRun: run.dryRun,
+    allowWriteActions: currentEffectivePolicy.allowWriteActions,
+    requireApprovalForWrites: currentEffectivePolicy.requireApprovalForWrites,
+    aiOversight: currentEffectivePolicy.aiOversight,
+  });
+  if (
+    !currentProject ||
+    !systemControl.globalEnabled ||
+    !currentWorkspacePolicy.enabled ||
+    !currentProjectPolicy.enabled ||
+    !currentEffectivePolicy.capabilities[run.kind] ||
+    (!run.dryRun && currentWritePolicy.dryRun)
+  ) {
+    throw new AgentExecutionError(
+      'Project agent policy was revoked before the run resumed.',
+      'policy_revoked',
+      409
+    );
+  }
+  const providerApiKey =
+    providerApiKeyOverride ??
+    resolveProviderApiKeyFromSettings(
+      organizationSettings,
+      input.effectiveSettings.provider,
+      systemControl.providerCredentials
+    );
+
+  const graphResult = await runProjectAgentGraph(
+    {
+      loadContext: async () => {
+        const context = await loadProjectContext(run.projectId!, run.organizationId);
+        if (!context) throw new Error('Project not found');
+        const logs: AgentLogEntry[] = [];
+        const openingLog = nextLog(
+          logs,
+          `${getRunKindSummary(run.kind)} started for ${context.project.name}${run.dryRun ? ' in preview mode' : ''}.`
+        );
+        emitAgentStatus(run.id, context.project.id, { status: 'running', progress: 5 });
+        emitLog(run.id, context.project.id, openingLog);
+        return { context, logs };
+      },
+      plan: async ({ context, logs, signal }) => {
+        const providerLog = nextLog(
+          logs,
+          input.modelConfig
+            ? `Using ${input.effectiveSettings.provider} provider with model ${input.effectiveSettings.model || 'n/a'} via profile ${input.modelConfig.name}.`
+            : `Using ${input.effectiveSettings.provider} provider with model ${input.effectiveSettings.model || 'n/a'}.`
+        );
+        emitLog(run.id, context.project.id, providerLog);
+        emitAgentStatus(run.id, context.project.id, { status: 'running', progress: 18 });
+
+        if (input.effectiveSettings.provider === 'native') return { plan: null, logs };
+        const plannerLog = nextLog(
+          logs,
+          'Requesting a structured agent plan from the configured LLM provider.'
+        );
+        emitLog(run.id, context.project.id, plannerLog);
+        const providerPrompt = serializeAgentProviderPrompt({
+          kind: run.kind,
+          context,
+          effectiveSettings: input.effectiveSettings,
+        });
+        const plan = await runWithBudget(
+          {
+            organizationId: run.organizationId,
+            userId: run.initiatedBy,
+            provider: input.effectiveSettings.provider,
+            model: input.effectiveSettings.model || 'unknown',
+            feature: `agent_run:${run.kind}`,
+            prompt: providerPrompt,
+            estimatedTokens:
+              estimatePromptTokens(providerPrompt) +
+              (input.modelConfig?.settings.maxOutputTokens || 4096),
+          },
+          async () => {
+            const generated = await generateAgentPlan({
+              kind: run.kind,
+              model: input.effectiveSettings.model,
+              effectiveSettings: input.effectiveSettings,
+              context,
+              apiKey: providerApiKey,
+              modelConfigId: input.modelConfig?.id ?? null,
+              modelConfigName: input.modelConfig?.name ?? null,
+              modelTuning: input.modelConfig?.settings ?? null,
+              userId: run.initiatedBy,
+              signal,
+              // Three transient attempts plus bounded backoff fit comfortably
+              // inside the graph's 120s active-runtime budget.
+              providerTimeoutMs: 30_000,
+            });
+            return {
+              value: generated,
+              usage: {
+                inputTokens: estimatePromptTokens(providerPrompt),
+                outputTokens: estimatePromptTokens(JSON.stringify(generated)),
+              },
+            };
+          }
+        );
+        const generatedLog = nextLog(logs, 'Structured provider plan generated successfully.');
+        emitLog(run.id, context.project.id, generatedLog);
+        emitAgentStatus(run.id, context.project.id, { status: 'running', progress: 42 });
+        return { plan, logs };
+      },
+      execute: async ({ context, plan, logs, signal }) => {
+        const result = await executeProjectAgentKind({
+          run,
+          input,
+          context,
+          generatedPlan: plan,
+          logs,
+          leaseOwner: lease.leaseOwner,
+          signal,
+        });
+        const closingLog = nextLog(logs, result.summary);
+        emitLog(run.id, context.project.id, closingLog);
+        return { result, logs };
+      },
+    },
+    lease.checkpoint?.state ?? createInitialProjectAgentState(run.kind),
+    {
+      checkpoint: lease.checkpoint,
+      signal: lease.signal,
+      maxSteps: run.maxSteps,
+      maxVisitsPerNode: run.maxVisitsPerNode,
+      maxRuntimeMs: lease.remainingRuntimeMs,
+      maxConsecutiveNoProgress: run.maxConsecutiveNoProgress,
+      onCheckpoint: lease.persistCheckpoint,
+      onEvent: lease.appendEvent,
+    }
+  );
+  if (graphResult.status !== 'completed' || !graphResult.state.result) {
+    throw new Error('Project agent graph ended without a result.');
+  }
+  emitAgentStatus(run.id, run.projectId!, { status: 'completed', progress: 100 });
+  return {
+    checkpoint: graphResult.checkpoint,
+    logs: graphResult.state.logs,
+    summary: graphResult.state.result.summary,
+    output: graphResult.state.result.output,
+    // This is the total number of durable domain effects represented by the
+    // run, including receipts recovered during a resumed execute node.
+    writeActionsCount: graphResult.state.result.writeActionsCount ?? 0,
+  };
+}
+
+export async function processProjectAgentRunQueue(
+  options: {
+    runId?: string;
+    organizationId?: string;
+    projectId?: string;
+    limit?: number;
+    providerApiKey?: string | null;
+  } = {}
+) {
+  return processDurableProjectAgentRuns({
+    runId: options.runId,
+    organizationId: options.organizationId,
+    projectId: options.projectId,
+    limit: options.limit,
+    execute: (run, lease) => executeClaimedProjectAgentRun(run, lease, options.providerApiKey),
+    classifyError: classifyAgentError,
+  });
+}
+
+export type ProjectAgentStartParams = {
   projectId: string;
+  organizationId: string;
+  projectKey: string;
   userId: string;
   kind: AgentRunKind;
   workspaceSettings: WorkspaceAgentSettings;
@@ -873,21 +1371,17 @@ export async function runProjectAgent(params: {
   systemControl: SystemAgentControlSettings;
   dryRun?: boolean;
   selectedModelConfig?: AgentModelConfigRecord | null;
-  providerApiKey?: string | null;
-  signal?: AbortSignal;
-}): Promise<RunResponse> {
-  const context = await loadProjectContext(params.projectId);
-  if (!context) {
-    throw new Error('Project not found');
-  }
+  idempotencyKey: string;
+};
 
+export async function enqueueProjectAgentRun(
+  params: ProjectAgentStartParams
+): Promise<RunResponse> {
   const effectiveSettings = resolveEffectiveProjectAgentSettings(
     params.workspaceSettings,
     params.projectSettings,
     params.systemControl
   );
-
-  const logs: AgentLogEntry[] = [];
   const executionPolicy = resolveAgentExecutionPolicy({
     kind: params.kind,
     requestedDryRun: Boolean(params.dryRun),
@@ -896,270 +1390,88 @@ export async function runProjectAgent(params: {
     aiOversight: effectiveSettings.aiOversight,
   });
   const { dryRun, forcedDryRun, approvalRequired, disposition: writeDisposition } = executionPolicy;
+  const input: DurableProjectAgentInput = {
+    kind: params.kind,
+    projectKey: params.projectKey,
+    requestedDryRun: Boolean(params.dryRun),
+    forcedDryRun,
+    approvalRequired,
+    writeDisposition,
+    effectiveSettings,
+    modelConfig: params.selectedModelConfig
+      ? {
+          id: params.selectedModelConfig.id,
+          name: params.selectedModelConfig.name,
+          revisionCount: params.selectedModelConfig.revisionCount,
+          settings: params.selectedModelConfig.settings,
+        }
+      : null,
+  };
 
-  const run = await createAgentRunRecord({
-    organizationId: context.project.organizationId,
-    projectId: context.project.id,
+  const started = await startDurableProjectAgentRun({
+    organizationId: params.organizationId,
+    projectId: params.projectId,
     initiatedBy: params.userId,
     kind: params.kind,
     mode: effectiveSettings.executionMode,
     dryRun,
-    input: {
-      kind: params.kind,
-      projectKey: context.project.key,
-      forcedDryRun,
-      approvalRequired,
-      writeDisposition,
-      provider: effectiveSettings.provider,
-      model: effectiveSettings.model,
-      modelConfigId: params.selectedModelConfig?.id || null,
-      modelConfigName: params.selectedModelConfig?.name || null,
-      modelConfigRevisionCount: params.selectedModelConfig?.revisionCount || 0,
-      modelConfigSettings: params.selectedModelConfig?.settings || null,
-    },
+    requestedDryRun: Boolean(params.dryRun),
+    idempotencyKey: params.idempotencyKey,
+    input,
+    dailyRunLimit: effectiveSettings.dailyRunLimit,
+    maxConcurrentRuns: params.systemControl.maxConcurrentRuns,
   });
 
-  emitAgentStatus(run.id, context.project.id, { status: 'running', progress: 5 });
-  const openingLog = nextLog(
-    logs,
-    `${getRunKindSummary(params.kind)} started for ${context.project.name}${dryRun ? ' in preview mode' : ''}.`
-  );
-  emitLog(run.id, context.project.id, openingLog);
-
-  try {
-    let result: {
-      summary: string;
-      writeActionsCount?: number;
-      output: Record<string, unknown>;
-    };
-    let generatedPlan: AgentProviderPlan | undefined;
-
-    const providerLog = nextLog(
-      logs,
-      params.selectedModelConfig
-        ? `Using ${effectiveSettings.provider} provider with model ${effectiveSettings.model || 'n/a'} via profile ${params.selectedModelConfig.name}.`
-        : `Using ${effectiveSettings.provider} provider with model ${effectiveSettings.model || 'n/a'}.`
-    );
-    emitLog(run.id, context.project.id, providerLog);
-    emitAgentStatus(run.id, context.project.id, { status: 'running', progress: 18 });
-
-    if (effectiveSettings.provider !== 'native') {
-      const plannerLog = nextLog(
-        logs,
-        'Requesting a structured agent plan from the configured LLM provider.'
-      );
-      emitLog(run.id, context.project.id, plannerLog);
-
-      // Run the provider call inside the AI Cost Guard reservation.
-      // The wrapper writes an llm_call_audit row, debits the running
-      // counters, and throws BudgetExhaustedError (mapped to 429 below)
-      // when the workspace is over budget or the kill switch is on.
-      const planJson = JSON.stringify({
-        kind: params.kind,
-        projectKey: context.project.key,
-        model: effectiveSettings.model,
-      });
-      generatedPlan = await runWithBudget(
-        {
-          organizationId: context.project.organizationId,
-          userId: params.userId,
-          provider: effectiveSettings.provider,
-          model: effectiveSettings.model || 'unknown',
-          feature: `agent_run:${params.kind}`,
-          prompt: planJson,
-          estimatedTokens:
-            estimatePromptTokens(planJson) +
-            (params.selectedModelConfig?.settings?.maxOutputTokens || 4096),
-        },
-        async () => {
-          const plan = await generateAgentPlan({
-            kind: params.kind,
-            model: effectiveSettings.model,
-            effectiveSettings,
-            context,
-            apiKey: params.providerApiKey,
-            modelConfigId: params.selectedModelConfig?.id || null,
-            modelConfigName: params.selectedModelConfig?.name || null,
-            modelTuning: params.selectedModelConfig?.settings || null,
-            userId: params.userId,
-            signal: params.signal,
-          });
-          return {
-            value: plan,
-            // Without provider usage stats here, fall back to a coarse
-            // post-hoc estimate. The audit row will still record the
-            // call; the budget number is approximate.
-            usage: {
-              inputTokens: estimatePromptTokens(planJson),
-              outputTokens: estimatePromptTokens(JSON.stringify(plan)),
-            },
-          };
-        }
-      );
-
-      const generatedLog = nextLog(logs, 'Structured provider plan generated successfully.');
-      emitLog(run.id, context.project.id, generatedLog);
-      emitAgentStatus(run.id, context.project.id, { status: 'running', progress: 42 });
-    }
-
-    switch (params.kind) {
-      case 'project_tracking':
-        result = await runProjectTracking({
-          context,
-          logs,
-          generatedPlan: generatedPlan?.kind === 'project_tracking' ? generatedPlan : undefined,
-        });
-        break;
-      case 'backlog_triage':
-        result = await runBacklogTriage({
-          runId: run.id,
-          userId: params.userId,
-          context,
-          effectiveSettings,
-          dryRun,
-          logs,
-          generatedPlan: generatedPlan?.kind === 'backlog_triage' ? generatedPlan : undefined,
-        });
-        break;
-      case 'sprint_planning':
-        result = await buildSprintPlanningOutput({
-          context,
-          effectiveSettings,
-          logs,
-          generatedPlan:
-            generatedPlan?.kind === 'sprint_planning' ||
-            generatedPlan?.kind === 'bulk_sprint_creation'
-              ? generatedPlan
-              : undefined,
-        });
-        break;
-      case 'bulk_sprint_creation':
-        result = await runBulkSprintCreation({
-          runId: run.id,
-          userId: params.userId,
-          context,
-          effectiveSettings,
-          dryRun,
-          logs,
-          generatedPlan:
-            generatedPlan?.kind === 'sprint_planning' ||
-            generatedPlan?.kind === 'bulk_sprint_creation'
-              ? generatedPlan
-              : undefined,
-        });
-        break;
-      default:
-        throw new Error('Unsupported agent run kind');
-    }
-
-    const closingLog = nextLog(logs, result.summary);
-    emitLog(run.id, context.project.id, closingLog);
-    emitAgentStatus(run.id, context.project.id, { status: 'completed', progress: 100 });
-
-    const finalizedRun = await finalizeAgentRun({
-      runId: run.id,
-      status: 'completed',
-      logs,
-      summary: result.summary,
-      output: result.output,
-      writeActionsCount: result.writeActionsCount ?? 0,
-    });
-
-    await createAuditLog({
-      userId: params.userId,
-      organizationId: context.project.organizationId,
-      action: 'agent.run_completed',
-      resourceType: 'agent_run',
-      resourceId: run.id,
-      projectId: context.project.id,
-      changes: {
-        status: { from: 'running', to: 'completed' },
-      },
-      metadata: {
-        kind: params.kind,
-        dryRun,
-        writeActionsCount: result.writeActionsCount ?? 0,
-        provider: effectiveSettings.provider,
-        model: effectiveSettings.model,
-        modelConfigId: params.selectedModelConfig?.id || null,
-        modelConfigName: params.selectedModelConfig?.name || null,
-      },
-    });
-
-    return {
-      run: finalizedRun,
-      output: result.output,
-      dryRun,
-      forcedDryRun,
-      approvalRequired,
-      writeDisposition,
-      httpStatus: 201,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Agent run failed';
-    const errorCode =
-      error instanceof BudgetExhaustedError
-        ? `budget_${error.code}`
-        : error instanceof AgentExecutionError
-          ? error.code
-          : 'agent_run_failed';
-    const httpStatus =
-      error instanceof BudgetExhaustedError
-        ? 429
-        : error instanceof AgentExecutionError
-          ? error.statusCode
-          : 500;
-    const failureLog = nextLog(logs, message, 'stderr');
-    emitLog(run.id, context.project.id, failureLog);
-    emitAgentStatus(run.id, context.project.id, {
-      status: 'failed',
-      progress: 100,
-      error: message,
-    });
-
-    const failedRun = await finalizeAgentRun({
-      runId: run.id,
-      status: 'failed',
-      logs,
-      error: message,
-      summary: 'Agent run failed',
-      output: {
-        error: message,
-        errorCode,
-      },
-    });
-
-    await createAuditLog({
-      userId: params.userId,
-      organizationId: context.project.organizationId,
-      action: 'agent.run_failed',
-      resourceType: 'agent_run',
-      resourceId: run.id,
-      projectId: context.project.id,
-      changes: {
-        status: { from: 'running', to: 'failed' },
-      },
-      metadata: {
-        kind: params.kind,
-        dryRun,
-        error: message,
-        errorCode,
-        provider: effectiveSettings.provider,
-        model: effectiveSettings.model,
-        modelConfigId: params.selectedModelConfig?.id || null,
-        modelConfigName: params.selectedModelConfig?.name || null,
-      },
-    });
-
-    return {
-      run: failedRun,
-      output: { error: message, errorCode },
-      dryRun,
-      forcedDryRun,
-      approvalRequired,
-      writeDisposition,
-      errorCode,
-      httpStatus,
-    };
-  }
+  const envelope = serializeProjectAgentRunEnvelope(started.run);
+  const output = envelope.output;
+  return {
+    ...envelope,
+    errorCode: typeof output.errorCode === 'string' ? output.errorCode : undefined,
+    httpStatus:
+      started.run.status === 'failed'
+        ? typeof output.httpStatus === 'number'
+          ? output.httpStatus
+          : 500
+        : started.run.status === 'completed'
+          ? 200
+          : 202,
+  };
 }
+
+/** Synchronous helper retained for controlled jobs and real-DB verification. */
+export async function runProjectAgent(params: ProjectAgentStartParams): Promise<RunResponse> {
+  const accepted = await enqueueProjectAgentRun(params);
+
+  const processed = await processProjectAgentRunQueue({
+    runId: accepted.run.id,
+    organizationId: params.organizationId,
+    projectId: params.projectId,
+    limit: 1,
+  });
+  const finalRun =
+    processed.run ??
+    (await getProjectAgentRun({
+      runId: accepted.run.id,
+      organizationId: params.organizationId,
+      projectId: params.projectId,
+    }));
+  if (!finalRun) return accepted;
+  const output = (finalRun.output as Record<string, unknown>) ?? {};
+  const errorCode = typeof output.errorCode === 'string' ? output.errorCode : undefined;
+  const httpStatus =
+    finalRun.status === 'failed'
+      ? typeof output.httpStatus === 'number'
+        ? output.httpStatus
+        : 500
+      : finalRun.status === 'completed'
+        ? 200
+        : 202;
+
+  return {
+    ...serializeProjectAgentRunEnvelope(finalRun),
+    errorCode,
+    httpStatus,
+  };
+}
+
+export { ProjectAgentAdmissionError, ProjectAgentIdempotencyConflict };

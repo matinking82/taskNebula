@@ -21,6 +21,7 @@ import { notifyProjectCreated } from '@/lib/notifications/project-events';
 import { runAutomations } from '@/lib/automation/evaluator';
 import { withValidation } from '@/lib/api-validation';
 import { hasPermission } from '@/lib/auth/permissions';
+import { resolveApiActor } from '@/lib/auth/api-actor';
 
 // FEAT-29: replaces ad-hoc `if (!name || !key)` checks with a Zod schema.
 // `key` is uppercased downstream; we accept any case here and let the
@@ -39,14 +40,25 @@ const createProjectSchema = z.object({
 
 // GET /api/projects - List all projects for the current user
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const actor = await resolveApiActor(request);
+  if (!actor) {
     return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
   }
 
   try {
     const searchParams = request.nextUrl.searchParams;
     const requestedOrganizationId = searchParams.get('organizationId');
+    if (
+      actor.organizationId &&
+      requestedOrganizationId &&
+      requestedOrganizationId !== actor.organizationId
+    ) {
+      return NextResponse.json(
+        { error: 'Forbidden', code: 'ORGANIZATION_FORBIDDEN' },
+        { status: 403 }
+      );
+    }
+    const effectiveOrganizationId = actor.organizationId ?? requestedOrganizationId;
     const requestedTeamId = searchParams.get('teamId');
     const excludeArchived = searchParams.get('includeArchived') === 'false';
     const requestedLimit = Math.min(
@@ -58,8 +70,9 @@ export async function GET(request: NextRequest) {
     const [user] = await db
       .select({ isSuperAdmin: users.isSuperAdmin })
       .from(users)
-      .where(eq(users.id, session.user.id))
+      .where(eq(users.id, actor.userId))
       .limit(1);
+    const isSuperAdmin = actor.organizationId === null && user?.isSuperAdmin === true;
 
     // Get user's organization memberships
     const userOrgMemberships = await db
@@ -69,24 +82,21 @@ export async function GET(request: NextRequest) {
       })
       .from(organizationMembers)
       .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.status, 'active')
-        )
+        and(eq(organizationMembers.userId, actor.userId), eq(organizationMembers.status, 'active'))
       );
 
     let orgIds = userOrgMemberships.map((m) => m.organizationId);
-    if (requestedOrganizationId) {
-      if (!user?.isSuperAdmin && !orgIds.includes(requestedOrganizationId)) {
+    if (effectiveOrganizationId) {
+      if (!isSuperAdmin && !orgIds.includes(effectiveOrganizationId)) {
         return NextResponse.json(
           { error: 'Forbidden', code: 'ORGANIZATION_FORBIDDEN' },
           { status: 403 }
         );
       }
-      orgIds = [requestedOrganizationId];
+      orgIds = [effectiveOrganizationId];
     }
 
-    if (userOrgMemberships.length === 0 && !user?.isSuperAdmin) {
+    if (userOrgMemberships.length === 0 && !isSuperAdmin) {
       return NextResponse.json([]);
     }
 
@@ -166,15 +176,15 @@ export async function GET(request: NextRequest) {
       return query.where(and(...filters)).orderBy(desc(projects.updatedAt));
     };
 
-    if (user?.isSuperAdmin) {
-      const visibleOrgIds = requestedOrganizationId ? orgIds : undefined;
+    if (isSuperAdmin) {
+      const visibleOrgIds = effectiveOrganizationId ? orgIds : undefined;
       const userProjects = await selectProjects(visibleOrgIds);
 
       return NextResponse.json(mapProjects(userProjects));
     }
 
-    const scopedMemberships = requestedOrganizationId
-      ? userOrgMemberships.filter((m) => m.organizationId === requestedOrganizationId)
+    const scopedMemberships = effectiveOrganizationId
+      ? userOrgMemberships.filter((m) => m.organizationId === effectiveOrganizationId)
       : userOrgMemberships;
 
     const adminOrgIds = scopedMemberships
@@ -193,7 +203,7 @@ export async function GET(request: NextRequest) {
     const userProjectMemberships = await db
       .select({ projectId: projectMembers.projectId })
       .from(projectMembers)
-      .where(eq(projectMembers.userId, session.user.id));
+      .where(eq(projectMembers.userId, actor.userId));
 
     if (memberOrgIds.length > 0 && userProjectMemberships.length > 0) {
       const projectIds = userProjectMemberships.map((m) => m.projectId);

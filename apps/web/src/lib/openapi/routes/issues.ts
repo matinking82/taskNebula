@@ -1,4 +1,4 @@
-import { registerRoute, TAGS } from '../registry';
+import { registerRoute, SESSION_OR_API_KEY_SECURITY, TAGS } from '../registry';
 import {
   CreateCommentBodySchema,
   CommentSchema,
@@ -20,6 +20,7 @@ registerRoute({
   description:
     'Returns issues visible to the authenticated user. Optionally filter by project, assignee, status category, sprint, parent, or type.',
   tags: [TAGS.Issues],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: { query: IssueListQuerySchema },
   responses: {
     '200': {
@@ -45,6 +46,7 @@ registerRoute({
   description:
     'Creates a new issue in the given project. The caller must have `create` permission for the project.',
   tags: [TAGS.Issues],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: {
     body: {
       required: true,
@@ -82,6 +84,7 @@ registerRoute({
   summary: 'Get an issue',
   description: 'Fetch a single issue by id.',
   tags: [TAGS.Issues],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: { params: IssueIdParamSchema },
   responses: {
     '200': {
@@ -111,6 +114,7 @@ registerRoute({
   description:
     'Partial update. The required permission depends on which fields are changed (edit, assign, transition, schedule).',
   tags: [TAGS.Issues],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: {
     params: IssueIdParamSchema,
     body: {
@@ -148,6 +152,7 @@ registerRoute({
   path: '/api/issues/{issueId}',
   summary: 'Delete an issue',
   tags: [TAGS.Issues],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: { params: IssueIdParamSchema },
   responses: {
     '200': {
@@ -175,6 +180,7 @@ registerRoute({
   path: '/api/issues/{issueId}/comments',
   summary: 'Comment on an issue',
   tags: [TAGS.Comments],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: {
     params: IssueIdParamSchema,
     body: {

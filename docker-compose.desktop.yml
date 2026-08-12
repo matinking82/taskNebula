@@ -28,6 +28,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   redis:
     image: redis:7-alpine
@@ -41,6 +46,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging: *default-logging
 
   web:
     image: ${TASKNEBULA_IMAGE:-neuraparse/tasknebula:0.14.0}
@@ -81,9 +87,9 @@ services:
       timeout: 10s
       start_period: 90s
       retries: 5
+    logging: *default-logging
 
-  # Keep durable post-approval notifications moving even if the request-local
-  # fast path is interrupted by a container restart.
+  # Keep durable approval effects and project-agent runs moving across restarts.
   approval-reconciler:
     image: alpine:3.20
     restart: unless-stopped
@@ -102,8 +108,13 @@ services:
             --header="x-cron-secret: $$CRON_SECRET" \
             --post-data='' \
             "$$WEB_BASE_URL/api/cron/agent-approval-effects" || true
+          wget -qO /dev/null \
+            --header="x-cron-secret: $$CRON_SECRET" \
+            --post-data='' \
+            "$$WEB_BASE_URL/api/cron/agent-runs" || true
           sleep 60
         done
+    logging: *default-logging
 
 volumes:
   postgres_data:

@@ -751,7 +751,10 @@ export function MembersPageClient() {
                           })
                         }
                       >
-                        <SelectTrigger className="h-8 w-[120px] text-xs">
+                        <SelectTrigger
+                          aria-label={`${t('members.roleLabel')}: ${member.name || member.email}`}
+                          className="h-8 w-[120px] text-xs"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

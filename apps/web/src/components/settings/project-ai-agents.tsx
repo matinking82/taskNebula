@@ -1,7 +1,4 @@
 'use client';
-
-// QUAL-21 TS-strict-migration: file untouched intentionally; surfaces 4 errors
-// under `exactOptionalPropertyTypes`. See docs/TS_STRICT_MIGRATION.md.
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -21,6 +18,9 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import {
+  createProjectAgentRunIntent,
+  getProjectAgentControlAction,
+  useControlProjectAgentRun,
   useProjectAgents,
   useProjectAgentStream,
   useRunProjectAgent,
@@ -151,6 +151,7 @@ export function ProjectAiAgents({ projectId }: { projectId: string }) {
   const stream = useProjectAgentStream(projectId, Boolean(data?.access.canView));
   const updateAgents = useUpdateProjectAgents(projectId);
   const runAgent = useRunProjectAgent(projectId);
+  const controlRun = useControlProjectAgentRun(projectId);
   const { toast } = useToast();
   const [formState, setFormState] = useState<ProjectAgentSettings>(EMPTY_SETTINGS);
 
@@ -186,15 +187,37 @@ export function ProjectAiAgents({ projectId }: { projectId: string }) {
     dryRun = true
   ) {
     try {
-      const result = await runAgent.mutateAsync({ kind, dryRun });
+      const result = await runAgent.mutateAsync(createProjectAgentRunIntent({ kind, dryRun }));
+      const queued = result.run.status === 'pending' || result.run.status === 'running';
       toast({
-        title:
-          dryRun || result.forcedDryRun
+        title: queued
+          ? t('projectAi.run_queued')
+          : dryRun || result.forcedDryRun
             ? t('projectAi.preview_ready')
             : t('projectAi.run_completed'),
-        description:
-          formatAgentRunDisplayText(t, result.run.summary) ||
-          t('projectAi.run_finished', { kind: formatAgentRunKind(kind, tRunKind) }),
+        description: queued
+          ? t('projectAi.run_queued')
+          : formatAgentRunDisplayText(t, result.run.summary) ||
+            t('projectAi.run_finished', { kind: formatAgentRunKind(kind, tRunKind) }),
+      });
+    } catch {
+      toast({
+        title: t('projectAi.run_failed_title'),
+        description: t('projectAi.run_failed_title'),
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function handleRunControl(runId: string, action: 'resume' | 'cancel') {
+    try {
+      const result = await controlRun.mutateAsync({ runId, action });
+      toast({
+        title:
+          action === 'resume'
+            ? t('projectAi.run_queued')
+            : formatAgentRunStatus(t, result.run.status),
+        description: action === 'resume' ? t('projectAi.resume_run') : t('projectAi.cancel_run'),
       });
     } catch {
       toast({
@@ -981,7 +1004,7 @@ export function ProjectAiAgents({ projectId }: { projectId: string }) {
 
                       {run.error ? (
                         <p className="text-destructive mt-3 text-sm">
-                          {formatAgentRunDisplayText(t, run.error)}
+                          {t('agentShared.runMessages.agentRunFailed')}
                         </p>
                       ) : null}
                     </div>
@@ -1067,13 +1090,37 @@ export function ProjectAiAgents({ projectId }: { projectId: string }) {
                             : t('projectAi.no_summary')}
                         </p>
                       </div>
-                      <div className="text-muted-foreground text-xs">
-                        {formatter.relativeTime(new Date(run.createdAt))}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs">
+                          {formatter.relativeTime(new Date(run.createdAt))}
+                        </span>
+                        {data.access.canManage &&
+                        getProjectAgentControlAction(run.status) === 'cancel' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={controlRun.isPending}
+                            onClick={() => handleRunControl(run.id, 'cancel')}
+                          >
+                            {t('projectAi.cancel_run')}
+                          </Button>
+                        ) : null}
+                        {data.access.canManage &&
+                        getProjectAgentControlAction(run.status) === 'resume' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={controlRun.isPending}
+                            onClick={() => handleRunControl(run.id, 'resume')}
+                          >
+                            {t('projectAi.resume_run')}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
-                    {run.error ? (
+                    {run.errorCode ? (
                       <p className="text-destructive mt-3 text-sm">
-                        {formatAgentRunDisplayText(t, run.error)}
+                        {t('agentShared.runMessages.agentRunFailed')}
                       </p>
                     ) : null}
                   </div>
@@ -1111,7 +1158,7 @@ function RunCard({
     dryRun: boolean;
     summary: string | null;
     createdAt: string;
-    error: string | null;
+    errorCode: string | null;
   };
   formatter: ReturnType<typeof useFormatter>;
   t: (key: string, values?: Record<string, string | number>) => string;
@@ -1150,7 +1197,11 @@ function RunCard({
           {lastRun.summary ? (
             <p className="text-muted-foreground mt-2 text-sm">{lastRun.summary}</p>
           ) : null}
-          {lastRun.error ? <p className="text-destructive mt-2 text-sm">{lastRun.error}</p> : null}
+          {lastRun.errorCode ? (
+            <p className="text-destructive mt-2 text-sm">
+              {t('agentShared.runMessages.agentRunFailed')}
+            </p>
+          ) : null}
         </div>
       ) : null}
       {reason ? <p className="text-muted-foreground mt-3 text-xs">{reason}</p> : null}

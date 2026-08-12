@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { db, issues, projects, workflowStatuses } from '@tasknebula/db';
 import { and, eq, inArray, isNotNull, lte } from 'drizzle-orm';
 import { canReadProject } from '@/lib/auth/access-control';
+import { resolveApiActor } from '@/lib/auth/api-actor';
 
 const windows = new Set(['today', 'this_week', 'this_sprint', 'overdue']);
 
@@ -20,8 +20,8 @@ function endOfThisWeek() {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const actor = await resolveApiActor(request);
+  if (!actor) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
     .from(issues)
     .where(
       and(
-        eq(issues.assigneeId, session.user.id),
+        eq(issues.assigneeId, actor.userId),
+        ...(actor.organizationId ? [eq(issues.organizationId, actor.organizationId)] : []),
         ...(window === 'overdue'
           ? [isNotNull(issues.dueDate), lte(issues.dueDate, now)]
           : [isNotNull(issues.dueDate), lte(issues.dueDate, dueCutoff)])
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
   const projectById = new Map(projectRows.map((project) => [project.id, project]));
   const readableProjectIds = new Set<string>();
   for (const project of projectRows) {
-    if (await canReadProject(session.user.id, project)) {
+    if (await canReadProject(actor.userId, project)) {
       readableProjectIds.add(project.id);
     }
   }

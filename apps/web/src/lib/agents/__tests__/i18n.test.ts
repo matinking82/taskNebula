@@ -1,4 +1,4 @@
-import { formatAgentRunDisplayText } from '@/lib/agents/i18n';
+import { formatAgentRunDisplayText, formatAgentRunStatus } from '@/lib/agents/i18n';
 
 describe('agent i18n helpers', () => {
   const t = jest.fn((key: string, values?: Record<string, string | number>) => {
@@ -34,4 +34,13 @@ describe('agent i18n helpers', () => {
       'LLM provider generated a custom summary.'
     );
   });
+
+  it.each(['pending', 'running', 'completed', 'failed', 'cancelled'])(
+    'localizes durable run status %s',
+    (status) => {
+      expect(formatAgentRunStatus(t, status)).toBe(
+        `agentShared.runStatuses.${status}:${JSON.stringify({})}`
+      );
+    }
+  );
 });

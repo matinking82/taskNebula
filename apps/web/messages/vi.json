@@ -1075,7 +1075,7 @@
     "toast_refresh_failed_title": "Không thể làm mới trạng thái",
     "registration_invite_required": "Đăng ký chỉ dành cho người được mời. Hãy yêu cầu quản trị viên gửi lời mời.",
     "registration_admin_only": "Đăng ký đã đóng. Hãy yêu cầu quản trị viên tạo tài khoản cho bạn.",
-    "project_invite_invalid": "This project invite link is expired, revoked, or has no remaining uses."
+    "project_invite_invalid": "Liên kết mời vào dự án này đã hết hạn, bị thu hồi hoặc không còn lượt sử dụng."
   },
   "issuesViews": {
     "loading": "Đang tải…",
@@ -2434,7 +2434,10 @@
       "no_runs": "Chưa có lần chạy tác nhân nào. Bắt đầu bằng việc quét tình trạng dự án hoặc xem trước lập kế hoạch sprint.",
       "writes_count": "{count} lần ghi",
       "no_summary": "Không có tóm tắt nào được ghi nhận.",
-      "run_live": "Chạy trực tiếp"
+      "run_live": "Chạy trực tiếp",
+      "run_queued": "Đã xếp hàng lượt chạy tác nhân",
+      "cancel_run": "Hủy lượt chạy",
+      "resume_run": "Tiếp tục lượt chạy"
     },
     "agentGovernance": {
       "title": "AGENTOWNERS governance",
@@ -2552,7 +2555,9 @@
         "running": "Đang chạy",
         "completed": "Hoàn tất",
         "failed": "Thất bại",
-        "unknown": "{status}"
+        "unknown": "{status}",
+        "pending": "Đang chờ",
+        "cancelled": "Đã hủy"
       },
       "capabilities": {
         "project_tracking": {
@@ -5151,8 +5156,7 @@
         "description": "Một lệnh khởi chạy stack Compose nhỏ. Dữ liệu cốt lõi nằm trong Postgres, chỉ cần pg_dump để xuất và mặc định không có dữ liệu nào được gửi ra ngoài — không bị khóa vào nhà cung cấp.",
         "cards": {
           "postgres": {
-            "title": "One Postgres, one web image",
-            "body": "Postgres 16 with the pgvector extension powers search; Redis 7 is along for the ride. No Mongo, no Elastic, no sidecar zoo."
+            "title": "One Postgres, one web image"
           },
           "migrations": {
             "title": "Migrations run on boot",
@@ -5172,46 +5176,18 @@
         "quickstartAria": "Self-host quickstart commands",
         "terminalNote": "The web image waits for Postgres, runs migrations, then serves on <code>http://localhost:3000</code> — open it and finish the first-run admin wizard. Image: <imageLink>neuraparse/tasknebula</imageLink>."
       },
-      "migrate": {
-        "kicker": "Migrate",
-        "title": "Move from Jira or Linear in an afternoon",
-        "description": "Switching tools shouldn't mean losing your history or your process. Import what you have, map it to TaskNebula, and keep working the way your team already does.",
-        "steps": {
-          "issues": {
-            "title": "Bring your issues over",
-            "body": "Import issues from Jira and Linear with their descriptions, comments, and history intact — not flattened into a CSV dump."
-          },
-          "labels": {
-            "title": "Labels and sprints come too",
-            "body": "Labels, components, and active sprints land as first-class records, so your boards and backlog look familiar on day one."
-          },
-          "fields": {
-            "title": "Map fields, not just names",
-            "body": "Match statuses, priorities, and custom fields to TaskNebula equivalents during import — review the mapping before anything writes."
-          },
-          "workflow": {
-            "title": "Keep your workflow",
-            "body": "Your statuses, swimlanes, and conventions move with you. Switch tools without retraining the team or rebuilding process from scratch."
-          }
-        },
-        "note": "Imports run against your own database and are fully reversible — nothing leaves your server, and you can re-run a mapping until it looks right."
-      },
       "aiMcp": {
         "kicker": "AI-native",
         "title": "Agents work the backlog with you.",
-        "description": "TaskNebula was built for the agent era. Ask questions across your whole workspace, let AI triage and estimate new work, and give external agents real tools through a first-class MCP server.",
         "capabilities": {
           "ask": {
-            "title": "Ask your workspace",
-            "body": "The /api/ask RAG endpoint answers in natural language over your issues, docs, and comments — grounded in pgvector retrieval, with citations back to the source."
+            "title": "Ask your workspace"
           },
           "triage": {
-            "title": "AI triage & estimates",
-            "body": "Suggested priority, labels, and effort land on new issues — backed by real OpenAI and Anthropic calls, a cost guard, and tracing. You stay in control: accept or dismiss."
+            "title": "AI triage & estimates"
           },
           "mcp": {
-            "title": "MCP tools for agents",
-            "body": "@tasknebula/mcp-server exposes the backlog over MCP — HTTP at /api/mcp or stdio — so external agents create, search, and move issues with revocable keys."
+            "title": "MCP tools for agents"
           }
         },
         "mock": {
@@ -5247,8 +5223,7 @@
             "body": "Pull from the backlog into a sprint, set fix versions and components, and read scope at a glance. Planning lives next to the work, not in a separate doc."
           },
           "build": {
-            "title": "Build alongside agents",
-            "body": "Agents are first-class teammates over MCP — they pick up issues, comment, and open work the same way people do, with every action on the shared timeline."
+            "title": "Build alongside agents"
           },
           "ship": {
             "title": "Ship and track the outcome",
@@ -5310,28 +5285,23 @@
             "answer": "Tự lưu trữ là cách triển khai mặc định. Với Docker, bạn khởi chạy stack Compose nhỏ gồm Postgres 16 và pgvector, Redis 7, image web neuraparse/tasknebula cùng các dịch vụ đi kèm hoặc tùy chọn mà bạn bật. Migration chạy khi khởi động, GET /api/health là endpoint kiểm tra và quickstart mở tại localhost:3000."
           },
           "aiKeys": {
-            "question": "Do I need the AI features? Can I bring my own keys?",
-            "answer": "AI is optional — every board, sprint, and doc works with no model keys configured. When you want it, you bring your own OpenAI or Anthropic key as environment variables, so spend and data residency stay yours. There is a cost guard so a runaway prompt cannot run up your bill."
+            "question": "Do I need the AI features? Can I bring my own keys?"
           },
           "aiReality": {
-            "question": "How real are the AI features today?",
-            "answer": "We build them in the open. The data model and endpoints — triage suggestions, pgvector semantic search, and the /api/ask RAG endpoint — are live, and they make real OpenAI and Anthropic calls. Some surfaces are still labeled preview while we harden them; we would rather say that here than have you discover it after install."
+            "question": "How real are the AI features today?"
           },
           "mcpServer": {
-            "question": "What is the MCP server?",
-            "answer": "An MCP (Model Context Protocol) server exposes TaskNebula as tools — create, search, move, and comment on issues — so agents like Claude Code and Cursor can drive your tracker. It ships with the repo, HTTP at /api/mcp or stdio via @tasknebula/mcp-server, and is MIT licensed. Heads up: end-to-end agent auth depends on the REST API accepting API keys, which is still being wired, so treat it as preview today."
+            "question": "What is the MCP server?"
           },
           "imports": {
-            "question": "Does it import from Jira or Linear?",
-            "answer": "Yes — there are importers for Jira, Linear, GitHub, and CSV. Each runs with a preview step so you can inspect the field mapping before anything is written, and you can keep your old tool read-only while you cut over."
+            "question": "Does it import from Jira or Linear?"
           },
           "productionReady": {
             "question": "Is it production-ready?",
             "answer": "Trình theo dõi cốt lõi — issue, bảng, sprint, tài liệu, tìm kiếm, REST API và đặc tả OpenAPI — có thể tự lưu trữ. Đăng nhập OAuth vẫn cần bộ điều hợp cơ sở dữ liệu, vì vậy hiện tại hãy dùng xác thực bằng thông tin đăng nhập. Cộng tác thời gian thực đã được nối qua Docker/Compose, nhưng deployment vẫn cần URL có thể truy cập và một smoke test thực tế. AI và MCP vẫn ở trạng thái preview. Chúng tôi theo dõi các khoảng trống trong docs/STATUS.md."
           },
           "dataVisibility": {
-            "question": "Who can see my data?",
-            "answer": "You decide. Self-hosted, everything lives in your Postgres on your infrastructure and exports with a plain pg_dump — no telemetry phones home. Inside the product, workspaces are isolated per organization with role-based access, permission schemes, and audit logs."
+            "question": "Who can see my data?"
           }
         }
       },
@@ -5345,28 +5315,18 @@
             "body": "Drive the whole board from one Cmd+K palette — search, navigate, and run actions without leaving the keys. Drag across columns, plan sprints, and read burndown in the same view."
           },
           "import": {
-            "title": "Import from Jira and Linear",
-            "body": "Bring your backlog with you — Jira, Linear, and CSV importers map issues, statuses, and metadata so you start full, not empty."
+            "title": "Import from Jira and Linear"
           },
-          "structure": {
-            "title": "Jira-parity structure",
-            "body": "First-class labels, components, fix versions, and a resolution model — backlog structure stored in real tables and REST APIs, not JSON strings."
-          },
-          "ai": {
-            "title": "AI-native, auditable",
-            "body": "Real OpenAI and Anthropic calls behind a cost guard and tracing — triage suggestions, AI estimates, and a /api/ask RAG endpoint over pgvector. No black boxes."
-          },
+          "structure": {},
+          "ai": {},
           "agents": {
-            "title": "Agents work the backlog",
-            "body": "A real MCP server — HTTP at /api/mcp or stdio — lets coding agents create, search, and move issues. Backed by a REST API, OpenAPI spec, revocable keys, and webhooks."
+            "title": "Agents work the backlog"
           },
           "realtime": {
-            "title": "Realtime collaboration",
-            "body": "Specs and issue docs edit live — Tiptap on Yjs with presence and conflict-free merges, so two people on one doc just works."
+            "title": "Realtime collaboration"
           },
           "selfHost": {
-            "title": "Self-host in minutes",
-            "body": "One Docker image, Postgres, and you own the data. Multi-tenant from the schema up — every table is organization-scoped, no vendor lock-in."
+            "title": "Self-host in minutes"
           },
           "analytics": {
             "title": "Analytics close to execution",
@@ -5683,11 +5643,22 @@
       "meta": {
         "title": "TaskNebula — Open-source, AI-native Jira & Linear alternative",
         "description": "Keyboard-first boards, sprints, and docs with an MCP server so AI agents work the backlog with you. MIT licensed — self-host with one Docker Compose file.",
-        "skipToContent": "Skip to content"
+        "skipToContent": "Chuyển đến nội dung"
+      },
+      "productTruth": {
+        "aiSummary": "Các tính năng AI và tác tử là tùy chọn, phụ thuộc vào cấu hình và một số vẫn đang ở giai đoạn xem trước.",
+        "ask": "Hiện tại Ask tìm kiếm trong vấn đề và tài liệu. Truy xuất ngữ nghĩa cần nhà cung cấp embedding an toàn theo phạm vi tổ chức.",
+        "ai": "Đề xuất AI là tính năng xem trước và phụ thuộc vào thông tin xác thực nhà cung cấp đã cấu hình. Hãy xem xét từng đề xuất trước khi áp dụng.",
+        "mcp": "Xem trước: gói MCP được biên dịch từ mã nguồn hỗ trợ 11 công cụ với khóa API giới hạn theo tổ chức. OAuth, kiểm toán theo từng lệnh gọi và phát hành gói công khai chưa hoàn tất.",
+        "aiKeys": "AI là tùy chọn. Hãy dùng khóa nhà cung cấp của bạn; kiểm soát ngân sách giúp giảm rủi ro nhưng không bảo đảm mức trần chi tiêu.",
+        "data": "Dữ liệu ứng dụng tự lưu trữ dùng Postgres của bạn. Đã có kiểm soát truy cập nhưng phạm vi vẫn cần rà soát; tích hợp tùy chọn chỉ gửi dữ liệu khi bạn cấu hình.",
+        "structureTitle": "Các trường backlog có cấu trúc",
+        "structure": "Nhãn, thành phần, phiên bản sửa lỗi và cách giải quyết có mô hình cơ sở dữ liệu và API riêng. Việc thực thi vẫn khác nhau theo từng tuyến.",
+        "realtime": "Cộng tác Yjs khả dụng khi Hocuspocus, URL công khai và các bí mật tương ứng được cấu hình rồi kiểm tra hoạt động thực tế."
       }
     },
     "intake": {
-      "submitMetaTitle": "Submit · TaskNebula"
+      "submitMetaTitle": "Gửi · TaskNebula"
     },
     "stepStart": "Bắt đầu",
     "setupImportRedirecting": "Chuyển hướng để đăng nhập, sau đó{source}nhập khẩu…",
@@ -6660,7 +6631,7 @@
     "disclosureBadge": "Thông tin minh bạch về AI",
     "title": "Thẻ mô hình AI",
     "intro": "Trang này mô tả các tính năng AI và cấu hình mặc định được ghi lại của TaskNebula. Các mô hình thực tế, việc xử lý dữ liệu, lưu giữ và kiểm soát đánh giá có thể khác nhau tùy theo không gian làm việc và hoạt động triển khai; xác nhận cài đặt hiện hoạt với quản trị viên của bạn. Phiên bản thông báo minh bạch <version></version>.",
-    "lastReviewed": "Xem xét lần cuối 2026-08-12. Điều 50 của Quy định (EU) 2024/1689 áp dụng từ ngày 2026-08-02.",
+    "lastReviewed": "Xem xét lần cuối 2026-08-12.",
     "onThisPage": "Trên trang này",
     "model": "Mô hình",
     "provider": "Nhà cung cấp",
@@ -7036,5 +7007,28 @@
       "fetchOrganizations": "Failed to fetch organizations",
       "fetchEpics": "Failed to fetch epics"
     }
+  },
+  "slackCommands": {
+    "userUnmapped": "Không thể liên kết tài khoản Slack của bạn với người dùng TaskNebula. Hãy nhờ quản trị viên ánh xạ hồ sơ Slack với tài khoản TaskNebula.",
+    "statusUsage": "Cách dùng: `/tn status TN-123 done`",
+    "statusUnavailable": "Không thể thực hiện thay đổi trạng thái này. Xem `/tn help` để biết các trạng thái được hỗ trợ.",
+    "notInstalled": "TaskNebula chưa được cài đặt trong không gian làm việc Slack này. Hãy nhờ quản trị viên kết nối tại Cài đặt → Tích hợp.",
+    "help": "*Lệnh TaskNebula*\n`/tn new tiêu đề` — mở cửa sổ vấn đề mới với tiêu đề của bạn\n`/tn list` — liệt kê các vấn đề đang mở được giao cho bạn\n`/tn search truy vấn` — hiển thị 5 kết quả hàng đầu mà bạn có quyền truy cập\n`/tn assign TN-123 @người_dùng` — giao lại vấn đề\n`/tn status TN-123 done` — đổi trạng thái vấn đề (backlog | in_progress | in_review | done | blocked)",
+    "unknownCommand": "Lệnh không xác định.",
+    "noOpenAssigned": "Bạn không có vấn đề đang mở nào được giao.",
+    "openIssuesHeader": "Các vấn đề đang mở của bạn:",
+    "noStatus": "không có trạng thái",
+    "searchUsage": "Cách dùng: `/tn search truy vấn`",
+    "searchNoMatches": "Không có vấn đề nào khớp với `{query}`.",
+    "searchTopMatches": "Kết quả hàng đầu cho `{query}`: {count}",
+    "searchSummary": "Kết quả cho {query}: {count}",
+    "assignUsage": "Cách dùng: `/tn assign TN-123 @người_dùng`",
+    "invalidUserMention": "`{mention}` có vẻ không phải là một lượt đề cập người dùng Slack.",
+    "issueNotFound": "Không tìm thấy vấn đề `{issueKey}` trong không gian làm việc này.",
+    "assigneeUnmapped": "Không thể liên kết người dùng Slack đó với tài khoản TaskNebula. Hãy nhờ quản trị viên thêm ánh xạ tại Cài đặt → Tích hợp.",
+    "assignmentSuccess": "Đã giao lại *{issueKey}* cho <@{slackUserId}> (do <@{requestedBy}> yêu cầu).",
+    "statusSuccess": "Đã chuyển *{issueKey}* sang *{statusName}* (do <@{requestedBy}> yêu cầu).",
+    "newUsage": "Cách dùng: `/tn new tiêu đề` — mở cửa sổ vấn đề mới.",
+    "newOpening": "Đang mở cửa sổ vấn đề mới cho: _{title}_"
   }
 }

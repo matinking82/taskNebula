@@ -75,6 +75,18 @@ const featureCards: Array<{
 
 export function FeatureGrid() {
   const t = useTranslations('publicPages.landing.features');
+  const aiT = useTranslations('publicPages.landing.aiMcp');
+  const truth = useTranslations('publicPages.landing.productTruth');
+  const importT = useTranslations('pagesSettings.import');
+
+  const claimOverrides: Partial<Record<string, { title?: string; body: string }>> = {
+    import: { body: importT('subtitle') },
+    structure: { title: truth('structureTitle'), body: truth('structure') },
+    ai: { title: aiT('capabilities.triage.title'), body: truth('ai') },
+    agents: { body: truth('mcp') },
+    realtime: { body: truth('realtime') },
+    selfHost: { body: truth('data') },
+  };
 
   return (
     <section id="features" className="border-t border-[var(--landing-border)]">
@@ -87,19 +99,22 @@ export function FeatureGrid() {
         />
 
         <div className="stagger mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          {featureCards.map(({ key, icon, tone, className, badge, visual }) => (
-            <FeatureCell
-              key={key}
-              className={className}
-              icon={icon}
-              tone={tone}
-              title={t(`cards.${key}.title`)}
-              body={t(`cards.${key}.body`)}
-              badge={badge}
-            >
-              {visual}
-            </FeatureCell>
-          ))}
+          {featureCards.map(({ key, icon, tone, className, badge, visual }) => {
+            const override = claimOverrides[key];
+            return (
+              <FeatureCell
+                key={key}
+                className={className}
+                icon={icon}
+                tone={tone}
+                title={override?.title ?? t(`cards.${key}.title`)}
+                body={override?.body ?? t(`cards.${key}.body`)}
+                badge={badge}
+              >
+                {visual}
+              </FeatureCell>
+            );
+          })}
         </div>
       </Shell>
     </section>
@@ -273,7 +288,7 @@ function AiVisual() {
         <p className="text-[9px] uppercase tracking-[0.14em] text-[var(--landing-text-muted)]">
           /api/ask · RAG
         </p>
-        <span className="text-[9px] text-[var(--landing-text-muted)]">pgvector</span>
+        <span className="text-[9px] text-[var(--landing-text-muted)]">BM25</span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <span className="chip-amber">{t('triageHigh')}</span>

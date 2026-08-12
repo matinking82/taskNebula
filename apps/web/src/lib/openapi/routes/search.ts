@@ -1,23 +1,17 @@
-import { registerRoute, TAGS } from '../registry';
+import { registerRoute, SESSION_OR_API_KEY_SECURITY, TAGS } from '../registry';
 import { ErrorResponseSchema, SearchBodySchema, SearchResponseSchema } from '../schemas';
 
-// POST /api/search
-//
-// The runtime route currently accepts the same parameters via GET query
-// string. We expose `POST` here because the MCP server and other
-// programmatic clients prefer a JSON body for complex JQL queries.
+// GET /api/search
 registerRoute({
-  method: 'post',
+  method: 'get',
   path: '/api/search',
   summary: 'Execute a JQL-style search',
   description:
     'Run a structured search query against issues. Accepts JQL-style expressions like `assignee = me AND status = "In Progress"`.',
   tags: [TAGS.Search],
+  security: [...SESSION_OR_API_KEY_SECURITY],
   request: {
-    body: {
-      required: true,
-      content: { 'application/json': { schema: SearchBodySchema } },
-    },
+    query: SearchBodySchema,
   },
   responses: {
     '200': {

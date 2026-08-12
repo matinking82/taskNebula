@@ -115,8 +115,9 @@ Persistent environments are never reset or seeded as routine verification.
 - Organization/project roles and canonical guards enforce working paths.
 - Permission schemes, issue security, feature flags, and some SSO controls have
   configuration surfaces that are not yet consumed by every operation.
-- MCP/API-key authentication requires completion before the public MCP package
-  can be considered end-to-end usable.
+- Organization-bound API-key authentication is wired for the current MCP tool
+  routes. Fine-grained scopes, per-call audit, OAuth/Streamable HTTP, package
+  publication, and clean-install proof remain gates for a public MCP package.
 
 ## Realtime and collaboration
 
@@ -183,11 +184,17 @@ run, source snapshot/claim persistence, or mid-run refine flow yet.
   The external realtime/automation dispatch is leased and at-least-once. Base
   Compose runs its reconciler; other deployments must schedule the protected
   approval-effects endpoint every minute.
-- Project-engine proposal persistence/resume, provider-wide cancellation/retry,
-  end-to-end consumer idempotency, and crash recovery remain incomplete.
+- Project-agent runs themselves persist bounded graph checkpoints and recover
+  through a leased reconciler. Approval-required project-engine proposals are
+  still preview-only rather than persisted into the issue-write approval queue;
+  provider-wide cancellation/retry and end-to-end consumer idempotency remain
+  incomplete.
 - Local Claude/Codex sessions spawn configured CLIs with an allowlisted
-  provider-specific environment. They still run under the web process rather
-  than a leased durable worker.
+  provider-specific environment. This prevents wholesale inheritance of web
+  server secrets, but these are still high-trust local tools: CLI auth/config
+  directories remain available and filesystem/tool access is controlled by the
+  selected CLI sandbox. They run under the web process rather than a leased
+  durable worker.
 
 ### Bounded graph foundation
 
@@ -202,10 +209,12 @@ agents. The complete maturity and persistence target is
 
 ## Workflow architecture
 
-Workflow statuses and transitions have database models and editing APIs.
-Transition conditions/validators/post-actions can be stored. However, status
-mutation consumers do not yet converge on one enforcement engine; some direct
-issue and agent/webhook writes bypass the stored graph.
+Workflow statuses and transitions have database models and editing APIs. Issue
+status mutations across PATCH/board/MCP, bulk, automation, approved agent
+actions, remote-agent webhooks, Slack, and janitor converge on the same
+tenant-scoped transition service. It resolves the current project workflow,
+requires one exact edge, enforces persisted roles and project permission, locks
+the issue row, and commits status plus history with compare-and-swap semantics.
 
 The target service order is:
 
@@ -214,8 +223,10 @@ load current state -> find allowed edge -> validate -> authorize -> approve
   -> atomic update -> post-action/outbox -> history/event -> stable end
 ```
 
-Until that service exists, graph-shaped UI is configuration—not proof of
-runtime enforcement.
+The durable workflow-approval queue and typed condition/validator/post-action
+language are still unfinished. Edges using those unsupported policies fail
+closed with typed errors; the graph-shaped UI is not evidence that those
+advanced policies execute.
 
 ## Observability and operations
 

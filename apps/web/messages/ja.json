@@ -1075,7 +1075,7 @@
     "toast_refresh_failed_title": "ステータスを更新できませんでした",
     "registration_invite_required": "登録は招待制です。管理者に招待を依頼してください。",
     "registration_admin_only": "登録は閉じられています。管理者にアカウント作成を依頼してください。",
-    "project_invite_invalid": "This project invite link is expired, revoked, or has no remaining uses."
+    "project_invite_invalid": "このプロジェクト招待リンクは、有効期限が切れているか、取り消されているか、利用可能回数が残っていません。"
   },
   "issuesViews": {
     "loading": "読み込み中…",
@@ -2434,7 +2434,10 @@
       "no_runs": "エージェントの実行はまだありません。プロジェクトの健全性スキャンまたはスプリント計画のプレビューから始めてください。",
       "writes_count": "{count} 件の書き込み",
       "no_summary": "記録された要約はありません。",
-      "run_live": "ライブ実行"
+      "run_live": "ライブ実行",
+      "run_queued": "エージェント実行をキューに追加しました",
+      "cancel_run": "実行をキャンセル",
+      "resume_run": "実行を再開"
     },
     "agentGovernance": {
       "title": "AGENTOWNERS governance",
@@ -2552,7 +2555,9 @@
         "running": "実行中",
         "completed": "完了",
         "failed": "失敗",
-        "unknown": "{status}"
+        "unknown": "{status}",
+        "pending": "保留中",
+        "cancelled": "キャンセル済み"
       },
       "capabilities": {
         "project_tracking": {
@@ -5151,8 +5156,7 @@
         "description": "1つのコマンドで小規模なComposeスタックを起動します。主要データはPostgresに保存され、pg_dumpでエクスポートでき、デフォルトでは外部へデータを送信しません。ベンダーロックインはありません。",
         "cards": {
           "postgres": {
-            "title": "One Postgres, one web image",
-            "body": "Postgres 16 with the pgvector extension powers search; Redis 7 is along for the ride. No Mongo, no Elastic, no sidecar zoo."
+            "title": "One Postgres, one web image"
           },
           "migrations": {
             "title": "Migrations run on boot",
@@ -5172,46 +5176,18 @@
         "quickstartAria": "Self-host quickstart commands",
         "terminalNote": "The web image waits for Postgres, runs migrations, then serves on <code>http://localhost:3000</code> — open it and finish the first-run admin wizard. Image: <imageLink>neuraparse/tasknebula</imageLink>."
       },
-      "migrate": {
-        "kicker": "Migrate",
-        "title": "Move from Jira or Linear in an afternoon",
-        "description": "Switching tools shouldn't mean losing your history or your process. Import what you have, map it to TaskNebula, and keep working the way your team already does.",
-        "steps": {
-          "issues": {
-            "title": "Bring your issues over",
-            "body": "Import issues from Jira and Linear with their descriptions, comments, and history intact — not flattened into a CSV dump."
-          },
-          "labels": {
-            "title": "Labels and sprints come too",
-            "body": "Labels, components, and active sprints land as first-class records, so your boards and backlog look familiar on day one."
-          },
-          "fields": {
-            "title": "Map fields, not just names",
-            "body": "Match statuses, priorities, and custom fields to TaskNebula equivalents during import — review the mapping before anything writes."
-          },
-          "workflow": {
-            "title": "Keep your workflow",
-            "body": "Your statuses, swimlanes, and conventions move with you. Switch tools without retraining the team or rebuilding process from scratch."
-          }
-        },
-        "note": "Imports run against your own database and are fully reversible — nothing leaves your server, and you can re-run a mapping until it looks right."
-      },
       "aiMcp": {
         "kicker": "AI-native",
         "title": "Agents work the backlog with you.",
-        "description": "TaskNebula was built for the agent era. Ask questions across your whole workspace, let AI triage and estimate new work, and give external agents real tools through a first-class MCP server.",
         "capabilities": {
           "ask": {
-            "title": "Ask your workspace",
-            "body": "The /api/ask RAG endpoint answers in natural language over your issues, docs, and comments — grounded in pgvector retrieval, with citations back to the source."
+            "title": "Ask your workspace"
           },
           "triage": {
-            "title": "AI triage & estimates",
-            "body": "Suggested priority, labels, and effort land on new issues — backed by real OpenAI and Anthropic calls, a cost guard, and tracing. You stay in control: accept or dismiss."
+            "title": "AI triage & estimates"
           },
           "mcp": {
-            "title": "MCP tools for agents",
-            "body": "@tasknebula/mcp-server exposes the backlog over MCP — HTTP at /api/mcp or stdio — so external agents create, search, and move issues with revocable keys."
+            "title": "MCP tools for agents"
           }
         },
         "mock": {
@@ -5247,8 +5223,7 @@
             "body": "Pull from the backlog into a sprint, set fix versions and components, and read scope at a glance. Planning lives next to the work, not in a separate doc."
           },
           "build": {
-            "title": "Build alongside agents",
-            "body": "Agents are first-class teammates over MCP — they pick up issues, comment, and open work the same way people do, with every action on the shared timeline."
+            "title": "Build alongside agents"
           },
           "ship": {
             "title": "Ship and track the outcome",
@@ -5310,28 +5285,23 @@
             "answer": "セルフホストが標準の利用方法です。Dockerで、Postgres 16とpgvector、Redis 7、neuraparse/tasknebulaのWebイメージ、および有効化した同梱・任意サービスからなる小規模なComposeスタックを起動できます。起動時にマイグレーションが実行され、GET /api/healthが確認用エンドポイントとなり、クイックスタートはlocalhost:3000で開きます。"
           },
           "aiKeys": {
-            "question": "Do I need the AI features? Can I bring my own keys?",
-            "answer": "AI is optional — every board, sprint, and doc works with no model keys configured. When you want it, you bring your own OpenAI or Anthropic key as environment variables, so spend and data residency stay yours. There is a cost guard so a runaway prompt cannot run up your bill."
+            "question": "Do I need the AI features? Can I bring my own keys?"
           },
           "aiReality": {
-            "question": "How real are the AI features today?",
-            "answer": "We build them in the open. The data model and endpoints — triage suggestions, pgvector semantic search, and the /api/ask RAG endpoint — are live, and they make real OpenAI and Anthropic calls. Some surfaces are still labeled preview while we harden them; we would rather say that here than have you discover it after install."
+            "question": "How real are the AI features today?"
           },
           "mcpServer": {
-            "question": "What is the MCP server?",
-            "answer": "An MCP (Model Context Protocol) server exposes TaskNebula as tools — create, search, move, and comment on issues — so agents like Claude Code and Cursor can drive your tracker. It ships with the repo, HTTP at /api/mcp or stdio via @tasknebula/mcp-server, and is MIT licensed. Heads up: end-to-end agent auth depends on the REST API accepting API keys, which is still being wired, so treat it as preview today."
+            "question": "What is the MCP server?"
           },
           "imports": {
-            "question": "Does it import from Jira or Linear?",
-            "answer": "Yes — there are importers for Jira, Linear, GitHub, and CSV. Each runs with a preview step so you can inspect the field mapping before anything is written, and you can keep your old tool read-only while you cut over."
+            "question": "Does it import from Jira or Linear?"
           },
           "productionReady": {
             "question": "Is it production-ready?",
             "answer": "課題、ボード、スプリント、ドキュメント、検索、REST API、OpenAPI仕様を含む中核トラッカーはセルフホストできます。OAuthログインにはまだDBアダプターが必要なため、現時点では認証情報によるログインを使用してください。リアルタイム共同編集はDocker/Composeに接続済みですが、デプロイ環境には到達可能なURLと実環境でのスモークテストが必要です。AIとMCPは引き続きプレビューです。未対応項目はdocs/STATUS.mdで追跡しています。"
           },
           "dataVisibility": {
-            "question": "Who can see my data?",
-            "answer": "You decide. Self-hosted, everything lives in your Postgres on your infrastructure and exports with a plain pg_dump — no telemetry phones home. Inside the product, workspaces are isolated per organization with role-based access, permission schemes, and audit logs."
+            "question": "Who can see my data?"
           }
         }
       },
@@ -5345,28 +5315,18 @@
             "body": "Drive the whole board from one Cmd+K palette — search, navigate, and run actions without leaving the keys. Drag across columns, plan sprints, and read burndown in the same view."
           },
           "import": {
-            "title": "Import from Jira and Linear",
-            "body": "Bring your backlog with you — Jira, Linear, and CSV importers map issues, statuses, and metadata so you start full, not empty."
+            "title": "Import from Jira and Linear"
           },
-          "structure": {
-            "title": "Jira-parity structure",
-            "body": "First-class labels, components, fix versions, and a resolution model — backlog structure stored in real tables and REST APIs, not JSON strings."
-          },
-          "ai": {
-            "title": "AI-native, auditable",
-            "body": "Real OpenAI and Anthropic calls behind a cost guard and tracing — triage suggestions, AI estimates, and a /api/ask RAG endpoint over pgvector. No black boxes."
-          },
+          "structure": {},
+          "ai": {},
           "agents": {
-            "title": "Agents work the backlog",
-            "body": "A real MCP server — HTTP at /api/mcp or stdio — lets coding agents create, search, and move issues. Backed by a REST API, OpenAPI spec, revocable keys, and webhooks."
+            "title": "Agents work the backlog"
           },
           "realtime": {
-            "title": "Realtime collaboration",
-            "body": "Specs and issue docs edit live — Tiptap on Yjs with presence and conflict-free merges, so two people on one doc just works."
+            "title": "Realtime collaboration"
           },
           "selfHost": {
-            "title": "Self-host in minutes",
-            "body": "One Docker image, Postgres, and you own the data. Multi-tenant from the schema up — every table is organization-scoped, no vendor lock-in."
+            "title": "Self-host in minutes"
           },
           "analytics": {
             "title": "Analytics close to execution",
@@ -5683,11 +5643,22 @@
       "meta": {
         "title": "TaskNebula — Open-source, AI-native Jira & Linear alternative",
         "description": "Keyboard-first boards, sprints, and docs with an MCP server so AI agents work the backlog with you. MIT licensed — self-host with one Docker Compose file.",
-        "skipToContent": "Skip to content"
+        "skipToContent": "コンテンツにスキップ"
+      },
+      "productTruth": {
+        "aiSummary": "AI とエージェント機能は任意で、設定に依存し、一部はまだプレビュー段階です。",
+        "ask": "Ask は現在、課題とドキュメントを検索します。セマンティック検索には、組織境界を守る埋め込みプロバイダーが必要です。",
+        "ai": "AI の提案機能はプレビュー版で、設定済みのプロバイダー認証情報に依存します。適用前に各提案を確認してください。",
+        "mcp": "プレビュー：ソースからビルドする MCP パッケージは、組織に限定された API キーで 11 個のツールを利用できます。OAuth、呼び出し単位の監査、公開パッケージ配布は未完了です。",
+        "aiKeys": "AI は任意です。プロバイダーのキーは各自で用意してください。予算管理はリスクを下げますが、支出上限を保証するものではありません。",
+        "data": "セルフホストしたアプリのデータは、お使いの Postgres を利用します。アクセス制御はありますが、適用範囲には引き続き確認が必要です。任意の連携は、設定した場合にのみデータを送信します。",
+        "structureTitle": "構造化されたバックログ項目",
+        "structure": "ラベル、コンポーネント、修正バージョン、解決状況には専用のデータベースモデルと API モデルがあります。適用状況はルートによって異なります。",
+        "realtime": "Yjs 共同編集は、Hocuspocus、公開 URL、一致するシークレットを設定し、スモークテストした場合に利用できます。"
       }
     },
     "intake": {
-      "submitMetaTitle": "Submit · TaskNebula"
+      "submitMetaTitle": "送信 · TaskNebula"
     },
     "stepStart": "始める",
     "setupImportRedirecting": "サインインにリダイレクトしてから、{source}輸入…",
@@ -6660,7 +6631,7 @@
     "disclosureBadge": "AIの透明性に関する情報",
     "title": "AI モデルカード",
     "intro": "このページでは、TaskNebula の文書化された AI 機能とデフォルト設定について説明します。実際のモデル、データ処理、保持、およびレビューの制御は、ワークスペースや展開によって異なる場合があります。アクティブな設定を管理者に確認してください。透明性通知バージョン <version></version>。",
-    "lastReviewed": "最終レビュー日は 2026 年 8 月 12 日です。規則 (EU) 2024/1689 の第 50 条は、2026 年 8 月 2 日から適用されます。",
+    "lastReviewed": "最終レビュー日は 2026 年 8 月 12 日です。",
     "onThisPage": "このページの内容",
     "model": "モデル",
     "provider": "プロバイダー",
@@ -7036,5 +7007,28 @@
       "fetchOrganizations": "Failed to fetch organizations",
       "fetchEpics": "Failed to fetch epics"
     }
+  },
+  "slackCommands": {
+    "userUnmapped": "Slack アカウントを TaskNebula ユーザーに関連付けられませんでした。管理者に、Slack プロフィールと TaskNebula アカウントの対応付けを依頼してください。",
+    "statusUsage": "使用方法: `/tn status TN-123 done`",
+    "statusUnavailable": "このステータス変更は利用できません。対応しているステータスは `/tn help` で確認してください。",
+    "notInstalled": "TaskNebula はまだこの Slack ワークスペースにインストールされていません。管理者に「設定 → 連携」から接続するよう依頼してください。",
+    "help": "*TaskNebula コマンド*\n`/tn new タイトル` — 指定したタイトルで新しい課題の画面を開きます\n`/tn list` — 自分に割り当てられた未完了の課題を一覧表示します\n`/tn search 検索語` — アクセス可能な上位 5 件を表示します\n`/tn assign TN-123 @ユーザー` — 課題を再割り当てします\n`/tn status TN-123 done` — 課題のステータスを変更します（backlog | in_progress | in_review | done | blocked）",
+    "unknownCommand": "不明なコマンドです。",
+    "noOpenAssigned": "自分に割り当てられた未完了の課題はありません。",
+    "openIssuesHeader": "未完了の課題：",
+    "noStatus": "ステータスなし",
+    "searchUsage": "使用方法: `/tn search 検索語`",
+    "searchNoMatches": "`{query}` に一致する課題はありません。",
+    "searchTopMatches": "`{query}` の上位結果: {count} 件",
+    "searchSummary": "{query} の結果: {count} 件",
+    "assignUsage": "使用方法: `/tn assign TN-123 @ユーザー`",
+    "invalidUserMention": "`{mention}` は Slack ユーザーへのメンションではないようです。",
+    "issueNotFound": "このワークスペースに課題 `{issueKey}` はありません。",
+    "assigneeUnmapped": "その Slack ユーザーを TaskNebula アカウントに関連付けられませんでした。管理者に「設定 → 連携」で対応付けを追加するよう依頼してください。",
+    "assignmentSuccess": "*{issueKey}* を <@{slackUserId}> に再割り当てしました（依頼者: <@{requestedBy}>）。",
+    "statusSuccess": "*{issueKey}* を *{statusName}* に移動しました（依頼者: <@{requestedBy}>）。",
+    "newUsage": "使用方法: `/tn new タイトル` — 新しい課題の画面を開きます。",
+    "newOpening": "次のタイトルで新しい課題の画面を開いています: _{title}_"
   }
 }

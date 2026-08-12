@@ -142,7 +142,13 @@ export function formatAgentServiceLabel(t: Translate, key: string) {
 }
 
 export function formatAgentRunStatus(t: Translate, status: string) {
-  if (status === 'running' || status === 'completed' || status === 'failed') {
+  if (
+    status === 'pending' ||
+    status === 'running' ||
+    status === 'completed' ||
+    status === 'failed' ||
+    status === 'cancelled'
+  ) {
     return t(`agentShared.runStatuses.${status}`);
   }
 

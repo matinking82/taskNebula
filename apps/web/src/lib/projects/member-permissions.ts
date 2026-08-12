@@ -54,6 +54,16 @@ const PROJECT_PERMISSION_COLUMNS = [
 
 type ProjectPermissionColumn = (typeof PROJECT_PERMISSION_COLUMNS)[number];
 
+/**
+ * Resolve a persisted granular permission without allowing a role default to
+ * override an explicit denial. The fallback exists only for legacy/null rows.
+ */
+export function resolveProjectMemberPermission(value: unknown, fallback = false): boolean {
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  return fallback;
+}
+
 export function getProjectMemberPermissionValues(role: ProjectRole) {
   const defaults = ROLE_DEFAULT_PERMISSIONS[role] || ROLE_DEFAULT_PERMISSIONS.developer;
 

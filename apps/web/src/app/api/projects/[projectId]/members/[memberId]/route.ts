@@ -15,6 +15,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
 import { canReadProject } from '@/lib/auth/access-control';
 import { publishEvent } from '@/lib/realtime/events';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 // Check if user can change roles/permissions
 async function canChangeRolesAndPermissions(userId: string, projectId: string): Promise<boolean> {
@@ -53,7 +54,7 @@ async function canChangeRolesAndPermissions(userId: string, projectId: string): 
   if (!projectMember) return false;
 
   const roleDefaults = ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole];
-  return projectMember.canChangeRoles === 'true' || roleDefaults?.canChangeRoles || false;
+  return resolveProjectMemberPermission(projectMember.canChangeRoles, roleDefaults?.canChangeRoles);
 }
 
 // Check if user can remove members
@@ -90,11 +91,11 @@ async function canRemoveProjectMembers(userId: string, projectId: string): Promi
 
   const roleDefaults = ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole];
   return (
-    projectMember.canManageMembers === 'true' ||
-    projectMember.canRemoveMembers === 'true' ||
-    roleDefaults?.canManageMembers ||
-    roleDefaults?.canRemoveMembers ||
-    false
+    resolveProjectMemberPermission(
+      projectMember.canManageMembers,
+      roleDefaults?.canManageMembers
+    ) ||
+    resolveProjectMemberPermission(projectMember.canRemoveMembers, roleDefaults?.canRemoveMembers)
   );
 }
 

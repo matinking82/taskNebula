@@ -14,6 +14,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { rolloverCycle } from '@/lib/issues/cycle-rollover';
 import { publishEvent } from '@/lib/realtime/events';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 /**
  * POST /api/cycles/[cycleId]/rollover
@@ -93,7 +94,10 @@ export async function POST(
       const roleDefaults =
         ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] ||
         ROLE_DEFAULT_PERMISSIONS.viewer;
-      const allowed = projectMember.canManageSprints === 'true' || roleDefaults.canManageSprints;
+      const allowed = resolveProjectMemberPermission(
+        projectMember.canManageSprints,
+        roleDefaults.canManageSprints
+      );
       if (!allowed) {
         return NextResponse.json({ error: 'No permission to manage sprints' }, { status: 403 });
       }

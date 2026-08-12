@@ -58,7 +58,7 @@ describe('OpenAPI registry', () => {
       ['/api/projects/{projectId}/components/{componentId}', 'patch'],
       ['/api/projects/{projectId}/components/{componentId}', 'delete'],
       ['/api/users/me', 'get'],
-      ['/api/search', 'post'],
+      ['/api/search', 'get'],
       ['/api/health', 'get'],
     ];
 
@@ -77,6 +77,59 @@ describe('OpenAPI registry', () => {
   it('marks /api/health as a public route (no security)', () => {
     const op = (built.paths as any)['/api/health'].get;
     expect(op.security).toEqual([]);
+  });
+
+  it('documents project-agent admission as header-idempotent and asynchronous', () => {
+    const start = (built.paths as any)['/api/projects/{projectId}/agents/run'].post;
+    expect(start.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Idempotency-Key', in: 'header', required: true }),
+      ])
+    );
+    expect(start.requestBody.content['application/json'].schema.properties).not.toHaveProperty(
+      'idempotencyKey'
+    );
+    expect(start.responses['201']).toBeUndefined();
+    expect(start.responses['202']).toBeDefined();
+
+    const control = (built.paths as any)['/api/projects/{projectId}/agents/runs/{runId}'].post;
+    expect(control.responses['202']).toBeDefined();
+    expect(control.responses['429']).toBeDefined();
+    expect(control.requestBody.content['application/json'].schema.properties.action.enum).toEqual([
+      'resume',
+      'cancel',
+    ]);
+  });
+
+  it('documents API keys only on routes that resolve API actors', () => {
+    expect((built.components as any).securitySchemes.taskNebulaApiKey).toMatchObject({
+      type: 'apiKey',
+      in: 'header',
+      name: 'X-API-Key',
+    });
+
+    const apiKeyRoutes: Array<[string, string]> = [
+      ['/api/issues', 'get'],
+      ['/api/issues', 'post'],
+      ['/api/issues/{issueId}', 'get'],
+      ['/api/issues/{issueId}', 'patch'],
+      ['/api/issues/{issueId}', 'delete'],
+      ['/api/issues/{issueId}/comments', 'post'],
+      ['/api/projects', 'get'],
+      ['/api/search', 'get'],
+    ];
+    for (const [path, method] of apiKeyRoutes) {
+      expect((built.paths as any)[path][method].security).toEqual([
+        { cookieAuth: [] },
+        { taskNebulaApiKey: [] },
+      ]);
+    }
+
+    // This documented route is still session-only and must not inherit the
+    // API-key scheme just because it sits below an issue URL.
+    expect((built.paths as any)['/api/issues/{issueId}/versions'].get.security).toEqual([
+      { cookieAuth: [] },
+    ]);
   });
 
   it('parses as a valid OpenAPI 3.1 document', async () => {

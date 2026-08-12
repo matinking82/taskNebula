@@ -24,10 +24,11 @@ pnpm openapi:gen       # regenerate public/openapi.json (openapi:check verifies 
 
 ## API route conventions
 
-- **Auth idiom**: `const session = await auth();` (from `@/auth`), 401 on no session, then a permission check
-  (e.g. `checkIssuePermission` in `api/issues/route.ts`). Prefer the **canonical guards** in
-  `src/lib/auth/access-control.ts` and `src/lib/auth/guards.ts` over hand-rolled checks — hand-rolled per-route
-  auth is the systemic cause of the audited cross-tenant holes.
+- **Auth idiom**: browser-only routes use `const session = await auth();` (from `@/auth`). REST routes shared
+  with the current MCP tool surface use `resolveApiActor(request)` from `src/lib/auth/api-actor.ts`, then the
+  same canonical permission guards. A supplied malformed/invalid programmatic credential fails closed; API
+  keys are additionally confined to their immutable organization. Prefer the **canonical guards** in
+  `src/lib/auth/access-control.ts` and `src/lib/auth/guards.ts` over hand-rolled checks.
 - **Tenant scoping**: every query filters by the caller's `organization_id`. There is **no RLS backstop** — a
   forgotten WHERE clause is a cross-org breach. Never trust org/project ids from the request body.
 - **Validation**: Zod on every body/query — use `withValidation` from `src/lib/api-validation.ts` (400 with

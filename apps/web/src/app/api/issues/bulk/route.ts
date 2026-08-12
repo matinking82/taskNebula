@@ -3,8 +3,8 @@ import { auth } from '@/auth';
 import {
   db,
   issues,
-  issueStatusHistory,
   projects,
+  sprints,
   projectMembers,
   organizationMembers,
   users,
@@ -17,25 +17,47 @@ import { eq, inArray, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { publishEvent } from '@/lib/realtime/events';
 import { syncIssueLabelsBestEffort } from '@/lib/labels/sync';
+import {
+  applyBulkIssueStatusTransitions,
+  isWorkflowTransitionError,
+  WorkflowTransitionError,
+} from '@/lib/workflows/issue-transition-policy';
 
 export const dynamic = 'force-dynamic';
 
 const bulkUpdateSchema = z.object({
-  issueIds: z.array(z.string()).min(1),
-  updates: z.object({
-    statusId: z.string().optional(),
-    priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).optional(),
-    assigneeId: z.string().optional(),
-    labels: z.array(z.string()).optional(),
-    sprintId: z.string().optional(),
-  }),
+  issueIds: z
+    .array(z.string())
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: 'issueIds must be unique',
+    }),
+  updates: z
+    .object({
+      statusId: z.string().min(1).optional(),
+      priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).optional(),
+      assigneeId: z.string().min(1).nullable().optional(),
+      labels: z.array(z.string()).optional(),
+      sprintId: z.string().min(1).nullable().optional(),
+    })
+    .refine((updates) => Object.keys(updates).length > 0, {
+      message: 'updates must contain at least one supported field',
+    }),
 });
 
 const bulkDeleteSchema = z.object({
-  issueIds: z.array(z.string()).min(1),
+  issueIds: z
+    .array(z.string())
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: 'issueIds must be unique',
+    }),
 });
 
-type BulkAction = 'edit' | 'delete';
+type BulkAction = 'edit' | 'delete' | 'transition' | 'assign' | 'schedule';
+type BulkIssueScope = { id: string; projectId: string; organizationId: string };
 
 /**
  * Verify the caller has the given permission on every distinct project the
@@ -46,9 +68,9 @@ async function assertBulkPermission(
   userId: string,
   issueIds: string[],
   action: BulkAction
-): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+): Promise<{ ok: true; issues: BulkIssueScope[] } | { ok: false; status: number; error: string }> {
   const rows = await db
-    .select({ id: issues.id, projectId: issues.projectId })
+    .select({ id: issues.id, projectId: issues.projectId, organizationId: issues.organizationId })
     .from(issues)
     .where(inArray(issues.id, issueIds));
 
@@ -63,7 +85,7 @@ async function assertBulkPermission(
     .limit(1);
 
   if (user?.isSuperAdmin) {
-    return { ok: true };
+    return { ok: true, issues: rows };
   }
 
   const projectIds = Array.from(new Set(rows.map((r) => r.projectId)));
@@ -77,6 +99,13 @@ async function assertBulkPermission(
 
     if (!project) {
       return { ok: false, status: 404, error: 'Project not found' };
+    }
+    if (
+      rows.some(
+        (issue) => issue.projectId === projectId && issue.organizationId !== project.organizationId
+      )
+    ) {
+      return { ok: false, status: 404, error: 'Some issues not found' };
     }
 
     const [orgMember] = await db
@@ -100,6 +129,9 @@ async function assertBulkPermission(
         role: projectMembers.role,
         canEditIssues: projectMembers.canEditIssues,
         canDeleteIssues: projectMembers.canDeleteIssues,
+        canTransitionIssues: projectMembers.canTransitionIssues,
+        canAssignIssues: projectMembers.canAssignIssues,
+        canScheduleIssues: projectMembers.canScheduleIssues,
       })
       .from(projectMembers)
       .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
@@ -113,29 +145,39 @@ async function assertBulkPermission(
       };
     }
 
-    const toBool = (val: string | null | undefined): boolean => val === 'true';
-    const canModify =
-      action === 'edit'
-        ? toBool(projectMember.canEditIssues)
-        : toBool(projectMember.canDeleteIssues);
-
-    // Fall back to project role defaults
+    const explicitPermission = {
+      edit: projectMember.canEditIssues,
+      delete: projectMember.canDeleteIssues,
+      transition: projectMember.canTransitionIssues,
+      assign: projectMember.canAssignIssues,
+      schedule: projectMember.canScheduleIssues,
+    }[action];
+    // An explicit per-member value wins in both directions. Only a nullable
+    // legacy value falls back to the project role default.
     const roleDefaults =
       ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] ||
       ROLE_DEFAULT_PERMISSIONS.viewer;
-    const allowedByRole =
-      action === 'edit' ? roleDefaults.canEditIssues : roleDefaults.canDeleteIssues;
+    const allowedByRole = {
+      edit: roleDefaults.canEditIssues,
+      delete: roleDefaults.canDeleteIssues,
+      transition: roleDefaults.canTransitionIssues,
+      assign: roleDefaults.canAssignIssues,
+      schedule: roleDefaults.canScheduleIssues,
+    }[action];
+    const canModify =
+      explicitPermission === 'true' ? true : explicitPermission === 'false' ? false : allowedByRole;
 
-    if (!canModify && !allowedByRole) {
+    if (!canModify) {
+      const actionLabel = action === 'transition' ? 'transition' : action;
       return {
         ok: false,
         status: 403,
-        error: `Insufficient permission to ${action} issues in one or more projects`,
+        error: `Insufficient permission to ${actionLabel} issues in one or more projects`,
       };
     }
   }
 
-  return { ok: true };
+  return { ok: true, issues: rows };
 }
 
 /**
@@ -181,6 +223,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (isWorkflowTransitionError(error)) {
+      return NextResponse.json(
+        { error: error.code, code: error.code },
+        { status: error.httpStatus }
+      );
+    }
 
     console.error('Bulk operation error:', error);
     return NextResponse.json({ error: 'Failed to perform bulk operation' }, { status: 500 });
@@ -194,51 +242,109 @@ async function handleBulkUpdate(body: any, userId: string) {
   const validatedData = bulkUpdateSchema.parse(body);
   const { issueIds, updates } = validatedData;
 
-  const auth = await assertBulkPermission(userId, issueIds, 'edit');
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  const requiredActions = new Set<BulkAction>();
+  if (updates.statusId !== undefined) requiredActions.add('transition');
+  if (updates.assigneeId !== undefined) requiredActions.add('assign');
+  if (updates.sprintId !== undefined) requiredActions.add('schedule');
+  if (updates.priority !== undefined || updates.labels !== undefined) requiredActions.add('edit');
+  let authorizedScope: BulkIssueScope[] | null = null;
+  for (const action of requiredActions) {
+    const permission = await assertBulkPermission(userId, issueIds, action);
+    if (!permission.ok) {
+      return NextResponse.json({ error: permission.error }, { status: permission.status });
+    }
+    authorizedScope ??= permission.issues;
   }
 
-  // Verify all issues exist and get their current state
-  const existingIssues = await db.select().from(issues).where(inArray(issues.id, issueIds));
-
-  if (existingIssues.length !== issueIds.length) {
-    return NextResponse.json({ error: 'Some issues not found' }, { status: 404 });
-  }
-
-  // Perform bulk update
+  // Prepare every transition before the first mutation. All issue locks,
+  // policy checks, updates and history rows share one transaction, so one
+  // cross-tenant/invalid edge rolls back the entire bulk operation.
   const updateData: any = {
     ...updates,
     updatedAt: new Date(),
   };
+  const { existingIssues, updatedIssues } = await db.transaction(async (tx) => {
+    const identities = await tx
+      .select({
+        organizationId: issues.organizationId,
+        projectId: issues.projectId,
+        issueId: issues.id,
+      })
+      .from(issues)
+      .where(inArray(issues.id, issueIds))
+      .for('update');
+    if (identities.length !== issueIds.length) {
+      throw new WorkflowTransitionError('workflow_transition_issue_not_found');
+    }
+    const allowedIdentities = new Set(
+      (authorizedScope ?? []).map(
+        (identity) => `${identity.id}\u0000${identity.organizationId}\u0000${identity.projectId}`
+      )
+    );
+    if (
+      identities.some(
+        (identity) =>
+          !allowedIdentities.has(
+            `${identity.issueId}\u0000${identity.organizationId}\u0000${identity.projectId}`
+          )
+      )
+    ) {
+      throw new WorkflowTransitionError('workflow_transition_issue_not_found');
+    }
 
-  const updatedIssues = await db
-    .update(issues)
-    .set(updateData)
-    .where(inArray(issues.id, issueIds))
-    .returning();
-
-  // FEAT-23: write issue_status_history rows for every status change in this
-  // bulk update. Best-effort: if the insert fails (e.g. dropped status id)
-  // we still want the bulk response to surface.
-  if (updates.statusId) {
-    const historyRows = existingIssues
-      .filter((oldIssue) => oldIssue.statusId !== updates.statusId)
-      .map((oldIssue) => ({
-        issueId: oldIssue.id,
-        fromStatus: oldIssue.statusId,
-        toStatus: updates.statusId!,
-        changedByUserId: userId,
-        reason: 'user_bulk',
-      }));
-    if (historyRows.length > 0) {
-      try {
-        await db.insert(issueStatusHistory).values(historyRows);
-      } catch (err) {
-        console.error('bulk issue_status_history insert failed', err);
+    if (updates.assigneeId) {
+      const organizationIds = Array.from(
+        new Set(identities.map((identity) => identity.organizationId))
+      );
+      const memberships = await tx
+        .select({ organizationId: organizationMembers.organizationId })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.userId, updates.assigneeId),
+            eq(organizationMembers.status, 'active'),
+            inArray(organizationMembers.organizationId, organizationIds)
+          )
+        );
+      if (new Set(memberships.map((row) => row.organizationId)).size !== organizationIds.length) {
+        throw new WorkflowTransitionError('workflow_transition_relationship_invalid');
       }
     }
-  }
+
+    if (updates.sprintId) {
+      const projectIds = Array.from(new Set(identities.map((identity) => identity.projectId)));
+      const [sprint] = await tx
+        .select({ projectId: sprints.projectId })
+        .from(sprints)
+        .where(and(eq(sprints.id, updates.sprintId), inArray(sprints.projectId, projectIds)))
+        .limit(1);
+      if (!sprint || projectIds.length !== 1 || sprint.projectId !== projectIds[0]) {
+        throw new WorkflowTransitionError('workflow_transition_relationship_invalid');
+      }
+    }
+
+    if (updates.statusId !== undefined) {
+      const result = await applyBulkIssueStatusTransitions(tx, {
+        issues: identities,
+        toStatusId: updates.statusId,
+        actorUserId: userId,
+        reason: 'user_bulk',
+        patch: updateData,
+      });
+      return { existingIssues: result.before, updatedIssues: result.after };
+    }
+
+    const before = await tx.select().from(issues).where(inArray(issues.id, issueIds));
+    if (before.length !== issueIds.length) {
+      throw new Error('bulk_issue_not_found');
+    }
+    const after = await tx
+      .update(issues)
+      .set(updateData)
+      .where(inArray(issues.id, issueIds))
+      .returning();
+    return { existingIssues: before, updatedIssues: after };
+  });
 
   // Write-through to the first-class labels layer. The jsonb write above
   // (`issues.labels`) stays the REST contract; this mirrors the names into

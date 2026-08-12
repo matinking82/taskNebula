@@ -234,7 +234,6 @@ async function auditSurface({
     expect.soft(response?.status(), `${path} should resolve`).toBeLessThan(400);
 
     await waitForSurfaceReady(surfacePage);
-    await dismissAiDisclosure(surfacePage);
 
     const settledSettingsTab = SETTLED_SETTINGS_TABS[surface.id];
     if (settledSettingsTab) {
@@ -242,6 +241,11 @@ async function auditSurface({
         timeout: 20_000,
       });
     }
+
+    // Organization-scoped disclosure state resolves after the settings tab.
+    // Dismiss only once the surface has settled so the modal cannot open after
+    // the accessibility assertions and hide the application root from the tree.
+    await dismissAiDisclosure(surfacePage);
 
     if (surface.id === 'issues-redirect') {
       await expect(surfacePage).toHaveURL(/\/my-issues(?:[?#]|$)/);

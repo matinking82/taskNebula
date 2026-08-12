@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/auth';
 import {
   db,
   issues,
   workflowStatuses,
   searchHistory,
   organizationMembers,
-  projectMembers,
   parseJQL,
   issuePriorityEnum,
   issueTypeEnum,
+  projects,
 } from '@tasknebula/db';
 import { eq, and, or, inArray, gte, lte, desc, sql, type SQL } from 'drizzle-orm';
 import { withValidation } from '@/lib/api-validation';
 import { hybridSearch, looksLikeFreeText } from '@/lib/search/hybrid';
+import { resolveApiActor } from '@/lib/auth/api-actor';
+import { canReadProject } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,24 +65,27 @@ const isIssueType = (value: string): value is IssueType =>
 // checks are no longer needed here.
 export const GET = withValidation({ query: searchQuerySchema })(async (request, { query: q }) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { q: query, organizationId, projectId, saveHistory, limit, offset } = q;
+    if (actor.organizationId && actor.organizationId !== organizationId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
-    // Membership guard — the caller passes `organizationId` (and optionally
-    // `projectId`) as a query parameter, so without a server-side check
-    // anyone who can guess an org slug can probe its issue catalogue. Refuse
-    // unless the user is currently an org member, and (if narrowing to a
-    // project) a member of that project too.
+    // The caller supplies organization/project scope, so both the broad search
+    // and a requested project must be reduced to projects this actor can read.
+    // Active organization membership alone does not grant private-project
+    // visibility; org administrators and explicit project members are handled
+    // consistently by the canonical access-control helper.
     const [orgMember] = await db
       .select({ role: organizationMembers.role })
       .from(organizationMembers)
       .where(
         and(
-          eq(organizationMembers.userId, session.user.id),
+          eq(organizationMembers.userId, actor.userId),
           eq(organizationMembers.organizationId, organizationId),
           eq(organizationMembers.status, 'active')
         )
@@ -90,26 +94,47 @@ export const GET = withValidation({ query: searchQuerySchema })(async (request, 
     if (!orgMember) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    if (projectId) {
-      const [projMember] = await db
-        .select({ role: projectMembers.role })
-        .from(projectMembers)
-        .where(
-          and(eq(projectMembers.userId, session.user.id), eq(projectMembers.projectId, projectId))
+    const projectCandidates = await db
+      .select()
+      .from(projects)
+      .where(
+        and(
+          eq(projects.organizationId, organizationId),
+          ...(projectId ? [eq(projects.id, projectId)] : [])
         )
-        .limit(1);
-      if (!projMember) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      );
+    const authorizedProjectIds: string[] = [];
+    for (const project of projectCandidates) {
+      if (
+        await canReadProject(actor.userId, project, {
+          allowSuperAdmin: actor.authType === 'session',
+        })
+      ) {
+        authorizedProjectIds.push(project.id);
       }
     }
+    if (projectId && !authorizedProjectIds.includes(projectId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
-    if (looksLikeFreeText(query)) {
+    const isFreeTextQuery = looksLikeFreeText(query);
+    if (authorizedProjectIds.length === 0) {
+      return NextResponse.json({
+        results: [],
+        count: 0,
+        query,
+        criteria: isFreeTextQuery ? { text: query } : {},
+        ...(isFreeTextQuery ? { mode: 'freeText' } : {}),
+      });
+    }
+
+    if (isFreeTextQuery) {
       const hybridLimit = Math.min(Math.max(limit + offset, limit), 500);
       const rankedResults = await hybridSearch({
         query,
         filters: {
           organizationId,
-          projectId: projectId || null,
+          projectId: authorizedProjectIds,
         },
         candidateLimit: Math.min(Math.max(hybridLimit * 2, 50), 500),
         limit: hybridLimit,
@@ -120,7 +145,7 @@ export const GET = withValidation({ query: searchQuerySchema })(async (request, 
       if (saveHistory) {
         try {
           await db.insert(searchHistory).values({
-            userId: session.user.id,
+            userId: actor.userId,
             organizationId,
             projectId: projectId || null,
             query,
@@ -156,17 +181,15 @@ export const GET = withValidation({ query: searchQuerySchema })(async (request, 
     const { criteria } = parseResult;
 
     // Build where conditions
-    const conditions: SQL[] = [eq(issues.organizationId, organizationId)];
-
-    // Project filter
-    if (projectId) {
-      conditions.push(eq(issues.projectId, projectId));
-    }
+    const conditions: SQL[] = [
+      eq(issues.organizationId, organizationId),
+      inArray(issues.projectId, authorizedProjectIds),
+    ];
 
     // Assignee filter
     if (criteria.assignee) {
       if (criteria.assignee === 'me') {
-        conditions.push(eq(issues.assigneeId, session.user.id));
+        conditions.push(eq(issues.assigneeId, actor.userId));
       } else if (Array.isArray(criteria.assignee)) {
         conditions.push(inArray(issues.assigneeId, criteria.assignee));
       } else {
@@ -177,7 +200,7 @@ export const GET = withValidation({ query: searchQuerySchema })(async (request, 
     // Reporter filter
     if (criteria.reporter) {
       if (criteria.reporter === 'me') {
-        conditions.push(eq(issues.reporterId, session.user.id));
+        conditions.push(eq(issues.reporterId, actor.userId));
       } else if (Array.isArray(criteria.reporter)) {
         conditions.push(inArray(issues.reporterId, criteria.reporter));
       } else {
@@ -303,7 +326,7 @@ export const GET = withValidation({ query: searchQuerySchema })(async (request, 
     if (saveHistory) {
       try {
         await db.insert(searchHistory).values({
-          userId: session.user.id,
+          userId: actor.userId,
           organizationId,
           projectId: projectId || null,
           query,

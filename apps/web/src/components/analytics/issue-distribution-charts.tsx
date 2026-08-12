@@ -138,7 +138,7 @@ function PieCard({ title, subtitle, data, colorMap }: PieCardProps) {
                 {entry.name}
               </span>
               <span className="text-muted-foreground shrink-0 tabular-nums">
-                {entry.value} <span className="text-muted-foreground/60">{`(${pct}%)`}</span>
+                {entry.value} <span className="text-muted-foreground">{`(${pct}%)`}</span>
               </span>
             </div>
           );

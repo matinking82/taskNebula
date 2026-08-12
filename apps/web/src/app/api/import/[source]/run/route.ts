@@ -15,6 +15,7 @@ import {
 } from '@tasknebula/db';
 import { isImportSource, type ImportSource } from '@/lib/importers';
 import { executeImportJob } from '@/lib/importers/runner';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,10 +23,6 @@ type MappingRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is MappingRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function toBool(value: unknown): boolean {
-  return value === true || value === 'true';
 }
 
 function compactRecord(record: MappingRecord): MappingRecord {
@@ -93,7 +90,10 @@ async function canCreateImportedIssues(args: {
 
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const allowed = toBool(projectMember.canCreateIssues) || roleDefaults.canCreateIssues;
+  const allowed = resolveProjectMemberPermission(
+    projectMember.canCreateIssues,
+    roleDefaults.canCreateIssues
+  );
   return {
     allowed,
     status: 403,

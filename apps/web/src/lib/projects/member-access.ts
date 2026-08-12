@@ -7,6 +7,7 @@ import {
   hasPermission as roleHasPermission,
   type ProjectRole,
 } from '@tasknebula/db';
+import { resolveProjectMemberPermission } from './member-permissions';
 
 export async function canManageProjectMembers(userId: string, projectId: string): Promise<boolean> {
   const user = await db.query.users.findFirst({
@@ -41,10 +42,10 @@ export async function canManageProjectMembers(userId: string, projectId: string)
 
   const roleDefaults = ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole];
   return (
-    projectMember.canManageMembers === 'true' ||
-    projectMember.canInviteMembers === 'true' ||
-    roleDefaults?.canManageMembers ||
-    roleDefaults?.canInviteMembers ||
-    false
+    resolveProjectMemberPermission(
+      projectMember.canManageMembers,
+      roleDefaults?.canManageMembers
+    ) ||
+    resolveProjectMemberPermission(projectMember.canInviteMembers, roleDefaults?.canInviteMembers)
   );
 }

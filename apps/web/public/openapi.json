@@ -18,6 +18,12 @@
         "in": "cookie",
         "name": "__Secure-authjs.session-token",
         "description": "NextAuth session cookie. In dev the cookie is named `authjs.session-token`."
+      },
+      "taskNebulaApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "TaskNebula `sk_live_*` API key. Keys are bound to one organization and the creator must retain an active user and organization membership; route permissions still apply."
       }
     },
     "schemas": {
@@ -1408,42 +1414,6 @@
           "criteria"
         ]
       },
-      "SearchBody": {
-        "type": "object",
-        "properties": {
-          "q": {
-            "type": "string",
-            "minLength": 1,
-            "description": "JQL-style query string",
-            "example": "assignee = me AND status = \"In Progress\""
-          },
-          "organizationId": {
-            "type": "string"
-          },
-          "projectId": {
-            "type": "string"
-          },
-          "saveHistory": {
-            "type": "boolean",
-            "default": true
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 500,
-            "default": 100
-          },
-          "offset": {
-            "type": "integer",
-            "minimum": 0,
-            "default": 0
-          }
-        },
-        "required": [
-          "q",
-          "organizationId"
-        ]
-      },
       "HealthResponse": {
         "type": "object",
         "properties": {
@@ -1524,6 +1494,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
         "parameters": [
@@ -1618,6 +1591,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
         "requestBody": {
@@ -1694,6 +1670,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
         "parameters": [
@@ -1758,6 +1737,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
         "parameters": [
@@ -1841,6 +1823,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
         "parameters": [
@@ -1906,6 +1891,9 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
         "parameters": [
@@ -1965,13 +1953,16 @@
     "/api/projects": {
       "get": {
         "summary": "List projects accessible to the current user",
-        "description": "Returns projects from organizations the caller is a member of, optionally narrowed by `organizationId` and/or `teamId`. Super admins see all projects in the scope.",
+        "description": "Returns projects from organizations the caller is a member of, optionally narrowed by `organizationId` and/or `teamId`. Browser-session super admins can see all projects in the requested scope; API keys remain confined to their organization.",
         "tags": [
           "Projects"
         ],
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
         "parameters": [
@@ -3591,7 +3582,7 @@
       }
     },
     "/api/search": {
-      "post": {
+      "get": {
         "summary": "Execute a JQL-style search",
         "description": "Run a structured search query against issues. Accepts JQL-style expressions like `assignee = me AND status = \"In Progress\"`.",
         "tags": [
@@ -3600,18 +3591,70 @@
         "security": [
           {
             "cookieAuth": []
+          },
+          {
+            "taskNebulaApiKey": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SearchBody"
-              }
-            }
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "JQL-style query string",
+              "example": "assignee = me AND status = \"In Progress\""
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "organizationId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "projectId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "required": false,
+            "name": "saveHistory",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "Search results.",
@@ -3681,6 +3724,232 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/agents/run": {
+      "post": {
+        "summary": "Start a durable project-agent run",
+        "description": "Starts or replays a bounded project-agent graph. Idempotency-Key is required; replaying the same request returns the original run, while reusing the key for a different request returns 409.",
+        "tags": [
+          "Agents"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            },
+            "required": true,
+            "name": "Idempotency-Key",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "project_tracking",
+                      "backlog_triage",
+                      "sprint_planning",
+                      "bulk_sprint_creation"
+                    ]
+                  },
+                  "dryRun": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "An existing idempotent run was returned."
+          },
+          "202": {
+            "description": "A new durable run was accepted and remains queued or in progress."
+          },
+          "400": {
+            "description": "Invalid body or idempotency key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency conflict or blocked agent configuration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Idempotency-Key header is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "UTC daily or global concurrency quota was reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/agents/runs/{runId}": {
+      "post": {
+        "summary": "Control a durable project-agent run",
+        "description": "Requests cancellation or requeues a resumable failed/cancelled run. Resume returns immediately; the reconciler is authoritative for eventual execution.",
+        "tags": [
+          "Agents"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "runId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "resume",
+                      "cancel"
+                    ]
+                  }
+                },
+                "required": [
+                  "action"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cancellation was requested or a terminal run was returned."
+          },
+          "202": {
+            "description": "The run was accepted for asynchronous resume."
+          },
+          "400": {
+            "description": "Invalid control action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller cannot manage project agent runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No run exists in the authorized project scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The run state or graph version cannot be resumed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Resume could not reserve a global active-run slot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

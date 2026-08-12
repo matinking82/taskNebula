@@ -22,11 +22,15 @@ get-my-workload. Plus resources (`src/resources.ts`) and prompts (`src/prompts.t
 
 ## Current limitations (verified August 2026)
 
-- **Auth caveat — tools 401 until fixed**: the web REST API does not yet accept API keys (no route
-  consumes the `api_keys` table; everything uses session cookies via `await auth()`). Every tool call
-  fails with 401 until an API-key resolver lands in `apps/web` route auth. Don't "fix" this inside the
-  MCP package — the gap is server-side.
+- The current 11-tool REST surface accepts TaskNebula `sk_live_*` keys. The server hashes the
+  presented key, requires an active/unexpired/unrevoked record, active creator and active
+  organization membership, then applies the route's existing project/issue permissions inside the
+  key's immutable organization boundary.
+- HTTP OAuth 2.1/PKCE verification, resumable Streamable HTTP, fine-grained key scopes, and per-call
+  MCP audit evidence are still incomplete. Do not describe the HTTP scaffold as a public connector.
+- HTTP capability discovery only syntax-checks the `sk_live_*` prefix. It does not prove a key is
+  active; data tools are authenticated and authorized by the downstream web REST routes.
 - **Not published to npm**: use the source build instructions in `README.md`;
-  publication is gated on end-to-end auth and install smoke tests.
+  publication is gated on the remaining auth/transport/audit work and install smoke tests.
 - Real API keys are prefixed `sk_live_`; verify every tool change against the
   authoritative route validation in `apps/web/src/app/api`.

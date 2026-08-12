@@ -17,6 +17,7 @@ import { eq, count, and, ne } from 'drizzle-orm';
 import { publishEvent } from '@/lib/realtime/events';
 import { runAutomations } from '@/lib/automation/evaluator';
 import { notifySprintEvent } from '@/lib/notifications/send-sprint-notification';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 // Granular permission check helper
 async function checkSprintPermission(
@@ -90,30 +91,42 @@ async function checkSprintPermission(
   // Get role defaults
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const toBool = (val: string | null | undefined): boolean => val === 'true';
-
   // Check specific permissions based on action
   switch (action) {
     case 'manage':
-      if (toBool(projectMember.canManageSprints) || roleDefaults.canManageSprints) {
+      if (
+        resolveProjectMemberPermission(
+          projectMember.canManageSprints,
+          roleDefaults.canManageSprints
+        )
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to manage sprints' };
 
     case 'start':
-      if (toBool(projectMember.canStartSprint) || roleDefaults.canStartSprint) {
+      if (
+        resolveProjectMemberPermission(projectMember.canStartSprint, roleDefaults.canStartSprint)
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to start sprints' };
 
     case 'complete':
-      if (toBool(projectMember.canCompleteSprint) || roleDefaults.canCompleteSprint) {
+      if (
+        resolveProjectMemberPermission(
+          projectMember.canCompleteSprint,
+          roleDefaults.canCompleteSprint
+        )
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to complete sprints' };
 
     case 'delete':
-      if (toBool(projectMember.canDeleteSprint) || roleDefaults.canDeleteSprint) {
+      if (
+        resolveProjectMemberPermission(projectMember.canDeleteSprint, roleDefaults.canDeleteSprint)
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to delete sprints' };

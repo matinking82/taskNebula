@@ -146,7 +146,7 @@ Each major workspace has its own nested `CLAUDE.md` (with a sibling `AGENTS.md` 
 
 - `apps/web/CLAUDE.md` — route auth idiom, validation, i18n, design system
 - `packages/db/CLAUDE.md` — hand-written migration recipe, journal rules, tenancy
-- `packages/mcp-server/CLAUDE.md` — tool surface, auth caveat, publish status
+- `packages/mcp-server/CLAUDE.md` — tool surface, API-key boundary, remaining OAuth/publish gates
 - `services/hocuspocus/CLAUDE.md` — JWT auth, persistence, env vars
 
 ## Pointers

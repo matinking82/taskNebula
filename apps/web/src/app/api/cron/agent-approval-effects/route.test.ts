@@ -73,4 +73,18 @@ describe('POST /api/cron/agent-approval-effects', () => {
       failed: 0,
     });
   });
+
+  it('rejects malformed JSON without draining the outbox', async () => {
+    const response = await POST(
+      new Request('http://localhost', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{',
+      }) as never
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Malformed JSON body' });
+    expect(processEffectsMock).not.toHaveBeenCalled();
+  });
 });

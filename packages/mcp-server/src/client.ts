@@ -29,7 +29,7 @@ export class TaskNebulaApiError extends Error {
     public readonly status: number,
     public readonly statusText: string,
     public readonly body: unknown,
-    message?: string,
+    message?: string
   ) {
     super(message ?? `TaskNebula API error ${status} ${statusText}`);
     this.name = 'TaskNebulaApiError';
@@ -63,8 +63,9 @@ export class TaskNebulaClient {
     if (this.accessToken) {
       h.Authorization = `Bearer ${this.accessToken}`;
     } else if (this.apiKey) {
-      // TaskNebula REST API accepts either `Authorization: Bearer` (OAuth) or
-      // `X-API-Key` (long-lived keys). Sending both is harmless.
+      // The REST actor resolver accepts long-lived TaskNebula keys through
+      // either header. Send both for compatibility; they must contain the
+      // same key or the server fails closed.
       h['X-API-Key'] = this.apiKey;
       h.Authorization = `Bearer ${this.apiKey}`;
     }
@@ -75,7 +76,7 @@ export class TaskNebulaClient {
     method: string,
     path: string,
     body?: unknown,
-    query?: Record<string, string | number | boolean | undefined | null>,
+    query?: Record<string, string | number | boolean | undefined | null>
   ): Promise<T> {
     const url = new URL(path.startsWith('/') ? path : `/${path}`, this.apiUrl + '/');
     if (query) {
@@ -114,7 +115,10 @@ export class TaskNebulaClient {
     }
   }
 
-  get<T = unknown>(path: string, query?: Record<string, string | number | boolean | undefined | null>) {
+  get<T = unknown>(
+    path: string,
+    query?: Record<string, string | number | boolean | undefined | null>
+  ) {
     return this.request<T>('GET', path, undefined, query);
   }
   post<T = unknown>(path: string, body?: unknown) {

@@ -16,6 +16,7 @@
     "tests:e2e:public": "playwright test e2e/public-surfaces.spec.ts --project=chromium-public",
     "tests:e2e:surfaces": "playwright test e2e/app-surfaces.spec.ts --project=chromium",
     "tests:e2e:install": "playwright install --with-deps",
+    "test:integration:durable-project-agent-runtime": "tsx scripts/durable-project-agent-runtime.integration.ts",
     "tests:e2e:ui": "playwright test --ui",
     "type-check": "tsc --noEmit"
   },

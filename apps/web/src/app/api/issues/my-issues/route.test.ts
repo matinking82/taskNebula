@@ -1,5 +1,6 @@
 const authMock = jest.fn();
 const dbSelectMock = jest.fn();
+const canReadProjectMock = jest.fn();
 
 class MockNextRequest {
   readonly nextUrl: URL;
@@ -35,6 +36,10 @@ jest.mock('next/server', () => ({
 
 jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
+}));
+
+jest.mock('@/lib/auth/access-control', () => ({
+  canReadProject: (...args: unknown[]) => canReadProjectMock(...args),
 }));
 
 jest.mock('@tasknebula/db', () => ({
@@ -188,6 +193,7 @@ describe('GET /api/issues/my-issues', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    canReadProjectMock.mockResolvedValue(true);
   });
 
   it('returns 401 when the user is not authenticated', async () => {
@@ -329,5 +335,38 @@ describe('GET /api/issues/my-issues', () => {
     const body = await response.json();
     expect(body.issues).toHaveLength(1);
     expect(body.issues[0].id).toBe('issue-open');
+  });
+
+  it('filters assigned issues whose project is no longer readable', async () => {
+    authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    canReadProjectMock.mockResolvedValue(false);
+    dbSelectMock
+      .mockReturnValueOnce(
+        orderBuilder([
+          {
+            id: 'issue-stale',
+            key: 'PRIVATE-1',
+            projectId: 'project-private',
+            statusId: 'status-open',
+            assigneeId: 'user-1',
+          },
+        ])
+      )
+      .mockReturnValueOnce(
+        whereBuilder([{ id: 'status-open', name: 'Todo', category: 'backlog', color: '#64748b' }])
+      )
+      .mockReturnValueOnce(
+        whereBuilder([{ id: 'project-private', key: 'PRIVATE', name: 'Private Project' }])
+      );
+
+    const response = await GET(new NextRequestCtor('http://localhost:3002/api/issues/my-issues'));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ issues: [], view: 'assigned' });
+    expect(canReadProjectMock).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ id: 'project-private' }),
+      { allowSuperAdmin: true }
+    );
   });
 });

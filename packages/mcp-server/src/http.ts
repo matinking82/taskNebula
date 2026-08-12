@@ -1,23 +1,22 @@
 /**
- * HTTP / Streamable transport entry point.
+ * Limited HTTP JSON-RPC scaffold.
  *
- * Designed to be mounted from a Next.js Route Handler (see
- * `apps/web/src/app/api/mcp/route.ts`). We expose a Web-Fetch-API style
- * handler so it plugs into Next 13+ App Router with no shim.
+ * Designed to be mounted from a Next.js Route Handler. POST handles one
+ * JSON-RPC request and GET returns discovery metadata. This is deliberately
+ * not described as MCP Streamable HTTP: there is no SDK transport, SSE,
+ * session persistence, resumability, or server-to-client request channel yet.
  *
- * Streaming behavior:
- *   - POST /api/mcp           — JSON-RPC request, response is either JSON
- *                                or an SSE stream of `message` events,
- *                                depending on the `Accept` header.
- *   - GET  /api/mcp           — open an SSE channel for server→client
- *                                notifications (resource updates, log
- *                                messages, etc.).
- *
- * Auth: we extract a Bearer token (OAuth 2.1) per request and build a
- * fresh REST client. This means each request runs as the user that
- * authorized it — the server itself holds no privileged credentials.
+ * Auth: POST accepts only a syntactically valid `sk_live_*` Bearer key and
+ * builds a fresh REST client. The MCP handler does not validate the secret,
+ * so capability-only methods can answer for a fake well-formed key; every
+ * data tool delegates to REST, where the key is validated before access and
+ * confined to its immutable organization. OAuth 2.1 is still a follow-up.
  */
 import { TaskNebulaClient } from './client.js';
+import {
+  LATEST_PROTOCOL_VERSION,
+  SUPPORTED_PROTOCOL_VERSIONS,
+} from '@modelcontextprotocol/sdk/types.js';
 import { resolveHttpAuth, clientOptionsFromHttp } from './auth.js';
 import { createMcpServer } from './server.js';
 import { allTools } from './tools/index.js';
@@ -37,8 +36,8 @@ export interface HttpHandlerOptions {
  * exercises the same tool registry as stdio. Streaming SSE upgrade and
  * resumability are tracked as P1 follow-ups — they require wiring the
  * MCP SDK's `StreamableHTTPServerTransport`, which in turn needs a
- * persistent session store. For now JSON-only responses are sufficient
- * for Claude.ai's "Custom Connectors" beta and for curl smoke tests.
+ * persistent session store. The JSON-only path is for source-build smoke
+ * tests and must not be presented as a public remote MCP connector.
  */
 export function createMcpHttpHandler(opts: HttpHandlerOptions = {}) {
   return async function handler(request: Request): Promise<Response> {
@@ -52,9 +51,13 @@ export function createMcpHttpHandler(opts: HttpHandlerOptions = {}) {
 
     const auth = resolveHttpAuth({ headers: request.headers }, env);
     if (!auth.accessToken) {
-      return jsonRpcError(null, -32001, 'Missing or invalid Authorization header. ' +
-        'Send `Authorization: Bearer <token>` (OAuth 2.1 access token or TaskNebula API key).',
-        401);
+      return jsonRpcError(
+        null,
+        -32001,
+        'Missing or invalid Authorization header. ' +
+          'Send `Authorization: Bearer sk_live_...` with a TaskNebula API key.',
+        401
+      );
     }
     const client = new TaskNebulaClient(clientOptionsFromHttp(auth));
 
@@ -74,7 +77,7 @@ export function createMcpHttpHandler(opts: HttpHandlerOptions = {}) {
       switch (method) {
         case 'initialize':
           return jsonRpcResult(id, {
-            protocolVersion: '2025-03-26',
+            protocolVersion: negotiateProtocolVersion(params),
             serverInfo: { name: '@tasknebula/mcp-server', version: '0.1.0' },
             capabilities: { tools: {}, resources: {}, prompts: {} },
           });
@@ -95,7 +98,12 @@ export function createMcpHttpHandler(opts: HttpHandlerOptions = {}) {
           // `tool.handler` parses internally (see `toAnyTool`).
           const result = await tool.handler(p.arguments ?? {}, { client });
           return jsonRpcResult(id, {
-            content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result, null, 2) }],
+            content: [
+              {
+                type: 'text',
+                text: typeof result === 'string' ? result : JSON.stringify(result, null, 2),
+              },
+            ],
           });
         }
         case 'resources/list':
@@ -111,12 +119,14 @@ export function createMcpHttpHandler(opts: HttpHandlerOptions = {}) {
           const p = params as { uri?: string };
           if (!p?.uri) return jsonRpcError(id, -32602, 'Missing uri');
           const tmpl = resourceTemplates.find((t) =>
-            p.uri!.startsWith(t.uriTemplate.split('{')[0]!),
+            p.uri!.startsWith(t.uriTemplate.split('{')[0]!)
           );
           if (!tmpl) return jsonRpcError(id, -32601, `No resource template for ${p.uri}`);
           const data = await tmpl.read(p.uri, { client });
           return jsonRpcResult(id, {
-            contents: [{ uri: p.uri, mimeType: tmpl.mimeType, text: JSON.stringify(data, null, 2) }],
+            contents: [
+              { uri: p.uri, mimeType: tmpl.mimeType, text: JSON.stringify(data, null, 2) },
+            ],
           });
         }
         case 'prompts/list':
@@ -159,7 +169,7 @@ function discoveryResponse(): Response {
     JSON.stringify({
       server: { name: '@tasknebula/mcp-server', version: '0.1.0' },
       transport: 'http+jsonrpc',
-      protocolVersion: '2025-03-26',
+      protocolVersion: LATEST_PROTOCOL_VERSION,
       // OAuth 2.1 discovery stub — point clients at the Next.js OAuth
       // routes once they're implemented (see TODO in src/auth.ts).
       authorization: {
@@ -169,10 +179,25 @@ function discoveryResponse(): Response {
         registrationEndpoint: '/api/oauth/register',
         scopesSupported: ['issues:read', 'issues:write', 'comments:write'],
         status: 'stub',
+        apiKey: {
+          format: 'sk_live_*',
+          transport: 'Authorization: Bearer <key>',
+          status: 'supported',
+        },
       },
     }),
-    { headers: { 'Content-Type': 'application/json' } },
+    { headers: { 'Content-Type': 'application/json' } }
   );
+}
+
+function negotiateProtocolVersion(params: unknown): string {
+  const requested =
+    params && typeof params === 'object' && 'protocolVersion' in params
+      ? (params as { protocolVersion?: unknown }).protocolVersion
+      : undefined;
+  return typeof requested === 'string' && SUPPORTED_PROTOCOL_VERSIONS.includes(requested)
+    ? requested
+    : LATEST_PROTOCOL_VERSION;
 }
 
 function jsonRpcResult(id: unknown, result: unknown): Response {
@@ -188,7 +213,9 @@ function jsonRpcError(id: unknown, code: number, message: string, httpStatus = 2
   });
 }
 
-function isJsonRpc(x: unknown): x is { jsonrpc: '2.0'; id?: unknown; method: string; params?: unknown } {
+function isJsonRpc(
+  x: unknown
+): x is { jsonrpc: '2.0'; id?: unknown; method: string; params?: unknown } {
   return (
     typeof x === 'object' &&
     x !== null &&
@@ -211,7 +238,11 @@ function zodToJsonSchemaSafe(schema: unknown): Record<string, unknown> {
       const properties: Record<string, unknown> = {};
       const required: string[] = [];
       for (const [key, field] of Object.entries(obj.shape)) {
-        const f = field as { _def?: { typeName?: string; description?: string; defaultValue?: () => unknown }; isOptional?: () => boolean; description?: string };
+        const f = field as {
+          _def?: { typeName?: string; description?: string; defaultValue?: () => unknown };
+          isOptional?: () => boolean;
+          description?: string;
+        };
         const typeName = f._def?.typeName ?? 'ZodAny';
         const jsType = mapZodType(typeName);
         properties[key] = { type: jsType, description: f.description ?? f._def?.description };

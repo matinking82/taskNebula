@@ -21,16 +21,21 @@ interface FakeState {
   inserted: Row[];
   updated: Array<{ table: string; set: Row }>;
   rows: Record<string, Row[]>;
+  userQueryRows: Row[][];
+  joins: Array<{ from: string; joined: string }>;
 }
 
 const fake: FakeState = {
   inserted: [],
   updated: [],
+  userQueryRows: [],
+  joins: [],
   rows: {
     agent_sessions: [],
     agent_providers: [],
     issues: [],
     users: [],
+    organization_members: [],
     workflows: [],
     workflow_statuses: [],
     agent_session_webhook_deliveries: [],
@@ -42,8 +47,15 @@ jest.mock('@tasknebula/db', () => {
   const table = (name: string) => ({ __name: name });
 
   function selectRows(t: { __name: string }) {
-    const rows = fake.rows[t.__name] ?? [];
+    const rows =
+      t.__name === 'users' && fake.userQueryRows.length > 0
+        ? (fake.userQueryRows.shift() ?? [])
+        : (fake.rows[t.__name] ?? []);
     const chain = {
+      innerJoin: (joined: { __name: string }, _condition: unknown) => {
+        fake.joins.push({ from: t.__name, joined: joined.__name });
+        return chain;
+      },
       where: (_c: unknown) => chain,
       orderBy: (..._args: unknown[]) => chain,
       limit: (count: number) => {
@@ -160,6 +172,7 @@ jest.mock('@tasknebula/db', () => {
     agentSessionWebhookDeliveries: table('agent_session_webhook_deliveries'),
     workflows: table('workflows'),
     workflowStatuses: table('workflow_statuses'),
+    organizationMembers: table('organization_members'),
     users: table('users'),
   };
 });
@@ -192,6 +205,8 @@ function seed(
 ) {
   fake.inserted = [];
   fake.updated = [];
+  fake.userQueryRows = [];
+  fake.joins = [];
   fake.rows.agent_sessions = [
     {
       id: 'sess_1',
@@ -308,6 +323,40 @@ describe('POST /api/webhooks/agent-session/[provider]', () => {
     // Comment posted on the linked issue.
     const comment = fake.inserted.find((i) => i.table === 'issue_comments');
     expect(comment?.content).toBe('Cursor started: Cloning repo');
+    expect(comment?.createdBy).toBe('user_caller');
+  });
+
+  it('never attributes a comment to an agent from another organization', async () => {
+    seed({ sessionState: 'pending', signedSecret: 'top-secret' });
+    fake.rows.agent_sessions[0]!.payload = { dispatchedBy: 'user_dispatcher' };
+    fake.rows.users = [{ id: 'agent_other_org', isAgent: true, agentProvider: 'cursor' }];
+    fake.rows.organization_members = [
+      { userId: 'agent_other_org', organizationId: 'org_other', status: 'active' },
+      { userId: 'user_dispatcher', organizationId: 'org_1', status: 'active' },
+    ];
+    // The first tenant-scoped join finds no matching virtual agent. The
+    // second validates dispatchedBy as an active member of this organization.
+    fake.userQueryRows = [[], [{ id: 'user_dispatcher' }]];
+    const body = { state: 'active', sessionId: 'sess_1', message: 'Working' };
+    const raw = JSON.stringify(body);
+    const sig = signAgentPayload(raw, 'top-secret');
+
+    const response = await receiveHandler(
+      reqWith(body, {
+        'x-tasknebula-session-id': 'sess_1',
+        'x-tasknebula-signature': `sha256=${sig}`,
+      }) as never,
+      { params: Promise.resolve({ provider: 'cursor' }) }
+    );
+
+    expect(response.status).toBe(200);
+    expect(fake.inserted.find((row) => row.table === 'issue_comments')?.createdBy).toBe(
+      'user_dispatcher'
+    );
+    expect(fake.joins).toEqual([
+      { from: 'users', joined: 'organization_members' },
+      { from: 'users', joined: 'organization_members' },
+    ]);
   });
 
   it('concurrently deduplicates an identical same-state delivery before side effects', async () => {
@@ -384,6 +433,32 @@ describe('POST /api/webhooks/agent-session/[provider]', () => {
     await expect(response.json()).resolves.toMatchObject({ dropped: true, duplicate: true });
     expect(fake.inserted.find((row) => row.table === 'issue_comments')).toBeUndefined();
     expect(fake.updated.find((row) => row.table === 'agent_sessions')).toBeUndefined();
+  });
+
+  it('completes the session but explicitly skips an unattributed workflow transition', async () => {
+    seed({ sessionState: 'active', signedSecret: 'top-secret' });
+    const body = { state: 'complete', sessionId: 'sess_1', message: 'Finished' };
+    const raw = JSON.stringify(body);
+    const sig = signAgentPayload(raw, 'top-secret');
+
+    const response = await receiveHandler(
+      reqWith(body, {
+        'x-tasknebula-session-id': 'sess_1',
+        'x-tasknebula-signature': `sha256=${sig}`,
+      }) as never,
+      { params: Promise.resolve({ provider: 'cursor' }) }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      state: 'complete',
+      transitionSkipped: 'workflow_transition_actor_forbidden',
+    });
+    expect(fake.rows.issues[0]?.statusId).toBeUndefined();
+    expect(
+      fake.updated.find((row) => row.table === 'agent_session_webhook_deliveries')?.set
+    ).toMatchObject({ lastError: 'workflow_transition_actor_forbidden' });
   });
 
   it('drops an invalid transition (complete -> active) with 200 and no mutation', async () => {

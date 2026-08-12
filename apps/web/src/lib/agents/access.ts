@@ -5,6 +5,34 @@ function toBool(value: string | null | undefined) {
   return value === 'true';
 }
 
+export function resolveProjectAgentAccess(input: {
+  isSuperAdmin: boolean;
+  orgRole: 'owner' | 'admin' | 'member' | 'viewer' | 'guest' | null;
+  projectMembership: {
+    role: string;
+    canBrowseProject: string;
+    canAdministerProject: string;
+    canManageSprints: string;
+    canManageWorkflow: string;
+  } | null;
+}) {
+  if (input.isSuperAdmin) return { canView: true, canManage: true };
+  // A project-membership row is never an independent tenant grant. It becomes
+  // effective only while the user retains active organization membership.
+  if (!input.orgRole) return { canView: false, canManage: false };
+  if (input.orgRole === 'owner' || input.orgRole === 'admin') {
+    return { canView: true, canManage: true };
+  }
+  if (!input.projectMembership) return { canView: false, canManage: false };
+  return {
+    canView: toBool(input.projectMembership.canBrowseProject),
+    canManage:
+      toBool(input.projectMembership.canAdministerProject) ||
+      toBool(input.projectMembership.canManageSprints) ||
+      toBool(input.projectMembership.canManageWorkflow),
+  };
+}
+
 export async function getOrgAgentAccess(userId: string, organizationId: string) {
   const [[user], [membership]] = await Promise.all([
     db
@@ -106,21 +134,11 @@ export async function getProjectAgentAccess(userId: string, projectId: string) {
 
   const orgRole = orgMembership?.role ?? null;
   const projectRole = projectMembership?.role ?? null;
-  const canView = Boolean(
-    orgRole === 'owner' ||
-      orgRole === 'admin' ||
-      (projectMembership && toBool(projectMembership.canBrowseProject)) ||
-      projectMembership
-  );
-
-  const canManage = Boolean(
-    orgRole === 'owner' ||
-      orgRole === 'admin' ||
-      (projectMembership && toBool(projectMembership.canAdministerProject)) ||
-      (projectMembership && toBool(projectMembership.canManageSprints)) ||
-      (projectMembership && toBool(projectMembership.canManageWorkflow)) ||
-      ['product_owner', 'scrum_master', 'tech_lead'].includes(projectRole || '')
-  );
+  const { canView, canManage } = resolveProjectAgentAccess({
+    isSuperAdmin: false,
+    orgRole,
+    projectMembership: projectMembership ?? null,
+  });
 
   return {
     canView,

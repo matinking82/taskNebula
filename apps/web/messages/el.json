@@ -1075,7 +1075,7 @@
     "toast_refresh_failed_title": "Δεν ήταν δυνατή η ανανέωση της κατάστασης",
     "registration_invite_required": "Η εγγραφή γίνεται μόνο με πρόσκληση. Ζητήστε πρόσκληση από έναν διαχειριστή.",
     "registration_admin_only": "Η εγγραφή είναι κλειστή. Ζητήστε από έναν διαχειριστή να δημιουργήσει τον λογαριασμό σας.",
-    "project_invite_invalid": "This project invite link is expired, revoked, or has no remaining uses."
+    "project_invite_invalid": "Αυτός ο σύνδεσμος πρόσκλησης έργου έχει λήξει, έχει ανακληθεί ή δεν έχει άλλες διαθέσιμες χρήσεις."
   },
   "issuesViews": {
     "loading": "Φόρτωση…",
@@ -2434,7 +2434,10 @@
       "no_runs": "Δεν υπάρχουν ακόμη εκτελέσεις πρακτόρων. Ξεκινήστε με μια σάρωση υγείας έργου ή προεπισκόπηση προγραμματισμού sprint.",
       "writes_count": "{count} εγγραφές",
       "no_summary": "Δεν καταγράφηκε σύνοψη.",
-      "run_live": "Ζωντανή εκτέλεση"
+      "run_live": "Ζωντανή εκτέλεση",
+      "run_queued": "Η εκτέλεση πράκτορα μπήκε στην ουρά",
+      "cancel_run": "Ακύρωση εκτέλεσης",
+      "resume_run": "Συνέχιση εκτέλεσης"
     },
     "agentGovernance": {
       "title": "AGENTOWNERS governance",
@@ -2552,7 +2555,9 @@
         "running": "Εκτελείται",
         "completed": "Ολοκληρώθηκε",
         "failed": "Απέτυχε",
-        "unknown": "{status}"
+        "unknown": "{status}",
+        "pending": "Σε αναμονή",
+        "cancelled": "Ακυρώθηκε"
       },
       "capabilities": {
         "project_tracking": {
@@ -5057,13 +5062,13 @@
     "landing": {
       "nav": {
         "primaryAria": "Primary",
-        "homeAria": "TaskNebula home",
-        "githubAria": "TaskNebula on GitHub",
+        "homeAria": "Αρχική σελίδα TaskNebula",
+        "githubAria": "Το TaskNebula στο GitHub",
         "github": "GitHub",
         "signIn": "Sign in",
         "startFree": "Start free",
-        "openMenuAria": "Open navigation menu",
-        "closeMenuAria": "Close navigation menu",
+        "openMenuAria": "Άνοιγμα μενού πλοήγησης",
+        "closeMenuAria": "Κλείσιμο μενού πλοήγησης",
         "items": {
           "features": "Features",
           "selfHost": "Self-host",
@@ -5091,7 +5096,7 @@
       "copy": {
         "copied": "Copied",
         "copyCommand": "Copy command",
-        "copiedToClipboard": "Copied to clipboard"
+        "copiedToClipboard": "Αντιγράφηκε στο πρόχειρο"
       },
       "footer": {
         "tagline": "Open-source project tracking for teams and agents",
@@ -5134,13 +5139,13 @@
         "meta": "No credit card. No telemetry by default. Export with a <code>pg_dump</code> whenever you leave."
       },
       "proof": {
-        "aria": "Open-source credibility",
-        "headline": "Open source, self-hosted, your data stays yours.",
-        "subline": "No logo wall — just receipts you can check.",
+        "aria": "Αξιοπιστία ανοιχτού κώδικα",
+        "headline": "Ανοιχτός κώδικας, αυτοφιλοξενία, τα δεδομένα σας παραμένουν δικά σας.",
+        "subline": "Χωρίς τοίχο λογοτύπων — μόνο αποδείξεις που μπορείτε να ελέγξετε.",
         "items": {
-          "sourceGithub": "Source on GitHub",
+          "sourceGithub": "Πηγαίος κώδικας στο GitHub",
           "mitLicensed": "MIT licensed",
-          "dockerImage": "Image on Docker Hub",
+          "dockerImage": "Εικόνα στο Docker Hub",
           "openapiSpec": "OpenAPI spec",
           "mcpServer": "MCP server"
         }
@@ -5151,8 +5156,7 @@
         "description": "Μία εντολή εκκινεί μια μικρή στοίβα Compose. Τα βασικά δεδομένα μένουν στο Postgres, η εξαγωγή απέχει ένα pg_dump και από προεπιλογή τίποτα δεν στέλνει δεδομένα προς τα έξω — χωρίς δέσμευση σε προμηθευτή.",
         "cards": {
           "postgres": {
-            "title": "One Postgres, one web image",
-            "body": "Postgres 16 with the pgvector extension powers search; Redis 7 is along for the ride. No Mongo, no Elastic, no sidecar zoo."
+            "title": "One Postgres, one web image"
           },
           "migrations": {
             "title": "Migrations run on boot",
@@ -5172,46 +5176,18 @@
         "quickstartAria": "Self-host quickstart commands",
         "terminalNote": "The web image waits for Postgres, runs migrations, then serves on <code>http://localhost:3000</code> — open it and finish the first-run admin wizard. Image: <imageLink>neuraparse/tasknebula</imageLink>."
       },
-      "migrate": {
-        "kicker": "Migrate",
-        "title": "Move from Jira or Linear in an afternoon",
-        "description": "Switching tools shouldn't mean losing your history or your process. Import what you have, map it to TaskNebula, and keep working the way your team already does.",
-        "steps": {
-          "issues": {
-            "title": "Bring your issues over",
-            "body": "Import issues from Jira and Linear with their descriptions, comments, and history intact — not flattened into a CSV dump."
-          },
-          "labels": {
-            "title": "Labels and sprints come too",
-            "body": "Labels, components, and active sprints land as first-class records, so your boards and backlog look familiar on day one."
-          },
-          "fields": {
-            "title": "Map fields, not just names",
-            "body": "Match statuses, priorities, and custom fields to TaskNebula equivalents during import — review the mapping before anything writes."
-          },
-          "workflow": {
-            "title": "Keep your workflow",
-            "body": "Your statuses, swimlanes, and conventions move with you. Switch tools without retraining the team or rebuilding process from scratch."
-          }
-        },
-        "note": "Imports run against your own database and are fully reversible — nothing leaves your server, and you can re-run a mapping until it looks right."
-      },
       "aiMcp": {
         "kicker": "AI-native",
         "title": "Agents work the backlog with you.",
-        "description": "TaskNebula was built for the agent era. Ask questions across your whole workspace, let AI triage and estimate new work, and give external agents real tools through a first-class MCP server.",
         "capabilities": {
           "ask": {
-            "title": "Ask your workspace",
-            "body": "The /api/ask RAG endpoint answers in natural language over your issues, docs, and comments — grounded in pgvector retrieval, with citations back to the source."
+            "title": "Ask your workspace"
           },
           "triage": {
-            "title": "AI triage & estimates",
-            "body": "Suggested priority, labels, and effort land on new issues — backed by real OpenAI and Anthropic calls, a cost guard, and tracing. You stay in control: accept or dismiss."
+            "title": "AI triage & estimates"
           },
           "mcp": {
-            "title": "MCP tools for agents",
-            "body": "@tasknebula/mcp-server exposes the backlog over MCP — HTTP at /api/mcp or stdio — so external agents create, search, and move issues with revocable keys."
+            "title": "MCP tools for agents"
           }
         },
         "mock": {
@@ -5247,8 +5223,7 @@
             "body": "Pull from the backlog into a sprint, set fix versions and components, and read scope at a glance. Planning lives next to the work, not in a separate doc."
           },
           "build": {
-            "title": "Build alongside agents",
-            "body": "Agents are first-class teammates over MCP — they pick up issues, comment, and open work the same way people do, with every action on the shared timeline."
+            "title": "Build alongside agents"
           },
           "ship": {
             "title": "Ship and track the outcome",
@@ -5310,28 +5285,23 @@
             "answer": "Η αυτοφιλοξενία είναι η προεπιλεγμένη διαδρομή. Με Docker εκκινείτε μια μικρή στοίβα Compose με Postgres 16 και pgvector, Redis 7, το web image neuraparse/tasknebula και τις ενσωματωμένες ή προαιρετικές υπηρεσίες που ενεργοποιείτε. Οι migrations εκτελούνται στην εκκίνηση, το GET /api/health είναι το endpoint ελέγχου και το quickstart ανοίγει στο localhost:3000."
           },
           "aiKeys": {
-            "question": "Do I need the AI features? Can I bring my own keys?",
-            "answer": "AI is optional — every board, sprint, and doc works with no model keys configured. When you want it, you bring your own OpenAI or Anthropic key as environment variables, so spend and data residency stay yours. There is a cost guard so a runaway prompt cannot run up your bill."
+            "question": "Do I need the AI features? Can I bring my own keys?"
           },
           "aiReality": {
-            "question": "How real are the AI features today?",
-            "answer": "We build them in the open. The data model and endpoints — triage suggestions, pgvector semantic search, and the /api/ask RAG endpoint — are live, and they make real OpenAI and Anthropic calls. Some surfaces are still labeled preview while we harden them; we would rather say that here than have you discover it after install."
+            "question": "How real are the AI features today?"
           },
           "mcpServer": {
-            "question": "What is the MCP server?",
-            "answer": "An MCP (Model Context Protocol) server exposes TaskNebula as tools — create, search, move, and comment on issues — so agents like Claude Code and Cursor can drive your tracker. It ships with the repo, HTTP at /api/mcp or stdio via @tasknebula/mcp-server, and is MIT licensed. Heads up: end-to-end agent auth depends on the REST API accepting API keys, which is still being wired, so treat it as preview today."
+            "question": "What is the MCP server?"
           },
           "imports": {
-            "question": "Does it import from Jira or Linear?",
-            "answer": "Yes — there are importers for Jira, Linear, GitHub, and CSV. Each runs with a preview step so you can inspect the field mapping before anything is written, and you can keep your old tool read-only while you cut over."
+            "question": "Does it import from Jira or Linear?"
           },
           "productionReady": {
             "question": "Is it production-ready?",
             "answer": "Ο βασικός tracker — ζητήματα, πίνακες, sprint, έγγραφα, αναζήτηση, REST API και προδιαγραφή OpenAPI — μπορεί να αυτοφιλοξενηθεί. Η σύνδεση OAuth χρειάζεται ακόμη database adapter, οπότε προς το παρόν χρησιμοποιήστε σύνδεση με διαπιστευτήρια. Η συνεργασία σε πραγματικό χρόνο έχει συνδεθεί μέσω Docker/Compose, αλλά η εγκατάστασή σας χρειάζεται προσβάσιμο URL και ζωντανό smoke test. Τα AI και MCP παραμένουν σε preview. Παρακολουθούμε τα κενά στο docs/STATUS.md."
           },
           "dataVisibility": {
-            "question": "Who can see my data?",
-            "answer": "You decide. Self-hosted, everything lives in your Postgres on your infrastructure and exports with a plain pg_dump — no telemetry phones home. Inside the product, workspaces are isolated per organization with role-based access, permission schemes, and audit logs."
+            "question": "Who can see my data?"
           }
         }
       },
@@ -5345,28 +5315,18 @@
             "body": "Drive the whole board from one Cmd+K palette — search, navigate, and run actions without leaving the keys. Drag across columns, plan sprints, and read burndown in the same view."
           },
           "import": {
-            "title": "Import from Jira and Linear",
-            "body": "Bring your backlog with you — Jira, Linear, and CSV importers map issues, statuses, and metadata so you start full, not empty."
+            "title": "Import from Jira and Linear"
           },
-          "structure": {
-            "title": "Jira-parity structure",
-            "body": "First-class labels, components, fix versions, and a resolution model — backlog structure stored in real tables and REST APIs, not JSON strings."
-          },
-          "ai": {
-            "title": "AI-native, auditable",
-            "body": "Real OpenAI and Anthropic calls behind a cost guard and tracing — triage suggestions, AI estimates, and a /api/ask RAG endpoint over pgvector. No black boxes."
-          },
+          "structure": {},
+          "ai": {},
           "agents": {
-            "title": "Agents work the backlog",
-            "body": "A real MCP server — HTTP at /api/mcp or stdio — lets coding agents create, search, and move issues. Backed by a REST API, OpenAPI spec, revocable keys, and webhooks."
+            "title": "Agents work the backlog"
           },
           "realtime": {
-            "title": "Realtime collaboration",
-            "body": "Specs and issue docs edit live — Tiptap on Yjs with presence and conflict-free merges, so two people on one doc just works."
+            "title": "Realtime collaboration"
           },
           "selfHost": {
-            "title": "Self-host in minutes",
-            "body": "One Docker image, Postgres, and you own the data. Multi-tenant from the schema up — every table is organization-scoped, no vendor lock-in."
+            "title": "Self-host in minutes"
           },
           "analytics": {
             "title": "Analytics close to execution",
@@ -5683,11 +5643,22 @@
       "meta": {
         "title": "TaskNebula — Open-source, AI-native Jira & Linear alternative",
         "description": "Keyboard-first boards, sprints, and docs with an MCP server so AI agents work the backlog with you. MIT licensed — self-host with one Docker Compose file.",
-        "skipToContent": "Skip to content"
+        "skipToContent": "Μετάβαση στο περιεχόμενο"
+      },
+      "productTruth": {
+        "aiSummary": "Οι λειτουργίες AI και agent είναι προαιρετικές, εξαρτώνται από τη ρύθμιση και ορισμένες παραμένουν σε προεπισκόπηση.",
+        "ask": "Το Ask αναζητά σήμερα σε ζητήματα και έγγραφα. Η σημασιολογική ανάκτηση απαιτεί πάροχο embeddings ασφαλή για τον οργανισμό.",
+        "ai": "Οι προτάσεις AI είναι λειτουργίες προεπισκόπησης και εξαρτώνται από ρυθμισμένα διαπιστευτήρια παρόχου. Ελέγξτε κάθε πρόταση πριν την εφαρμόσετε.",
+        "mcp": "Προεπισκόπηση: το πακέτο MCP που δημιουργείται από τον πηγαίο κώδικα υποστηρίζει 11 εργαλεία με κλειδιά API δεσμευμένα στον οργανισμό. Το OAuth, ο έλεγχος ανά κλήση και η δημόσια διάθεση πακέτου δεν έχουν ολοκληρωθεί.",
+        "aiKeys": "Το AI είναι προαιρετικό. Χρησιμοποιήστε δικά σας κλειδιά παρόχου· οι έλεγχοι προϋπολογισμού μειώνουν τον κίνδυνο, αλλά δεν εγγυώνται ανώτατο όριο δαπανών.",
+        "data": "Τα δεδομένα της αυτοφιλοξενούμενης εφαρμογής χρησιμοποιούν το δικό σας Postgres. Υπάρχουν έλεγχοι πρόσβασης, αλλά η κάλυψή τους χρειάζεται ακόμη έλεγχο· οι προαιρετικές ενσωματώσεις στέλνουν δεδομένα μόνο όταν τις ρυθμίσετε.",
+        "structureTitle": "Δομημένα πεδία backlog",
+        "structure": "Οι ετικέτες, τα components, οι εκδόσεις διόρθωσης και οι επιλύσεις έχουν μοντέλα πρώτης κατηγορίας στη βάση και στο API. Η επιβολή ακόμη διαφέρει ανά route.",
+        "realtime": "Η συνεργασία Yjs είναι διαθέσιμη όταν έχουν ρυθμιστεί και ελεγχθεί το Hocuspocus, το δημόσιο URL του και τα αντίστοιχα μυστικά."
       }
     },
     "intake": {
-      "submitMetaTitle": "Submit · TaskNebula"
+      "submitMetaTitle": "Υποβολή · TaskNebula"
     },
     "stepStart": "Αρχή",
     "setupImportRedirecting": "Ανακατεύθυνση για να συνδεθείτε, λοιπόν{source}εισαγωγή…",
@@ -6660,7 +6631,7 @@
     "disclosureBadge": "Πληροφορίες διαφάνειας AI",
     "title": "Κάρτες Μοντέλων AI",
     "intro": "Αυτή η σελίδα περιγράφει τις τεκμηριωμένες δυνατότητες AI και τις προεπιλεγμένες ρυθμίσεις παραμέτρων του TaskNebula. Τα πραγματικά μοντέλα, ο χειρισμός δεδομένων, η διατήρηση και τα στοιχεία ελέγχου μπορεί να διαφέρουν ανάλογα με τον χώρο εργασίας και την ανάπτυξη. επιβεβαιώστε τις ενεργές ρυθμίσεις με τον διαχειριστή σας. Έκδοση ειδοποίησης διαφάνειας <version></version>.",
-    "lastReviewed": "Τελευταία αξιολόγηση 12-08-2026. Το άρθρο 50 του Κανονισμού (ΕΕ) 2024/1689 εφαρμόζεται από τις 2026-08-02.",
+    "lastReviewed": "Τελευταία αξιολόγηση 12-08-2026.",
     "onThisPage": "Σε αυτή τη σελίδα",
     "model": "Μοντέλο",
     "provider": "Πάροχος",
@@ -7036,5 +7007,28 @@
       "fetchOrganizations": "Failed to fetch organizations",
       "fetchEpics": "Failed to fetch epics"
     }
+  },
+  "slackCommands": {
+    "userUnmapped": "Δεν ήταν δυνατή η σύνδεση του λογαριασμού σας στο Slack με χρήστη του TaskNebula. Ζητήστε από έναν διαχειριστή να αντιστοιχίσει τα προφίλ Slack με λογαριασμούς TaskNebula.",
+    "statusUsage": "Χρήση: `/tn status TN-123 done`",
+    "statusUnavailable": "Αυτή η αλλαγή κατάστασης δεν είναι διαθέσιμη. Δείτε το `/tn help` για τις υποστηριζόμενες καταστάσεις.",
+    "notInstalled": "Το TaskNebula δεν έχει εγκατασταθεί ακόμη σε αυτόν τον χώρο εργασίας Slack. Ζητήστε από έναν διαχειριστή να το συνδέσει στις Ρυθμίσεις → Ενσωματώσεις.",
+    "help": "*Εντολές TaskNebula*\n`/tn new τίτλος` — ανοίγει το παράθυρο νέου ζητήματος με τον τίτλο σας\n`/tn list` — εμφανίζει τα ανοικτά ζητήματα που σας έχουν ανατεθεί\n`/tn search ερώτημα` — εμφανίζει τα 5 καλύτερα προσβάσιμα αποτελέσματα\n`/tn assign TN-123 @χρήστης` — αναθέτει ξανά ένα ζήτημα\n`/tn status TN-123 done` — αλλάζει την κατάσταση ενός ζητήματος (backlog | in_progress | in_review | done | blocked)",
+    "unknownCommand": "Άγνωστη εντολή.",
+    "noOpenAssigned": "Δεν έχετε ανοικτά ζητήματα που σας έχουν ανατεθεί.",
+    "openIssuesHeader": "Τα ανοικτά ζητήματά σας:",
+    "noStatus": "χωρίς κατάσταση",
+    "searchUsage": "Χρήση: `/tn search ερώτημα`",
+    "searchNoMatches": "Δεν βρέθηκαν ζητήματα για το `{query}`.",
+    "searchTopMatches": "Καλύτερα αποτελέσματα για `{query}`: {count}",
+    "searchSummary": "Αποτελέσματα για {query}: {count}",
+    "assignUsage": "Χρήση: `/tn assign TN-123 @χρήστης`",
+    "invalidUserMention": "Το `{mention}` δεν μοιάζει με αναφορά χρήστη του Slack.",
+    "issueNotFound": "Το ζήτημα `{issueKey}` δεν βρέθηκε σε αυτόν τον χώρο εργασίας.",
+    "assigneeUnmapped": "Αυτός ο χρήστης Slack δεν μπόρεσε να συνδεθεί με λογαριασμό TaskNebula. Ζητήστε από έναν διαχειριστή να προσθέσει την αντιστοίχιση στις Ρυθμίσεις → Ενσωματώσεις.",
+    "assignmentSuccess": "Το *{issueKey}* ανατέθηκε ξανά στον <@{slackUserId}> (ζητήθηκε από <@{requestedBy}>).",
+    "statusSuccess": "Το *{issueKey}* μετακινήθηκε στην κατάσταση *{statusName}* (ζητήθηκε από <@{requestedBy}>).",
+    "newUsage": "Χρήση: `/tn new τίτλος` — ανοίγει το παράθυρο νέου ζητήματος.",
+    "newOpening": "Άνοιγμα παραθύρου νέου ζητήματος για: _{title}_"
   }
 }

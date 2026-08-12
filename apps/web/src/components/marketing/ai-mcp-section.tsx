@@ -6,6 +6,7 @@ const capabilities = ['ask', 'triage', 'mcp'] as const;
 
 export function AiMcpSection() {
   const t = useTranslations('publicPages.landing.aiMcp');
+  const truth = useTranslations('publicPages.landing.productTruth');
 
   return (
     <section id="ai-mcp" className="border-t border-[var(--landing-border)]">
@@ -16,7 +17,7 @@ export function AiMcpSection() {
               kicker={t('kicker')}
               kickerAccentVar="var(--landing-accent-violet)"
               title={t('title')}
-              description={t('description')}
+              description={truth('aiSummary')}
               compact
             />
 
@@ -37,7 +38,7 @@ export function AiMcpSection() {
                       {t(`capabilities.${key}.title`)}
                     </h3>
                     <p className="landing-body mt-1.5 text-[13px] leading-6 text-[var(--landing-text-subtle)]">
-                      {t(`capabilities.${key}.body`)}
+                      {truth(key === 'triage' ? 'ai' : key)}
                     </p>
                   </div>
                 </li>

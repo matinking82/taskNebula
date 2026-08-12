@@ -52,6 +52,7 @@ import {
   type AgentProviderKind,
   type AgentSessionRequest,
 } from '@/lib/agents/sessions';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 import {
   isLocalAgentEndpoint,
   resolveLocalAgentRunner,
@@ -119,7 +120,7 @@ async function userCanAssign(userId: string, projectId: string): Promise<boolean
   if (!pm) return false;
   const role = pm.role as ProjectRole;
   const defaults = ROLE_DEFAULT_PERMISSIONS[role] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  return pm.canAssignIssues === 'true' || defaults.canAssignIssues;
+  return resolveProjectMemberPermission(pm.canAssignIssues, defaults.canAssignIssues);
 }
 
 export async function POST(

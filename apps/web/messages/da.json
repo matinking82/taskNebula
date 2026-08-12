@@ -1075,7 +1075,7 @@
     "toast_refresh_failed_title": "Kunne ikke opdatere status",
     "registration_invite_required": "Registrering er kun med invitation. Bed en administrator om en invitation.",
     "registration_admin_only": "Registrering er lukket. Bed en administrator om at oprette din konto.",
-    "project_invite_invalid": "This project invite link is expired, revoked, or has no remaining uses."
+    "project_invite_invalid": "Dette projektinvitationslink er udløbet, tilbagekaldt eller har ingen resterende anvendelser."
   },
   "issuesViews": {
     "loading": "Indlæser …",
@@ -2434,7 +2434,10 @@
       "no_runs": "Ingen agentkørsler endnu. Start med en projekttilstandsscanning eller en forhåndsvisning af sprintplanlægning.",
       "writes_count": "{count} skrivninger",
       "no_summary": "Intet resumé registreret.",
-      "run_live": "Kør live"
+      "run_live": "Kør live",
+      "run_queued": "Agentkørsel sat i kø",
+      "cancel_run": "Annuller kørsel",
+      "resume_run": "Genoptag kørsel"
     },
     "agentGovernance": {
       "title": "AGENTOWNERS governance",
@@ -2552,7 +2555,9 @@
         "running": "Kører",
         "completed": "Fuldført",
         "failed": "Mislykkedes",
-        "unknown": "{status}"
+        "unknown": "{status}",
+        "pending": "Afventer",
+        "cancelled": "Annulleret"
       },
       "capabilities": {
         "project_tracking": {
@@ -5028,7 +5033,7 @@
     "shareUpdated": "Opdateret {date}",
     "sharePublishedFiles": "Udgivne filer",
     "sharePublicViewNotice": "Denne offentlige visning skjuler metadata for arbejdsområdet og ikke-udgivne filer.",
-    "trustMetaTitle": "Trust Center · TaskNebula",
+    "trustMetaTitle": "Tillidscenter · TaskNebula",
     "trustMetaDescription": "Sikkerhedsprogram, underdatabehandlere, compliance-status og nylige driftshændelser for TaskNebula.",
     "trustEyebrow": "Trust Center",
     "trustLastReviewed": "Sidst gennemgået: {date}",
@@ -5151,8 +5156,7 @@
         "description": "Én kommando starter en lille Compose-stack. Kernedata ligger i Postgres, eksport er kun en pg_dump væk, og som standard sendes intet hjem — uden leverandørlåsning.",
         "cards": {
           "postgres": {
-            "title": "One Postgres, one web image",
-            "body": "Postgres 16 with the pgvector extension powers search; Redis 7 is along for the ride. No Mongo, no Elastic, no sidecar zoo."
+            "title": "One Postgres, one web image"
           },
           "migrations": {
             "title": "Migrations run on boot",
@@ -5172,46 +5176,18 @@
         "quickstartAria": "Self-host quickstart commands",
         "terminalNote": "The web image waits for Postgres, runs migrations, then serves on <code>http://localhost:3000</code> — open it and finish the first-run admin wizard. Image: <imageLink>neuraparse/tasknebula</imageLink>."
       },
-      "migrate": {
-        "kicker": "Migrate",
-        "title": "Move from Jira or Linear in an afternoon",
-        "description": "Switching tools shouldn't mean losing your history or your process. Import what you have, map it to TaskNebula, and keep working the way your team already does.",
-        "steps": {
-          "issues": {
-            "title": "Bring your issues over",
-            "body": "Import issues from Jira and Linear with their descriptions, comments, and history intact — not flattened into a CSV dump."
-          },
-          "labels": {
-            "title": "Labels and sprints come too",
-            "body": "Labels, components, and active sprints land as first-class records, so your boards and backlog look familiar on day one."
-          },
-          "fields": {
-            "title": "Map fields, not just names",
-            "body": "Match statuses, priorities, and custom fields to TaskNebula equivalents during import — review the mapping before anything writes."
-          },
-          "workflow": {
-            "title": "Keep your workflow",
-            "body": "Your statuses, swimlanes, and conventions move with you. Switch tools without retraining the team or rebuilding process from scratch."
-          }
-        },
-        "note": "Imports run against your own database and are fully reversible — nothing leaves your server, and you can re-run a mapping until it looks right."
-      },
       "aiMcp": {
         "kicker": "AI-native",
         "title": "Agents work the backlog with you.",
-        "description": "TaskNebula was built for the agent era. Ask questions across your whole workspace, let AI triage and estimate new work, and give external agents real tools through a first-class MCP server.",
         "capabilities": {
           "ask": {
-            "title": "Ask your workspace",
-            "body": "The /api/ask RAG endpoint answers in natural language over your issues, docs, and comments — grounded in pgvector retrieval, with citations back to the source."
+            "title": "Ask your workspace"
           },
           "triage": {
-            "title": "AI triage & estimates",
-            "body": "Suggested priority, labels, and effort land on new issues — backed by real OpenAI and Anthropic calls, a cost guard, and tracing. You stay in control: accept or dismiss."
+            "title": "AI triage & estimates"
           },
           "mcp": {
-            "title": "MCP tools for agents",
-            "body": "@tasknebula/mcp-server exposes the backlog over MCP — HTTP at /api/mcp or stdio — so external agents create, search, and move issues with revocable keys."
+            "title": "MCP tools for agents"
           }
         },
         "mock": {
@@ -5247,8 +5223,7 @@
             "body": "Pull from the backlog into a sprint, set fix versions and components, and read scope at a glance. Planning lives next to the work, not in a separate doc."
           },
           "build": {
-            "title": "Build alongside agents",
-            "body": "Agents are first-class teammates over MCP — they pick up issues, comment, and open work the same way people do, with every action on the shared timeline."
+            "title": "Build alongside agents"
           },
           "ship": {
             "title": "Ship and track the outcome",
@@ -5310,28 +5285,23 @@
             "answer": "Selvhosting er standardvejen. Med Docker starter du en lille Compose-stack med Postgres 16 og pgvector, Redis 7, web-imaget neuraparse/tasknebula samt de medfølgende eller valgfrie tjenester, du aktiverer. Migreringer kører ved opstart, GET /api/health er dit kontrol-endpoint, og hurtigstarten åbner på localhost:3000."
           },
           "aiKeys": {
-            "question": "Do I need the AI features? Can I bring my own keys?",
-            "answer": "AI is optional — every board, sprint, and doc works with no model keys configured. When you want it, you bring your own OpenAI or Anthropic key as environment variables, so spend and data residency stay yours. There is a cost guard so a runaway prompt cannot run up your bill."
+            "question": "Do I need the AI features? Can I bring my own keys?"
           },
           "aiReality": {
-            "question": "How real are the AI features today?",
-            "answer": "We build them in the open. The data model and endpoints — triage suggestions, pgvector semantic search, and the /api/ask RAG endpoint — are live, and they make real OpenAI and Anthropic calls. Some surfaces are still labeled preview while we harden them; we would rather say that here than have you discover it after install."
+            "question": "How real are the AI features today?"
           },
           "mcpServer": {
-            "question": "What is the MCP server?",
-            "answer": "An MCP (Model Context Protocol) server exposes TaskNebula as tools — create, search, move, and comment on issues — so agents like Claude Code and Cursor can drive your tracker. It ships with the repo, HTTP at /api/mcp or stdio via @tasknebula/mcp-server, and is MIT licensed. Heads up: end-to-end agent auth depends on the REST API accepting API keys, which is still being wired, so treat it as preview today."
+            "question": "What is the MCP server?"
           },
           "imports": {
-            "question": "Does it import from Jira or Linear?",
-            "answer": "Yes — there are importers for Jira, Linear, GitHub, and CSV. Each runs with a preview step so you can inspect the field mapping before anything is written, and you can keep your old tool read-only while you cut over."
+            "question": "Does it import from Jira or Linear?"
           },
           "productionReady": {
             "question": "Is it production-ready?",
             "answer": "Kernetrackeren — opgaver, tavler, sprints, dokumenter, søgning, REST API og OpenAPI-specifikation — kan selvhostes. OAuth-login kræver stadig en databaseadapter, så brug login med legitimationsoplysninger indtil videre. Realtidssamarbejde er koblet gennem Docker/Compose, men din installation kræver stadig en tilgængelig URL og en live smoke-test. AI og MCP er fortsat preview. Vi følger manglerne i docs/STATUS.md."
           },
           "dataVisibility": {
-            "question": "Who can see my data?",
-            "answer": "You decide. Self-hosted, everything lives in your Postgres on your infrastructure and exports with a plain pg_dump — no telemetry phones home. Inside the product, workspaces are isolated per organization with role-based access, permission schemes, and audit logs."
+            "question": "Who can see my data?"
           }
         }
       },
@@ -5345,28 +5315,18 @@
             "body": "Drive the whole board from one Cmd+K palette — search, navigate, and run actions without leaving the keys. Drag across columns, plan sprints, and read burndown in the same view."
           },
           "import": {
-            "title": "Import from Jira and Linear",
-            "body": "Bring your backlog with you — Jira, Linear, and CSV importers map issues, statuses, and metadata so you start full, not empty."
+            "title": "Import from Jira and Linear"
           },
-          "structure": {
-            "title": "Jira-parity structure",
-            "body": "First-class labels, components, fix versions, and a resolution model — backlog structure stored in real tables and REST APIs, not JSON strings."
-          },
-          "ai": {
-            "title": "AI-native, auditable",
-            "body": "Real OpenAI and Anthropic calls behind a cost guard and tracing — triage suggestions, AI estimates, and a /api/ask RAG endpoint over pgvector. No black boxes."
-          },
+          "structure": {},
+          "ai": {},
           "agents": {
-            "title": "Agents work the backlog",
-            "body": "A real MCP server — HTTP at /api/mcp or stdio — lets coding agents create, search, and move issues. Backed by a REST API, OpenAPI spec, revocable keys, and webhooks."
+            "title": "Agents work the backlog"
           },
           "realtime": {
-            "title": "Realtime collaboration",
-            "body": "Specs and issue docs edit live — Tiptap on Yjs with presence and conflict-free merges, so two people on one doc just works."
+            "title": "Realtime collaboration"
           },
           "selfHost": {
-            "title": "Self-host in minutes",
-            "body": "One Docker image, Postgres, and you own the data. Multi-tenant from the schema up — every table is organization-scoped, no vendor lock-in."
+            "title": "Self-host in minutes"
           },
           "analytics": {
             "title": "Analytics close to execution",
@@ -5683,11 +5643,22 @@
       "meta": {
         "title": "TaskNebula — Open-source, AI-native Jira & Linear alternative",
         "description": "Keyboard-first boards, sprints, and docs with an MCP server so AI agents work the backlog with you. MIT licensed — self-host with one Docker Compose file.",
-        "skipToContent": "Skip to content"
+        "skipToContent": "Spring til indhold"
+      },
+      "productTruth": {
+        "aiSummary": "AI- og agentfunktioner er valgfrie, afhænger af konfigurationen, og nogle er stadig i forhåndsvisning.",
+        "ask": "Ask søger i dag i opgaver og dokumenter. Semantisk søgning kræver en organisationssikker embedding-udbyder.",
+        "ai": "AI-forslag er forhåndsvisningsfunktioner og afhænger af konfigurerede udbyderoplysninger. Gennemgå hvert forslag, før du anvender det.",
+        "mcp": "Forhåndsvisning: MCP-pakken, der bygges fra kildekoden, understøtter 11 værktøjer med organisationsbundne API-nøgler. OAuth, revision pr. kald og offentlig pakkelevering er ikke færdige.",
+        "aiKeys": "AI er valgfrit. Brug dine egne udbydernøgler; budgetkontroller reducerer risikoen, men garanterer ikke et udgiftsloft.",
+        "data": "Selvhostede applikationsdata bruger din Postgres. Adgangskontroller findes, men dækningen skal stadig gennemgås; valgfrie integrationer sender kun data, når du konfigurerer dem.",
+        "structureTitle": "Strukturerede backlogfelter",
+        "structure": "Etiketter, komponenter, rettelsesversioner og løsninger har førsteklasses database- og API-modeller. Håndhævelsen varierer stadig fra rute til rute.",
+        "realtime": "Yjs-samarbejde er tilgængeligt, når Hocuspocus, den offentlige URL og de matchende hemmeligheder er konfigureret og røgtestet."
       }
     },
     "intake": {
-      "submitMetaTitle": "Submit · TaskNebula"
+      "submitMetaTitle": "Indsend · TaskNebula"
     },
     "stepStart": "Starte",
     "setupImportRedirecting": "Omdirigerer for at logge ind, så{source}importere…",
@@ -6660,7 +6631,7 @@
     "disclosureBadge": "AI-gennemsigtighedsoplysninger",
     "title": "AI-modelkort",
     "intro": "Denne side beskriver TaskNebulas dokumenterede AI-funktioner og standardkonfiguration. Faktiske modeller, datahåndtering, opbevaring og kontrolkontroller kan variere alt efter arbejdsområde og implementering; bekræft de aktive indstillinger med din administrator. Gennemsigtighedsmeddelelse version <version></version>.",
-    "lastReviewed": "Sidst revideret 2026-08-12. Artikel 50 i forordning (EU) 2024/1689 gælder fra 2026-08-02.",
+    "lastReviewed": "Sidst revideret 2026-08-12.",
     "onThisPage": "På denne side",
     "model": "Model",
     "provider": "Udbyder",
@@ -7036,5 +7007,28 @@
       "fetchOrganizations": "Failed to fetch organizations",
       "fetchEpics": "Failed to fetch epics"
     }
+  },
+  "slackCommands": {
+    "userUnmapped": "Din Slack-konto kunne ikke knyttes til en TaskNebula-bruger. Bed en administrator om at knytte Slack-profiler til TaskNebula-konti.",
+    "statusUsage": "Brug: `/tn status TN-123 done`",
+    "statusUnavailable": "Denne statusændring er ikke tilgængelig. Se `/tn help` for understøttede statusser.",
+    "notInstalled": "TaskNebula er endnu ikke installeret i dette Slack-arbejdsområde. Bed en administrator om at forbinde det under Indstillinger → Integrationer.",
+    "help": "*TaskNebula-kommandoer*\n`/tn new titel` — åbner dialogen til en ny opgave med din titel\n`/tn list` — viser dine tildelte åbne opgaver\n`/tn search forespørgsel` — viser de 5 bedste tilgængelige resultater\n`/tn assign TN-123 @bruger` — tildeler en opgave på ny\n`/tn status TN-123 done` — ændrer opgavens status (backlog | in_progress | in_review | done | blocked)",
+    "unknownCommand": "Ukendt kommando.",
+    "noOpenAssigned": "Du har ingen tildelte åbne opgaver.",
+    "openIssuesHeader": "Dine åbne opgaver:",
+    "noStatus": "ingen status",
+    "searchUsage": "Brug: `/tn search forespørgsel`",
+    "searchNoMatches": "Ingen opgaver matchede `{query}`.",
+    "searchTopMatches": "Bedste resultater for `{query}`: {count}",
+    "searchSummary": "Resultater for {query}: {count}",
+    "assignUsage": "Brug: `/tn assign TN-123 @bruger`",
+    "invalidUserMention": "`{mention}` ligner ikke en omtale af en Slack-bruger.",
+    "issueNotFound": "Opgaven `{issueKey}` blev ikke fundet i dette arbejdsområde.",
+    "assigneeUnmapped": "Denne Slack-bruger kunne ikke knyttes til en TaskNebula-konto. Bed en administrator om at tilføje tilknytningen under Indstillinger → Integrationer.",
+    "assignmentSuccess": "*{issueKey}* blev tildelt på ny til <@{slackUserId}> (anmodet af <@{requestedBy}>).",
+    "statusSuccess": "*{issueKey}* blev flyttet til *{statusName}* (anmodet af <@{requestedBy}>).",
+    "newUsage": "Brug: `/tn new titel` — åbner dialogen til en ny opgave.",
+    "newOpening": "Åbner dialogen til en ny opgave med: _{title}_"
   }
 }

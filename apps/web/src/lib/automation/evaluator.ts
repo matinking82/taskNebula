@@ -36,10 +36,11 @@ import {
 import { automationExecutions } from '@tasknebula/db/src/schema/automation-executions';
 import { evaluateConditions, type AutomationCondition } from './conditions';
 import {
-  triggerWebhooks,
-  WEBHOOK_EVENTS,
-  type WebhookEvent,
-} from '@/lib/webhooks/dispatcher';
+  applyPreparedIssueStatusTransition,
+  prepareIssueStatusTransition,
+  WorkflowTransitionError,
+} from '@/lib/workflows/issue-transition-policy';
+import { triggerWebhooks, WEBHOOK_EVENTS, type WebhookEvent } from '@/lib/webhooks/dispatcher';
 
 // --------------------------------------------------------------------------
 // Types
@@ -138,15 +139,33 @@ const setStatusAction: ActionHandler = async (ctx, action) => {
 
   const statusId = getString(action, 'statusId') || getString(action, 'value');
   if (!statusId) throw new Error('set_status: missing statusId');
+  if (!ctx.actorUserId) {
+    throw new WorkflowTransitionError('workflow_transition_actor_forbidden');
+  }
+  const actorUserId = ctx.actorUserId;
 
-  await db
-    .update(issues)
-    .set({
-      statusId,
-      updatedAt: new Date(),
-      ...(ctx.actorUserId ? { updatedBy: ctx.actorUserId } : {}),
-    })
-    .where(eq(issues.id, issueId));
+  await db.transaction(async (tx) => {
+    const [issue] = await tx
+      .select({ projectId: issues.projectId })
+      .from(issues)
+      .where(and(eq(issues.id, issueId), eq(issues.organizationId, ctx.organizationId)))
+      .limit(1);
+    if (!issue || (ctx.projectId && issue.projectId !== ctx.projectId)) {
+      throw new WorkflowTransitionError('workflow_transition_issue_not_found');
+    }
+    const prepared = await prepareIssueStatusTransition(tx, {
+      organizationId: ctx.organizationId,
+      projectId: issue.projectId,
+      issueId,
+      toStatusId: statusId,
+      actorUserId,
+    });
+    await applyPreparedIssueStatusTransition(tx, {
+      prepared,
+      actorUserId,
+      reason: 'automation',
+    });
+  });
 };
 
 // assign — sets issue.assigneeId.
@@ -155,9 +174,7 @@ const assignAction: ActionHandler = async (ctx, action) => {
   if (!issueId) throw new Error('assign: no issue id in payload');
 
   const assigneeId =
-    getString(action, 'assigneeId') ||
-    getString(action, 'userId') ||
-    getString(action, 'value');
+    getString(action, 'assigneeId') || getString(action, 'userId') || getString(action, 'value');
   if (!assigneeId) throw new Error('assign: missing assigneeId');
 
   await db
@@ -267,14 +284,11 @@ const setPriorityAction: ActionHandler = async (ctx, action) => {
 // notify_user — inserts an in-app notification.
 const notifyUserAction: ActionHandler = async (ctx, action) => {
   const userId =
-    getString(action, 'userId') ||
-    getString(action, 'recipientId') ||
-    getString(action, 'value');
+    getString(action, 'userId') || getString(action, 'recipientId') || getString(action, 'value');
   if (!userId) throw new Error('notify_user: missing userId');
 
   const title = getString(action, 'title') || 'Automation';
-  const message =
-    getString(action, 'message') || `Automation triggered: ${ctx.trigger}`;
+  const message = getString(action, 'message') || `Automation triggered: ${ctx.trigger}`;
 
   const issueId = getIssueIdFromPayload(ctx.payload) ?? null;
   const projectId = ctx.projectId ?? null;
@@ -294,7 +308,9 @@ const notifyUserAction: ActionHandler = async (ctx, action) => {
   });
 };
 
-function mapTriggerToNotificationType(trigger: AutomationTrigger):
+function mapTriggerToNotificationType(
+  trigger: AutomationTrigger
+):
   | 'mention'
   | 'comment'
   | 'assigned'
@@ -517,14 +533,10 @@ async function loadEnabledRules(
  * Returns `null` when the trigger has no webhook surface (kept as a future-
  * proofing escape hatch — currently never returned).
  */
-function triggerToWebhookEvent(
-  trigger: AutomationTrigger
-): WebhookEvent | null {
+function triggerToWebhookEvent(trigger: AutomationTrigger): WebhookEvent | null {
   if (trigger === 'project.archived') return 'project.updated';
   // The remaining automation triggers are name-equal to webhook events.
-  return (WEBHOOK_EVENTS as readonly string[]).includes(trigger)
-    ? (trigger as WebhookEvent)
-    : null;
+  return (WEBHOOK_EVENTS as readonly string[]).includes(trigger) ? (trigger as WebhookEvent) : null;
 }
 
 /**
@@ -536,9 +548,7 @@ function triggerToWebhookEvent(
  * webhook fan-out runs in the background and intentionally does not block the
  * returned `ExecutionResult[]` so existing call sites keep their semantics.
  */
-export async function runAutomations(
-  params: RunAutomationsParams
-): Promise<ExecutionResult[]> {
+export async function runAutomations(params: RunAutomationsParams): Promise<ExecutionResult[]> {
   const results: ExecutionResult[] = [];
 
   // Fan out to webhook subscribers in parallel with rule evaluation. This is

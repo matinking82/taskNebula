@@ -35,6 +35,12 @@ import {
   getOrganizationSettingsForAgentCredentials,
   resolveProviderApiKeyFromSettings,
 } from './credentials';
+import {
+  applyPreparedIssueStatusTransition,
+  prepareIssueStatusTransition,
+  resolveProjectWorkflowStatusByCategory,
+  WorkflowTransitionError,
+} from '@/lib/workflows/issue-transition-policy';
 
 export interface RunJanitorOptions {
   organizationId: string;
@@ -78,10 +84,7 @@ async function loadStaleIssues(
         lte(issues.updatedAt, cutoff),
         notInArray(issues.statusId, terminalIds)
       )
-    : and(
-        eq(issues.organizationId, organizationId),
-        lte(issues.updatedAt, cutoff)
-      );
+    : and(eq(issues.organizationId, organizationId), lte(issues.updatedAt, cutoff));
 
   const rows = (await db
     .select({
@@ -128,11 +131,7 @@ async function loadStaleIssues(
   }));
 }
 
-async function postJanitorComment(
-  issueId: string,
-  systemUserId: string,
-  staleDays: number
-) {
+async function postJanitorComment(issueId: string, systemUserId: string, staleDays: number) {
   await db.insert(issueComments).values({
     issueId,
     content: JANITOR_COMMENT_TEMPLATE(staleDays),
@@ -159,6 +158,7 @@ async function snoozeIssue(issueId: string, systemUserId: string, days: number) 
 
 async function autoCloseIssue(
   issueId: string,
+  organizationId: string,
   systemUserId: string,
   currentLabels: string[]
 ) {
@@ -166,38 +166,39 @@ async function autoCloseIssue(
     ? currentLabels
     : [...currentLabels, STALE_AUTO_LABEL];
 
-  // Find any "done"-category status in this org to transition into.
-  const [issueRow] = (await db
-    .select({ orgId: issues.organizationId })
-    .from(issues)
-    .where(eq(issues.id, issueId))
-    .limit(1)) as Array<{ orgId: string }>;
-
-  if (!issueRow) return;
-
-  // Pick the first done-category status linked through any workflow used in
-  // this org. We're intentionally lenient here — operators can later use
-  // the stale-auto label to find these and re-route them.
-  const doneStatuses = await db.execute<{ id: string }>(
-    sql`SELECT ws.id FROM workflow_statuses ws
-        JOIN workflows w ON w.id = ws.workflow_id
-        WHERE w.organization_id = ${issueRow.orgId} AND ws.category = 'done'
-        ORDER BY ws.position ASC LIMIT 1`
-  );
-  const doneList: Array<{ id: string }> = Array.isArray(doneStatuses)
-    ? (doneStatuses as any)
-    : ((doneStatuses as any).rows ?? []);
-  const doneStatusId = doneList[0]?.id;
-
-  await db
-    .update(issues)
-    .set({
-      labels: labelsWithMarker,
-      updatedAt: new Date(),
-      updatedBy: systemUserId,
-      ...(doneStatusId ? { statusId: doneStatusId } : {}),
-    })
-    .where(eq(issues.id, issueId));
+  await db.transaction(async (tx) => {
+    const [identity] = await tx
+      .select({ projectId: issues.projectId })
+      .from(issues)
+      .where(and(eq(issues.id, issueId), eq(issues.organizationId, organizationId)))
+      .limit(1);
+    if (!identity) {
+      throw new WorkflowTransitionError('workflow_transition_issue_not_found');
+    }
+    const doneStatusId = await resolveProjectWorkflowStatusByCategory(tx, {
+      organizationId,
+      projectId: identity.projectId,
+      issueId,
+      category: 'done',
+    });
+    if (!doneStatusId) {
+      throw new WorkflowTransitionError('workflow_transition_status_invalid');
+    }
+    const prepared = await prepareIssueStatusTransition(tx, {
+      organizationId,
+      projectId: identity.projectId,
+      issueId,
+      toStatusId: doneStatusId,
+      actorUserId: systemUserId,
+      actorKind: 'system',
+    });
+    await applyPreparedIssueStatusTransition(tx, {
+      prepared,
+      actorUserId: systemUserId,
+      reason: 'janitor',
+      patch: { labels: labelsWithMarker },
+    });
+  });
 }
 
 export async function runJanitorForOrg(
@@ -211,9 +212,7 @@ export async function runJanitorForOrg(
     return { decisions: [], total: 0 };
   }
 
-  const settings = await getOrganizationSettingsForAgentCredentials(
-    options.organizationId
-  );
+  const settings = await getOrganizationSettingsForAgentCredentials(options.organizationId);
   const apiKey = resolveProviderApiKeyFromSettings(settings, 'anthropic');
 
   const decisions = await sweepStaleIssues({
@@ -241,11 +240,7 @@ export async function runJanitorForOrg(
     try {
       switch (decision.action) {
         case 'ping_assignee':
-          await postJanitorComment(
-            issue.id,
-            options.systemUserId,
-            issue.staleDays
-          );
+          await postJanitorComment(issue.id, options.systemUserId, issue.staleDays);
           break;
         case 'snooze':
           await snoozeIssue(
@@ -255,7 +250,12 @@ export async function runJanitorForOrg(
           );
           break;
         case 'auto_close_with_label':
-          await autoCloseIssue(issue.id, options.systemUserId, issue.labels);
+          await autoCloseIssue(
+            issue.id,
+            options.organizationId,
+            options.systemUserId,
+            issue.labels
+          );
           break;
       }
       applied.push({ ...decision, applied: true });

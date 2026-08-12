@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
-import { E2E_PUBLIC_SHARE_TOKEN } from './fixtures/seed';
+import { E2E_PROJECT_INVITE_TOKEN, E2E_PUBLIC_SHARE_TOKEN } from './fixtures/seed';
 
 const PUBLIC_SURFACES = [
   { id: 'landing', path: '/' },
@@ -186,11 +186,33 @@ test.describe('public surface contract', () => {
   }
 
   test('project invitation controller preserves the token when redirecting', async ({ page }) => {
-    const response = await page.goto('/join/project/e2e-invalid-invite', {
+    const response = await page.goto(`/join/project/${E2E_PROJECT_INVITE_TOKEN}`, {
       waitUntil: 'domcontentloaded',
     });
 
     expect(response?.status()).toBeLessThan(400);
-    await expect(page).toHaveURL(/\/auth\/signup\?projectInviteToken=e2e-invalid-invite$/);
+    await expect(page).toHaveURL(
+      new RegExp(`/auth/signup\\?projectInviteToken=${E2E_PROJECT_INVITE_TOKEN}$`)
+    );
+  });
+
+  test('public share exposes published content without search indexing', async ({ page }) => {
+    await page.goto(`/share/${E2E_PUBLIC_SHARE_TOKEN}`);
+
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('E2E Public Document');
+    await expect(
+      page.getByText(
+        'This published document is intentionally safe for unauthenticated E2E coverage.'
+      )
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: /attachment-name-without-breaks/i })).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/i);
+  });
+
+  test('an unknown public share token returns the 404 boundary', async ({ page }) => {
+    const response = await page.goto('/share/e2e-share-token-that-does-not-exist');
+
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 });

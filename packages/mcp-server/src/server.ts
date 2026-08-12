@@ -2,9 +2,9 @@
  * Build an `McpServer` instance from the shared tool / resource / prompt
  * definitions.
  *
- * Both transports (stdio and HTTP/Streamable) use this factory so that
- * the model sees exactly the same surface area regardless of how it
- * connected.
+ * The stdio transport uses this factory. The limited HTTP JSON-RPC scaffold
+ * reuses the same registries directly; a future SDK Streamable HTTP transport
+ * can use this factory once its session/auth contract is implemented.
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
@@ -26,7 +26,7 @@ export function createMcpServer(opts: CreateServerOptions): McpServer {
   const { client } = opts;
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
-    { capabilities: { tools: {}, resources: {}, prompts: {} } },
+    { capabilities: { tools: {}, resources: {}, prompts: {} } }
   );
 
   // -- Tools --------------------------------------------------------------
@@ -34,25 +34,20 @@ export function createMcpServer(opts: CreateServerOptions): McpServer {
     // The MCP SDK accepts a ZodRawShape (object) for `inputSchema`. Our
     // tool inputs are all `z.object(...)`, so we expose `.shape` here.
     const shape = (tool.inputSchema as unknown as z.ZodObject<z.ZodRawShape>).shape;
-    server.tool(
-      tool.name,
-      tool.description,
-      shape,
-      async (args: unknown) => {
-        try {
-          // `tool.handler` parses internally (see `toAnyTool`).
-          const result = await tool.handler(args, { client });
-          return { content: toMcpContent(result) };
-        } catch (err) {
-          return {
-            isError: true,
-            content: toMcpContent({
-              error: err instanceof Error ? err.message : String(err),
-            }),
-          };
-        }
-      },
-    );
+    server.tool(tool.name, tool.description, shape, async (args: unknown) => {
+      try {
+        // `tool.handler` parses internally (see `toAnyTool`).
+        const result = await tool.handler(args, { client });
+        return { content: toMcpContent(result) };
+      } catch (err) {
+        return {
+          isError: true,
+          content: toMcpContent({
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        };
+      }
+    });
   }
 
   // -- Resources ----------------------------------------------------------
@@ -72,22 +67,17 @@ export function createMcpServer(opts: CreateServerOptions): McpServer {
             },
           ],
         };
-      },
+      }
     );
   }
 
   // -- Prompts ------------------------------------------------------------
   for (const prompt of allPrompts) {
     const shape = (prompt.argsSchema as unknown as z.ZodObject<z.ZodRawShape>).shape;
-    server.prompt(
-      prompt.name,
-      prompt.description,
-      shape,
-      async (args: unknown) => {
-        const parsed = prompt.argsSchema.parse(args ?? {});
-        return { messages: prompt.build(parsed) };
-      },
-    );
+    server.prompt(prompt.name, prompt.description, shape, async (args: unknown) => {
+      const parsed = prompt.argsSchema.parse(args ?? {});
+      return { messages: prompt.build(parsed) };
+    });
   }
 
   return server;

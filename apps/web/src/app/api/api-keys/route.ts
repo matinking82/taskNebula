@@ -9,9 +9,9 @@ import { hasPermission } from '@/lib/auth/permissions';
 export const dynamic = 'force-dynamic';
 
 const createApiKeySchema = z.object({
-  name: z.string().min(1),
-  organizationId: z.string(),
-  expiresAt: z.string().optional(),
+  name: z.string().trim().min(1).max(120),
+  organizationId: z.string().min(1),
+  expiresAt: z.string().datetime().optional(),
 });
 
 // Generate a secure API key
@@ -20,7 +20,7 @@ function generateApiKey(): { key: string; hashedKey: string; prefix: string } {
   const key = `sk_live_${randomBytes.toString('base64url')}`;
   const hashedKey = crypto.createHash('sha256').update(key).digest('hex');
   const prefix = key.substring(0, 12); // "sk_live_xxxx"
-  
+
   return { key, hashedKey, prefix };
 }
 
@@ -83,6 +83,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
+    const expiresAt = validatedData.expiresAt ? new Date(validatedData.expiresAt) : null;
+    if (expiresAt && expiresAt.getTime() <= Date.now()) {
+      return NextResponse.json(
+        { error: 'API key expiration must be in the future' },
+        { status: 400 }
+      );
+    }
+
     // Generate API key
     const { key, hashedKey, prefix } = generateApiKey();
 
@@ -95,20 +103,26 @@ export async function POST(request: NextRequest) {
         keyPrefix: prefix,
         organizationId: validatedData.organizationId,
         createdBy: session.user.id,
-        expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : null,
+        expiresAt,
       })
       .returning();
 
     // Return the plain key ONLY on creation (this is the only time it's visible)
-    return NextResponse.json({
-      apiKey: {
-        ...newKey,
-        key, // Plain key - show only once!
+    return NextResponse.json(
+      {
+        apiKey: {
+          ...newKey,
+          key, // Plain key - show only once!
+        },
       },
-    }, { status: 201 });
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors },
+        { status: 400 }
+      );
     }
     console.error('Error creating API key:', error);
     return NextResponse.json({ error: 'Failed to create API key' }, { status: 500 });

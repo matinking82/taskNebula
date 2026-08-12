@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { db, issues, workflowStatuses, projects, watchers } from '@tasknebula/db';
 import { eq, desc, inArray, and, or, isNotNull } from 'drizzle-orm';
+import { resolveApiActor } from '@/lib/auth/api-actor';
+import { canReadProject } from '@/lib/auth/access-control';
 
 type ViewMode = 'assigned' | 'created' | 'subscribed' | 'mentioned';
 type StatusBucket = 'open' | 'in_progress' | 'blocked' | 'done' | 'all';
@@ -22,14 +23,22 @@ function parseStatusBucket(value: string | null): StatusBucket {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const userId = session.user.id;
+    const userId = actor.userId;
 
     const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
+    const requestedOrganizationId = searchParams.get('organizationId');
+    if (
+      actor.organizationId &&
+      requestedOrganizationId &&
+      requestedOrganizationId !== actor.organizationId
+    ) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const organizationId = actor.organizationId ?? requestedOrganizationId;
     const teamId = searchParams.get('teamId');
     const view = parseView(searchParams.get('view'));
     const statusBucket = parseStatusBucket(searchParams.get('status'));
@@ -89,6 +98,7 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           ownershipClause,
+          ...(organizationId ? [eq(issues.organizationId, organizationId)] : []),
           ...(allowedProjectIds ? [inArray(issues.projectId, allowedProjectIds)] : [])
         )
       )
@@ -107,7 +117,19 @@ export async function GET(request: NextRequest) {
     const projectIds = [...new Set(myIssuesRaw.map((i) => i.projectId))];
     const projectsData = await db.select().from(projects).where(inArray(projects.id, projectIds));
 
+    const readableProjectIds = new Set<string>();
+    for (const project of projectsData) {
+      if (
+        await canReadProject(userId, project, {
+          allowSuperAdmin: actor.authType === 'session',
+        })
+      ) {
+        readableProjectIds.add(project.id);
+      }
+    }
+
     const myIssues = myIssuesRaw
+      .filter((issue) => readableProjectIds.has(issue.projectId))
       .map((issue) => ({
         ...issue,
         status: statuses.find((s) => s.id === issue.statusId) || {

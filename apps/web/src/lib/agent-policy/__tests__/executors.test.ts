@@ -44,6 +44,20 @@ jest.mock('@/lib/labels/sync', () => ({
   syncIssueLabelsWithExecutor: (...args: unknown[]) => syncLabelsMock(...args),
 }));
 
+const mockPrepareTransition = jest.fn(async (..._args: unknown[]) => ({
+  issue: issueRow(),
+  workflowId: 'workflow-a',
+  fromStatusId: 'status-backlog',
+  toStatusId: 'status-review',
+  changed: true,
+  transitionId: 'transition-a',
+}));
+const mockApplyTransition = jest.fn(async () => mockUpdateResult[0]);
+jest.mock('@/lib/workflows/issue-transition-policy', () => ({
+  prepareIssueStatusTransition: (...args: unknown[]) => mockPrepareTransition(...args),
+  applyPreparedIssueStatusTransition: (...args: unknown[]) => mockApplyTransition(...args),
+}));
+
 import type { AgentApprovalRequest } from '@tasknebula/db';
 import { executeApprovedAgentAction } from '../executors';
 
@@ -317,7 +331,16 @@ describe('executeApprovedAgentAction', () => {
     const execution = await executeApprovedAgentAction(request, mockTx as never);
 
     expect(execution.result).toMatchObject({ id: 'issue-a', statusId: 'status-review' });
-    expect(mockUpdated).toHaveLength(1);
+    expect(mockPrepareTransition).toHaveBeenCalledWith(
+      mockTx,
+      expect.objectContaining({
+        organizationId: 'org-1',
+        projectId: 'project-a',
+        issueId: 'issue-a',
+        toStatusId: 'status-review',
+      })
+    );
+    expect(mockApplyTransition).toHaveBeenCalledTimes(1);
     expect(execution.postCommit.realtime.type).toBe('issue.updated');
   });
 });

@@ -377,7 +377,7 @@ export function RoadmapClient({ projectId }: RoadmapClientProps) {
                 >
                   <span className="text-muted-foreground">{col.label}</span>
                   {col.isCurrent && (
-                    <span className="bg-accent-blue/10 text-accent-blue inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-medium">
+                    <span className="bg-accent-blue/10 text-foreground inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-medium">
                       {t('roadmap.current')}
                     </span>
                   )}

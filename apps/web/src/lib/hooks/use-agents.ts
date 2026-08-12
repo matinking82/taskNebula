@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useToast } from '@/hooks/use-toast';
 
 export type AgentModelConfig = {
   id: string;
@@ -93,7 +94,7 @@ type WorkspaceAgentResponse = {
     writeActionsCount: number;
     createdAt: string;
     completedAt: string | null;
-    error: string | null;
+    errorCode: string | null;
     projectId: string | null;
     projectName: string | null;
     initiatedBy: string | null;
@@ -188,7 +189,7 @@ type ProjectAgentsResponse = {
       completedAt: string | null;
       mode: string;
       output: Record<string, unknown>;
-      error: string | null;
+      errorCode: string | null;
     }
   >;
   recentRuns: Array<{
@@ -202,7 +203,7 @@ type ProjectAgentsResponse = {
     completedAt: string | null;
     mode: string;
     output: Record<string, unknown>;
-    error: string | null;
+    errorCode: string | null;
   }>;
 };
 
@@ -211,7 +212,6 @@ type ProjectAgentRunResponse = {
   output: Record<string, unknown>;
   dryRun: boolean;
   forcedDryRun: boolean;
-  error?: string;
   errorCode?: string;
 };
 
@@ -714,8 +714,13 @@ export function useArchiveOrganizationAgentModelConfig(organizationId: string) {
 
 export function useProjectAgents(projectId: string | null) {
   const apiErrorText = useAgentApiErrorText();
+  const queryClient = useQueryClient();
+  const t = useTranslations('settingsConfig');
+  const { toast } = useToast();
+  const activeRunIds = useRef(new Set<string>());
+  const activeProjectId = useRef(projectId);
 
-  return useQuery<ProjectAgentsResponse>({
+  const query = useQuery<ProjectAgentsResponse>({
     queryKey: ['project-ai-agents', projectId],
     queryFn: async () => {
       const response = await fetch(`/api/projects/${projectId}/agents`);
@@ -726,7 +731,64 @@ export function useProjectAgents(projectId: string | null) {
       return payload as ProjectAgentsResponse;
     },
     enabled: !!projectId,
+    refetchInterval: (query) => getProjectAgentRefetchInterval(query.state.data),
   });
+
+  useEffect(() => {
+    if (activeProjectId.current !== projectId) {
+      activeProjectId.current = projectId;
+      activeRunIds.current = new Set();
+    }
+    const terminalRuns = getTerminalProjectAgentRuns(
+      activeRunIds.current,
+      query.data?.recentRuns ?? []
+    );
+    const current = new Set(
+      (query.data?.recentRuns ?? [])
+        .filter((run) => run.status === 'pending' || run.status === 'running')
+        .map((run) => run.id)
+    );
+    const reachedTerminal = [...activeRunIds.current].some((runId) => !current.has(runId));
+    activeRunIds.current = current;
+    if (reachedTerminal) {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+    }
+    for (const run of terminalRuns) {
+      const failed = run.status === 'failed';
+      const title = failed
+        ? t('projectAi.run_failed_title')
+        : run.status === 'cancelled'
+          ? t('agentShared.runStatuses.cancelled')
+          : run.dryRun
+            ? t('projectAi.preview_ready')
+            : t('projectAi.run_completed');
+      toast({ title, variant: failed ? 'destructive' : undefined });
+    }
+  }, [projectId, query.data?.recentRuns, queryClient, t, toast]);
+
+  return query;
+}
+
+export function getTerminalProjectAgentRuns(
+  previousActiveIds: ReadonlySet<string>,
+  runs: ProjectAgentsResponse['recentRuns']
+) {
+  return runs.filter(
+    (run) => previousActiveIds.has(run.id) && run.status !== 'pending' && run.status !== 'running'
+  );
+}
+
+export function getProjectAgentRefetchInterval(data: ProjectAgentsResponse | undefined) {
+  return data?.recentRuns.some((run) => run.status === 'pending' || run.status === 'running')
+    ? 2_000
+    : false;
+}
+
+export function getProjectAgentControlAction(status: string): 'cancel' | 'resume' | null {
+  if (status === 'pending' || status === 'running') return 'cancel';
+  if (status === 'failed' || status === 'cancelled') return 'resume';
+  return null;
 }
 
 export function useUpdateProjectAgents(projectId: string) {
@@ -758,17 +820,48 @@ export function useRunProjectAgent(projectId: string) {
   const apiErrorText = useAgentApiErrorText();
 
   return useMutation({
-    mutationFn: async (data: { kind: string; dryRun?: boolean }) => {
+    mutationFn: async (data: { kind: string; dryRun?: boolean; idempotencyKey: string }) => {
+      const { idempotencyKey, ...body } = data;
       const response = await fetch(`/api/projects/${projectId}/agents/run`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(body),
       });
       const payload = await readJsonPayload(response);
       if (!response.ok) {
         throw new Error(apiErrorText(payload, 'runProjectAgent'));
       }
       return payload as ProjectAgentRunResponse;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-ai-agents', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+    },
+  });
+}
+
+export function createProjectAgentRunIntent(data: { kind: string; dryRun?: boolean }) {
+  return { ...data, idempotencyKey: crypto.randomUUID() };
+}
+
+export function useControlProjectAgentRun(projectId: string) {
+  const queryClient = useQueryClient();
+  const apiErrorText = useAgentApiErrorText();
+
+  return useMutation({
+    mutationFn: async (data: { runId: string; action: 'resume' | 'cancel' }) => {
+      const response = await fetch(`/api/projects/${projectId}/agents/runs/${data.runId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: data.action }),
+      });
+      const payload = await readJsonPayload(response);
+      if (!response.ok) throw new Error(apiErrorText(payload, 'runProjectAgent'));
+      return payload as { run: ProjectAgentsResponse['recentRuns'][number] };
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['project-ai-agents', projectId] });

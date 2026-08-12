@@ -351,6 +351,34 @@ describe('/api/sprints route', () => {
       await expect(response.json()).resolves.toEqual({ error: 'Not a project member' });
     });
 
+    it('preserves an explicit sprint-management denial over a permissive role default', async () => {
+      authMock.mockResolvedValue({ user: { id: 'user-1' } });
+      dbSelectMock
+        .mockReturnValueOnce(chainable([{ isSuperAdmin: false }]))
+        .mockReturnValueOnce(
+          chainable([{ id: 'proj_long_id_1234567890', organizationId: 'org-1' }])
+        )
+        .mockReturnValueOnce(chainable([{ role: 'member' }]))
+        .mockReturnValueOnce(chainable([{ role: 'product_owner', canManageSprints: 'false' }]));
+
+      const response = await POST(
+        new NextRequestCtor('http://localhost:3002/api/sprints', {
+          method: 'POST',
+          body: JSON.stringify({
+            projectId: 'proj_long_id_1234567890',
+            name: 'Sprint 1',
+            startDate: '2026-01-01',
+            endDate: '2026-01-14',
+          }),
+        })
+      );
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({
+        error: 'Insufficient permissions to manage sprints',
+      });
+    });
+
     it('returns 400 when duration exceeds 90 days', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
       // Super admin bypass for permissions

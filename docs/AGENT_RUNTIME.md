@@ -2,7 +2,8 @@
 
 **Verified:** 2026-08-12
 
-**Status:** bounded graph foundation shipped; durable production integration is
+**Status:** bounded graph foundation shipped; the project-agent graph is
+durable, while deep research and the shared cross-product runtime remain
 partial.
 
 This document is the canonical contract for TaskNebula agent loops, research
@@ -11,23 +12,60 @@ what exists from the target architecture.
 
 ## Current maturity
 
-| Capability                                                | State                    | Evidence / limitation                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Explicit nodes, declared edges, conditional cycles, `END` | Foundation shipped       | `apps/web/src/lib/agents/graph-runtime.ts` validates routes; `research-graph.ts` defines plan → retrieve → grade → synthesize → verify → review                                                                                                                                                                                                                                      |
-| Finite termination                                        | Foundation shipped       | Step, per-node visit, wall-time, no-progress, retrieval-round, and retry-attempt bounds are tested                                                                                                                                                                                                                                                                                   |
-| Checkpoint and resume contract                            | Foundation shipped       | Serializable checkpoints, graph version checks, per-step callbacks, and review interrupt/resume are tested                                                                                                                                                                                                                                                                           |
-| Durable checkpoint store and worker                       | Missing                  | Current graph callers must supply persistence; no leased worker or crash recovery uses it yet                                                                                                                                                                                                                                                                                        |
-| Project-agent engine migration                            | Partial containment      | Existing `engine.ts` is still a single provider-plan call plus direct domain execution; approval-gated writes fail closed to preview and provider planning has finite timeout/request cancellation                                                                                                                                                                                   |
-| Human approval apply path                                 | Shipped for issue writes | Migration `0061` aligns lifecycle states; approval claim, issue/comment mutation, audit, terminal state, and durable outbox enqueue share one transaction. Base Compose reconciles leased delivery; non-Compose installs must schedule the endpoint. Redis acceptance is awaited before ACK, while lease recovery makes realtime delivery at-least-once, not externally exactly-once |
-| Ask citations                                             | Working contract         | Prompt, parser, SSE, unresolved markers, and Sidecar use `[TN-…]` / `[DOC-…]` consistently; organization membership is explicit and provider streaming is bounded                                                                                                                                                                                                                    |
-| Deep research                                             | Not shipped              | Ask retrieves workspace issues/docs and synthesizes once; web crawling, durable research runs, claims/evidence persistence, interrupts during research, and complete activity history are not wired                                                                                                                                                                                  |
-| Local Claude/Codex execution                              | Contained, not durable   | Child environments use a provider-specific allowlist; execution still runs in the request process and has no leased restart recovery                                                                                                                                                                                                                                                 |
-| Remote coding-agent webhooks                              | Contained                | Outbound destinations are SSRF/timeout bounded; inbound session events use a tenant/session fingerprint receipt and commit receipt, session CAS, comment, and terminal issue transition atomically                                                                                                                                                                                   |
-| Workflow transition persistence                           | Shipped foundation       | Roles, approval policy, targets, conditions, validators, and post-actions survive builder save/reload through migration `0060`                                                                                                                                                                                                                                                       |
-| Workflow transition enforcement                           | Missing common engine    | Mutation surfaces do not yet share validation/authorization/approval/apply logic                                                                                                                                                                                                                                                                                                     |
+| Capability                                                | State                      | Evidence / limitation                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Explicit nodes, declared edges, conditional cycles, `END` | Foundation shipped         | `apps/web/src/lib/agents/graph-runtime.ts` validates routes; `research-graph.ts` defines plan → retrieve → grade → synthesize → verify → review                                                                                                                                                                                                                                                                                                |
+| Finite termination                                        | Foundation shipped         | Step, per-node visit, wall-time, no-progress, retrieval-round, and retry-attempt bounds are tested                                                                                                                                                                                                                                                                                                                                             |
+| Checkpoint and resume contract                            | Foundation shipped         | Serializable checkpoints, graph version checks, per-step callbacks, and review interrupt/resume are tested                                                                                                                                                                                                                                                                                                                                     |
+| Durable checkpoint store and worker                       | Shipped for project agents | Migration `0063` adds versioned JSON checkpoints, current node/CAS version, monotonic step events, finite bounds, leases/heartbeats, cancellation, stale recovery, and transactional domain-effect receipts. Base Compose reconciles every minute; other installs must schedule `POST /api/cron/agent-runs`. Research and local coding-agent runs do not use this store.                                                                       |
+| Project-agent engine migration                            | Shipped, bounded scope     | `engine.ts` now runs `load_context → plan → execute → END`; provider plans and exact project context are checkpointed before execution. Starts require `Idempotency-Key`, UTC daily/global admission is serialized in Postgres, transient provider attempts are bounded, and incompatible graph versions fail terminally.                                                                                                                      |
+| Human approval apply path                                 | Shipped for issue writes   | Migration `0061` aligns lifecycle states; approval claim, issue/comment mutation, audit, terminal state, and durable outbox enqueue share one transaction. Base Compose reconciles leased delivery; non-Compose installs must schedule the endpoint. Redis acceptance is awaited before ACK, while lease recovery makes realtime delivery at-least-once, not externally exactly-once                                                           |
+| Ask citations                                             | Working contract           | Prompt, parser, SSE, unresolved markers, and Sidecar use `[TN-…]` / `[DOC-…]` consistently; organization membership is explicit and provider streaming is bounded                                                                                                                                                                                                                                                                              |
+| Deep research                                             | Not shipped                | Ask retrieves workspace issues/docs and synthesizes once; web crawling, durable research runs, claims/evidence persistence, interrupts during research, and complete activity history are not wired                                                                                                                                                                                                                                            |
+| Local Claude/Codex execution                              | Contained, not durable     | Child environments use a provider-specific allowlist; execution still runs in the request process and has no leased restart recovery                                                                                                                                                                                                                                                                                                           |
+| Remote coding-agent webhooks                              | Contained                  | Outbound destinations are SSRF/timeout bounded; inbound events atomically commit the tenant/session fingerprint receipt, session CAS and comment. Terminal issue moves use the common workflow gate; rejected policy is durably recorded as a typed skip rather than bypassed.                                                                                                                                                                 |
+| Workflow transition persistence                           | Shipped foundation         | Roles, approval policy, targets, conditions, validators, and post-actions survive builder save/reload through migration `0060`                                                                                                                                                                                                                                                                                                                 |
+| Workflow transition enforcement                           | Shipped fail-closed core   | PATCH/board/MCP, bulk, automation, approved agent actions, remote agent webhooks, Slack and janitor share tenant/workflow validation, project transition permission, exact edge/role checks, row locks, status CAS and atomic history. Trusted system jobs and superadmins are explicit service-level actors. Workflow approval and non-empty untyped conditions/validators/post-actions reject with typed codes until durable executors ship. |
 
 Do not describe the application as having a production deep-research engine or
-a durable shared agent runtime until the missing rows above are closed.
+a durable runtime shared by every agent surface until the remaining rows above
+are closed.
+
+## Shipped project-agent durability boundary
+
+- Durable runs persist graph version/current node, complete checkpoint state,
+  CAS version, bounds, deadline, lease/heartbeat/cancel fields, and monotonic
+  step events. A stale or lease-less durable `running` row is reclaimable. The
+  absolute deadline is 120 seconds from admission, so crash/reclaim cannot
+  reset the wall-clock bound.
+- Admission and the initial audit/event commit together. The caller must send a
+  stable `Idempotency-Key`; a same-request replay returns the existing run and a
+  changed request fails with `409`, even if provider/model policy changed after
+  acceptance. Daily admission resets at 00:00 UTC.
+- The start endpoint returns a safe run projection with `202` immediately after
+  admission, then schedules a best-effort post-response drain. The cron
+  reconciler is authoritative for process-loss recovery. Durable input,
+  checkpoints, request hashes and lease metadata are never returned to the
+  browser; public failures expose a typed code and localized generic copy.
+- Triage and bulk sprint effects fence the current, unexpired lease, revalidate
+  current workspace/project/system write policy, then commit receipt, mutation,
+  activity, and audit in one transaction. A stale context CAS fails rather than
+  overwrite a human priority/label/sprint change. `writeActionsCount` is the
+  run's total represented durable effects, including receipts recovered after
+  resume, not only writes made by the latest worker invocation.
+- Approval-required project runs remain preview-only and perform zero issue or
+  sprint domain writes. They are not yet resumable through the separate issue
+  approval queue.
+- Provider planning may be invoked again only if the process dies before its
+  completed plan checkpoint commits. Database domain effects do not repeat;
+  their realtime fan-out remains best-effort and can be absent after a process
+  loss immediately after commit. Persisted graph events are an operational
+  record, not yet an SSE replay source.
+- Resume/cancel are tenant-scoped control APIs. The settings UI polls accepted
+  runs, invalidates issue/sprint data on terminal transitions, and exposes
+  Cancel for active runs and Resume for failed/cancelled runs. Resume reserves
+  the global active-run slot under the same admission lock as a new start,
+  clears stale terminal output, and does not consume the UTC daily quota again.
 
 ## Runtime invariants
 
@@ -105,19 +143,19 @@ All project-agent, automation, board, bulk, webhook, and workflow-transition
 write paths should converge on the same effect/transition services. UI approval
 metadata is not enforcement.
 
-## Durable data model target
+## Durable data model and remaining target
 
 Extend or add persistent records only through the repository's hand-written,
 idempotent migration process:
 
-- `agent_runs`: graph version, current node, status reason, deadline, budgets,
-  cancel request, lease owner/expiry, heartbeat, idempotency key.
-- append-only `agent_run_steps`: node, attempt, input/output hashes, timing,
-  failure class, token/tool/cost counters.
-- versioned `agent_checkpoints`: serialized state plus compare-and-swap version.
-- append-only `agent_events`: monotonic sequence for SSE replay.
-- `agent_effects` and outbox: stable effect key, proposed payload, approval,
-  claim/apply/compensation outcome.
+- `agent_runs` now carries project-agent graph version/current node, serialized
+  checkpoint and CAS version, deadline/budgets, cancellation, lease/heartbeat,
+  request hash, and organization-scoped idempotency key.
+- `agent_run_step_events` is the append-only monotonic project-agent lifecycle
+  stream. Input/output hashes, token/tool counters and SSE replay are still
+  future work.
+- `agent_run_effects` now gives project-agent database mutations stable effect
+  keys with atomic receipt/apply. External delivery needs a separate outbox.
 - research sources/claims: source snapshot metadata and claim-source edges.
 
 JSON blobs may carry provider-specific detail, but fields needed for recovery,
@@ -125,12 +163,12 @@ lease ownership, policy, tenancy, and queries must be first-class columns.
 
 ## Rollout order
 
-1. **Containment (current):** approval-required project runs preview only;
+1. **Containment (shipped):** approval-required project runs preview only;
    citation grammar and unresolved markers agree end to end; local child env is
    allowlisted; pure graph and research topology are tested.
-2. **Durability:** add checkpoint/event/effect tables and a leased worker with
-   heartbeat, stale-run recovery, cancellation, idempotency, and transactional
-   outbox.
+2. **Project-agent durability (shipped):** checkpoint/event/effect tables and a
+   leased worker provide heartbeat, stale recovery, cancellation, idempotent
+   starts and database effects. Realtime still needs an outbox.
 3. **Convergence:** move project agents and workflow mutations onto common
    policy/effect services; make approval an atomic interrupt/resume path.
 4. **Research product:** add source connectors/snapshots, claim persistence,

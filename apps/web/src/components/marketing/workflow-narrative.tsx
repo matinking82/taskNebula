@@ -81,6 +81,7 @@ const STEPS: Step[] = [
 
 function StepRow({ step, reversed }: { step: Step; reversed: boolean }) {
   const t = useTranslations('publicPages.landing.workflow');
+  const truth = useTranslations('publicPages.landing.productTruth');
   const Icon = step.icon;
   const Visual = step.visual;
   return (
@@ -102,7 +103,7 @@ function StepRow({ step, reversed }: { step: Step; reversed: boolean }) {
           {t(`steps.${step.key}.title`)}
         </h3>
         <p className="landing-body mt-3 max-w-md text-[14px] text-[var(--landing-text-subtle)] sm:text-[15px]">
-          {t(`steps.${step.key}.body`)}
+          {step.key === 'build' ? truth('mcp') : t(`steps.${step.key}.body`)}
         </p>
       </div>
       <div aria-hidden="true">

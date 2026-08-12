@@ -72,14 +72,14 @@ and self-update details, use [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Features
 
-| Area                   | Highlights                                                                                            |
-| ---------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Project management** | Kanban, backlog, sprints, epics, subtasks, custom fields, issue links, attachments, imports           |
-| **Collaboration**      | Comments, reactions, docs, project chat, presence, realtime updates, collaborative editing            |
-| **AI assistance**      | Draft/issue assist, cited workspace Ask, native planner, agent activity, fail-closed previews         |
-| **Admin & governance** | Multi-org roles, audit logs, registration controls, webhooks, API-key and policy scaffolding          |
-| **Analytics**          | Burndown, velocity, cycle time, throughput, project health, time-in-status, dashboard cards           |
-| **Self-hosting**       | Docker-first deploy, Postgres, Redis, health checks, durable approval reconciler, optional voice/cron |
+| Area                   | Highlights                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| **Project management** | Kanban, backlog, sprints, epics, subtasks, custom fields, issue links, attachments, imports       |
+| **Collaboration**      | Comments, reactions, docs, project chat, presence, realtime updates, collaborative editing        |
+| **AI assistance**      | Draft/issue assist, cited workspace Ask, native planner, agent activity, fail-closed previews     |
+| **Admin & governance** | Multi-org roles, audit logs, registration controls, webhooks, API-key and policy scaffolding      |
+| **Analytics**          | Burndown, velocity, cycle time, throughput, project health, time-in-status, dashboard cards       |
+| **Self-hosting**       | Docker-first deploy, Postgres, Redis, health checks, durable work reconciler, optional voice/cron |
 
 Importers currently cover **Jira**, **Linear**, **GitHub**, and **CSV**.
 
@@ -128,7 +128,7 @@ TaskNebula is designed around a small production surface:
 - `web`: Next.js standalone runtime
 - `postgres`: PostgreSQL 16 with pgvector
 - `redis`: cache, realtime fan-out, and background coordination
-- `approval-reconciler`: durable post-approval outbox delivery
+- `approval-reconciler`: durable approval-effect delivery and project-agent run recovery
 - optional `livekit` (`voice` profile): voice rooms
 - optional `cron` profile: standup, janitor, embeddings, rollover, and version checks
 

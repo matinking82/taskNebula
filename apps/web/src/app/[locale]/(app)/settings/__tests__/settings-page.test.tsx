@@ -115,7 +115,7 @@ describe('SettingsPage (/settings)', () => {
 
     renderWithProviders(<SettingsPage />);
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
     expect(screen.getByTestId('manager-organization')).toBeInTheDocument();
     // None of the other manager stubs should be mounted.
     expect(screen.queryByTestId('manager-api-keys')).not.toBeInTheDocument();

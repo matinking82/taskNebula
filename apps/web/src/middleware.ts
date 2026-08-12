@@ -24,6 +24,27 @@ const UN_LOCALIZED_PREFIXES = [
   '/trust',
 ];
 
+const PUBLIC_AUTH_ROUTES = [
+  '/auth/signin',
+  '/auth/signup',
+  '/auth/error',
+  '/auth/verify-request',
+  '/auth/verify-email',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+] as const;
+
+// Verification pages remain useful after signup has established a session:
+// they explain the next step and expose the resend action. Entry and recovery
+// forms, on the other hand, should still send an authenticated user home.
+const SIGNED_IN_AUTH_REDIRECT_ROUTES = new Set<string>([
+  '/auth/signin',
+  '/auth/signup',
+  '/auth/error',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+]);
+
 function isUnLocalizedPath(pathname: string): boolean {
   return UN_LOCALIZED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -100,16 +121,9 @@ export default auth((req) => {
   }
 
   // Public auth routes remain outside the locale-prefixed app route group.
-  const publicAuthRoutes = [
-    '/auth/signin',
-    '/auth/signup',
-    '/auth/error',
-    '/auth/verify-request',
-    '/auth/verify-email',
-    '/auth/forgot-password',
-    '/auth/reset-password',
-  ];
-  const isPublicAuthRoute = publicAuthRoutes.includes(pathname);
+  const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.includes(
+    pathname as (typeof PUBLIC_AUTH_ROUTES)[number]
+  );
 
   // Redirect to signin if not logged in and trying to access protected route.
   // We strip any leading /[locale] segment before checking auth status so the
@@ -126,7 +140,7 @@ export default auth((req) => {
     return NextResponse.redirect(signInUrl);
   }
 
-  if (isLoggedIn && isPublicAuthRoute) {
+  if (isLoggedIn && SIGNED_IN_AUTH_REDIRECT_ROUTES.has(pathname)) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

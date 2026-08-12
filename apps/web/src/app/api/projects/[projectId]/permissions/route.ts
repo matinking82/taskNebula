@@ -14,6 +14,7 @@ import {
 } from '@tasknebula/db';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
 import { canReadProject } from '@/lib/auth/access-control';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 // Full permissions interface with all granular permissions
 export interface UserProjectPermissions extends GranularPermissions {
@@ -222,8 +223,8 @@ export async function GET(
       ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] ||
       ROLE_DEFAULT_PERMISSIONS.viewer;
 
-    // Helper to convert 'true'/'false' string to boolean
-    const toBool = (val: string | null | undefined): boolean => val === 'true';
+    const permission = (key: keyof GranularPermissions): boolean =>
+      resolveProjectMemberPermission(projectMember[key], roleDefaults[key]);
 
     // Build permissions from database values (custom overrides) or role defaults
     const permissions: UserProjectPermissions = {
@@ -233,78 +234,63 @@ export async function GET(
       isOrgOwner,
       isOrgAdmin,
       // Project
-      canBrowseProject: toBool(projectMember.canBrowseProject) || roleDefaults.canBrowseProject,
-      canAdministerProject:
-        toBool(projectMember.canAdministerProject) || roleDefaults.canAdministerProject,
-      canBrowseDocs: toBool(projectMember.canBrowseDocs) || roleDefaults.canBrowseDocs,
-      canCreateDocs: toBool(projectMember.canCreateDocs) || roleDefaults.canCreateDocs,
-      canEditDocs: toBool(projectMember.canEditDocs) || roleDefaults.canEditDocs,
-      canDeleteDocs: toBool(projectMember.canDeleteDocs) || roleDefaults.canDeleteDocs,
-      canBrowseChat: toBool(projectMember.canBrowseChat) || roleDefaults.canBrowseChat,
-      canCreateChannels: toBool(projectMember.canCreateChannels) || roleDefaults.canCreateChannels,
-      canPostMessages: toBool(projectMember.canPostMessages) || roleDefaults.canPostMessages,
-      canModerateMessages:
-        toBool(projectMember.canModerateMessages) || roleDefaults.canModerateMessages,
-      canStartCalls: toBool(projectMember.canStartCalls) || roleDefaults.canStartCalls,
-      canManageCalls: toBool(projectMember.canManageCalls) || roleDefaults.canManageCalls,
+      canBrowseProject: permission('canBrowseProject'),
+      canAdministerProject: permission('canAdministerProject'),
+      canBrowseDocs: permission('canBrowseDocs'),
+      canCreateDocs: permission('canCreateDocs'),
+      canEditDocs: permission('canEditDocs'),
+      canDeleteDocs: permission('canDeleteDocs'),
+      canBrowseChat: permission('canBrowseChat'),
+      canCreateChannels: permission('canCreateChannels'),
+      canPostMessages: permission('canPostMessages'),
+      canModerateMessages: permission('canModerateMessages'),
+      canStartCalls: permission('canStartCalls'),
+      canManageCalls: permission('canManageCalls'),
       // Sprint
-      canManageSprints: toBool(projectMember.canManageSprints) || roleDefaults.canManageSprints,
-      canStartSprint: toBool(projectMember.canStartSprint) || roleDefaults.canStartSprint,
-      canCompleteSprint: toBool(projectMember.canCompleteSprint) || roleDefaults.canCompleteSprint,
-      canDeleteSprint: toBool(projectMember.canDeleteSprint) || roleDefaults.canDeleteSprint,
+      canManageSprints: permission('canManageSprints'),
+      canStartSprint: permission('canStartSprint'),
+      canCompleteSprint: permission('canCompleteSprint'),
+      canDeleteSprint: permission('canDeleteSprint'),
       // Issue
-      canCreateIssues: toBool(projectMember.canCreateIssues) || roleDefaults.canCreateIssues,
-      canEditIssues: toBool(projectMember.canEditIssues) || roleDefaults.canEditIssues,
-      canEditOwnIssues: toBool(projectMember.canEditOwnIssues) || roleDefaults.canEditOwnIssues,
-      canDeleteIssues: toBool(projectMember.canDeleteIssues) || roleDefaults.canDeleteIssues,
-      canDeleteOwnIssues:
-        toBool(projectMember.canDeleteOwnIssues) || roleDefaults.canDeleteOwnIssues,
-      canAssignIssues: toBool(projectMember.canAssignIssues) || roleDefaults.canAssignIssues,
-      canAssigneeIssues: toBool(projectMember.canAssigneeIssues) || roleDefaults.canAssigneeIssues,
-      canTransitionIssues:
-        toBool(projectMember.canTransitionIssues) || roleDefaults.canTransitionIssues,
-      canScheduleIssues: toBool(projectMember.canScheduleIssues) || roleDefaults.canScheduleIssues,
-      canMoveIssues: toBool(projectMember.canMoveIssues) || roleDefaults.canMoveIssues,
-      canLinkIssues: toBool(projectMember.canLinkIssues) || roleDefaults.canLinkIssues,
-      canCloseIssues: toBool(projectMember.canCloseIssues) || roleDefaults.canCloseIssues,
-      canReopenIssues: toBool(projectMember.canReopenIssues) || roleDefaults.canReopenIssues,
+      canCreateIssues: permission('canCreateIssues'),
+      canEditIssues: permission('canEditIssues'),
+      canEditOwnIssues: permission('canEditOwnIssues'),
+      canDeleteIssues: permission('canDeleteIssues'),
+      canDeleteOwnIssues: permission('canDeleteOwnIssues'),
+      canAssignIssues: permission('canAssignIssues'),
+      canAssigneeIssues: permission('canAssigneeIssues'),
+      canTransitionIssues: permission('canTransitionIssues'),
+      canScheduleIssues: permission('canScheduleIssues'),
+      canMoveIssues: permission('canMoveIssues'),
+      canLinkIssues: permission('canLinkIssues'),
+      canCloseIssues: permission('canCloseIssues'),
+      canReopenIssues: permission('canReopenIssues'),
       // Comment
-      canAddComments: toBool(projectMember.canAddComments) || roleDefaults.canAddComments,
-      canEditOwnComments:
-        toBool(projectMember.canEditOwnComments) || roleDefaults.canEditOwnComments,
-      canEditAllComments:
-        toBool(projectMember.canEditAllComments) || roleDefaults.canEditAllComments,
-      canDeleteOwnComments:
-        toBool(projectMember.canDeleteOwnComments) || roleDefaults.canDeleteOwnComments,
-      canDeleteAllComments:
-        toBool(projectMember.canDeleteAllComments) || roleDefaults.canDeleteAllComments,
+      canAddComments: permission('canAddComments'),
+      canEditOwnComments: permission('canEditOwnComments'),
+      canEditAllComments: permission('canEditAllComments'),
+      canDeleteOwnComments: permission('canDeleteOwnComments'),
+      canDeleteAllComments: permission('canDeleteAllComments'),
       // Attachment
-      canCreateAttachments:
-        toBool(projectMember.canCreateAttachments) || roleDefaults.canCreateAttachments,
-      canDeleteOwnAttachments:
-        toBool(projectMember.canDeleteOwnAttachments) || roleDefaults.canDeleteOwnAttachments,
-      canDeleteAllAttachments:
-        toBool(projectMember.canDeleteAllAttachments) || roleDefaults.canDeleteAllAttachments,
+      canCreateAttachments: permission('canCreateAttachments'),
+      canDeleteOwnAttachments: permission('canDeleteOwnAttachments'),
+      canDeleteAllAttachments: permission('canDeleteAllAttachments'),
       // Watcher
-      canManageWatchers: toBool(projectMember.canManageWatchers) || roleDefaults.canManageWatchers,
-      canViewWatchers: toBool(projectMember.canViewWatchers) || roleDefaults.canViewWatchers,
+      canManageWatchers: permission('canManageWatchers'),
+      canViewWatchers: permission('canViewWatchers'),
       // Member
-      canManageMembers: toBool(projectMember.canManageMembers) || roleDefaults.canManageMembers,
-      canInviteMembers: toBool(projectMember.canInviteMembers) || roleDefaults.canInviteMembers,
-      canRemoveMembers: toBool(projectMember.canRemoveMembers) || roleDefaults.canRemoveMembers,
-      canChangeRoles: toBool(projectMember.canChangeRoles) || roleDefaults.canChangeRoles,
+      canManageMembers: permission('canManageMembers'),
+      canInviteMembers: permission('canInviteMembers'),
+      canRemoveMembers: permission('canRemoveMembers'),
+      canChangeRoles: permission('canChangeRoles'),
       // Workflow
-      canManageWorkflow: toBool(projectMember.canManageWorkflow) || roleDefaults.canManageWorkflow,
+      canManageWorkflow: permission('canManageWorkflow'),
       // Time Tracking
-      canLogWork: toBool(projectMember.canLogWork) || roleDefaults.canLogWork,
-      canEditOwnWorklogs:
-        toBool(projectMember.canEditOwnWorklogs) || roleDefaults.canEditOwnWorklogs,
-      canEditAllWorklogs:
-        toBool(projectMember.canEditAllWorklogs) || roleDefaults.canEditAllWorklogs,
-      canDeleteOwnWorklogs:
-        toBool(projectMember.canDeleteOwnWorklogs) || roleDefaults.canDeleteOwnWorklogs,
-      canDeleteAllWorklogs:
-        toBool(projectMember.canDeleteAllWorklogs) || roleDefaults.canDeleteAllWorklogs,
+      canLogWork: permission('canLogWork'),
+      canEditOwnWorklogs: permission('canEditOwnWorklogs'),
+      canEditAllWorklogs: permission('canEditAllWorklogs'),
+      canDeleteOwnWorklogs: permission('canDeleteOwnWorklogs'),
+      canDeleteAllWorklogs: permission('canDeleteAllWorklogs'),
     };
 
     return NextResponse.json(permissions);

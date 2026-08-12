@@ -9,9 +9,13 @@ Model Context Protocol server for TaskNebula, implemented in this monorepo.
   link tool is intentionally not advertised until the web API has a matching
   persisted remote-link contract.
 - Not published to npm; `npx @tasknebula/mcp-server` does not work yet.
-- End-to-end calls are blocked until the web REST API accepts scoped API keys
-  (or OAuth) instead of requiring only a browser session cookie.
+- Source-built stdio calls support TaskNebula `sk_live_*` API keys across the
+  current 11-tool REST surface. Keys remain bound to their organization and
+  creator's current active membership and route permissions.
 - HTTP OAuth 2.1/PKCE and resumable Streamable HTTP are incomplete.
+- The HTTP scaffold syntax-checks `sk_live_*` Bearer values only. Capability
+  discovery is not credential proof; data tools validate the key in the web
+  REST actor resolver before returning data.
 
 This package is useful for contract development and local tests. Do not present
 it as a turnkey public connector until the auth, transport, publication, and
@@ -35,9 +39,9 @@ TASKNEBULA_API_KEY=sk_live_replace_me \
 node packages/mcp-server/bin/tasknebula-mcp.mjs
 ```
 
-The key format shown is syntactically representative only. Until web route
-authentication is completed, a key stored by TaskNebula will not make the
-cookie-authenticated REST routes succeed.
+The key format shown is syntactically representative only. Create the real key
+in TaskNebula for the target organization; it is displayed once and should stay
+in the MCP client's private environment.
 
 For an MCP client during local development, point `command` to `node` and
 `args` to the absolute path of
@@ -70,7 +74,8 @@ not replace server-side authorization, approval, tenancy, audit, or idempotency.
 
 ## Publication definition of done
 
-1. Scoped API-key or OAuth web-route authentication works end to end.
+1. Fine-grained scoped API-key or OAuth web-route authentication works end to
+   end (organization-bound API-key auth for the current tool routes is present).
 2. Tool contracts match current REST validation and organization ownership.
 3. Streamable HTTP/OAuth discovery and replay behavior pass protocol tests.
 4. Every call records actor, scope, tool, effect, and outcome audit evidence.

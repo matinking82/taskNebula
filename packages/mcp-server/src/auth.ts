@@ -1,16 +1,18 @@
 /**
  * Authentication helpers for the TaskNebula MCP server.
  *
- * The MCP spec (2025-03-26) recommends OAuth 2.1 with PKCE for remote
- * (HTTP/Streamable) servers and lets stdio servers rely on out-of-band
+ * MCP authorization guidance recommends OAuth 2.1 with PKCE for remote
+ * HTTP servers and lets stdio servers rely on out-of-band
  * credentials (env vars). This file ships both code paths:
  *
  *   - `resolveStdioAuth`: pulls the API key from env for local Cursor /
  *     Claude Desktop / Claude Code usage.
  *
- *   - `resolveHttpAuth`: extracts a Bearer token from an incoming HTTP
- *     request, validates it against the TaskNebula API (or, eventually,
- *     against our OAuth 2.1 provider — see TODO below).
+ *   - `resolveHttpAuth`: accepts a TaskNebula `sk_live_*` Bearer key from an
+ *     incoming HTTP request and forwards it to the TaskNebula API. The MCP
+ *     scaffold does not validate the secret itself; each REST route validates
+ *     it through the organization-bound API actor resolver. OAuth token
+ *     verification remains a follow-up (see TODO below).
  *
  * NOTE: the OAuth 2.1 + PKCE flow itself (authorize +
  * token endpoints, dynamic client registration per RFC 7591, refresh
@@ -31,7 +33,7 @@ export interface HttpAuthContext {
   accessToken?: string;
   /** Subject (user id) extracted from the OAuth token. */
   subject?: string;
-  /** Granted scopes — checked by tools that mutate data. */
+  /** Granted OAuth scopes once token verification is implemented. */
   scopes?: string[];
 }
 
@@ -52,7 +54,10 @@ export function resolveStdioAuth(env: NodeJS.ProcessEnv = process.env): StdioAut
 }
 
 /**
- * Extract a Bearer token from the `Authorization` header.
+ * Extract a syntactically valid TaskNebula API key from the `Authorization`
+ * header. This is deliberately not an OAuth-token parser: accepting arbitrary
+ * Bearer values would let unverified credentials reach capability-only MCP
+ * methods such as `tools/list`.
  *
  * TODO(P1): replace this with full OAuth 2.1 verification:
  *   1. Discover provider via `.well-known/oauth-protected-resource`.
@@ -75,14 +80,14 @@ export function resolveHttpAuth(
     return { apiUrl };
   }
   const token = match[1]!.trim();
-  // Forward the token verbatim. The web REST API does not accept API keys or
-  // OAuth bearer tokens yet, so authenticated tool calls remain blocked until
-  // that server-side resolver is implemented.
+  if (!token.startsWith('sk_live_') || token.length <= 'sk_live_'.length) {
+    return { apiUrl };
+  }
+  // Forward the key verbatim. Its hash, lifecycle, creator, membership,
+  // organization boundary, and route permissions are validated by web REST.
   return {
     apiUrl,
     accessToken: token,
-    // Optimistic; the API will reject if the token is bad.
-    scopes: ['issues:read', 'issues:write', 'comments:write'],
   };
 }
 

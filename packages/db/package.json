@@ -14,6 +14,7 @@
     "db:setup": "pnpm db:migrate && pnpm db:seed",
     "db:setup:prod": "pnpm db:migrate:prod && pnpm db:seed:prod",
     "test:integration:agent-execution-receipts": "tsx scripts/agent-execution-receipts.integration.ts",
+    "test:integration:durable-project-agent-runs": "tsx scripts/durable-project-agent-runs.integration.ts",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts"
   },

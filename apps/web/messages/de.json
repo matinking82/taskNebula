@@ -128,13 +128,13 @@
       "create_submit": "Create label",
       "save_submit": "Save changes",
       "delete_title": "Delete label?",
-      "delete_warning": "This permanently deletes “{name}” and removes it from every issue that uses it. This cannot be undone.",
+      "delete_warning": "Dadurch wird „{name}“ dauerhaft gelöscht und aus allen Vorgängen entfernt, die dieses Label verwenden. Diese Aktion kann nicht rückgängig gemacht werden.",
       "delete_submit": "Delete label",
       "toast_created": "Label created",
       "toast_updated": "Label updated",
       "toast_deleted": "Label deleted",
-      "error_duplicate": "A label with this name already exists.",
-      "error_generic": "Something went wrong. Please try again."
+      "error_duplicate": "Ein Label mit diesem Namen ist bereits vorhanden.",
+      "error_generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
     },
     "versions": {
       "kicker": "Releases",
@@ -179,11 +179,11 @@
       "toast_archived": "Version archived",
       "toast_restored": "Version restored",
       "toast_deleted": "Version deleted",
-      "delete_title": "Delete version?",
-      "delete_warning": "This permanently deletes “{name}” and removes it from every issue’s fix and affects versions. This cannot be undone.",
+      "delete_title": "Version löschen?",
+      "delete_warning": "Dadurch wird „{name}“ dauerhaft gelöscht und aus den Feldern „Fix-Version“ und „Betroffene Version“ aller Vorgänge entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
       "delete_submit": "Delete version",
-      "error_duplicate": "A version with this name already exists in this project.",
-      "error_generic": "Something went wrong. Please try again."
+      "error_duplicate": "In diesem Projekt ist bereits eine Version mit diesem Namen vorhanden.",
+      "error_generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
     },
     "components": {
       "kicker": "Components",
@@ -215,17 +215,17 @@
       "default_assignee_label": "Default assignee",
       "create_submit": "Create component",
       "save_submit": "Save changes",
-      "delete_title": "Delete component?",
-      "delete_warning": "This permanently deletes “{name}” and removes it from every issue that uses it. This cannot be undone.",
+      "delete_title": "Komponente löschen?",
+      "delete_warning": "Dadurch wird „{name}“ dauerhaft gelöscht und aus allen Vorgängen entfernt, die diese Komponente verwenden. Diese Aktion kann nicht rückgängig gemacht werden.",
       "delete_submit": "Delete component",
       "toast_created": "Component created",
       "toast_updated": "Component updated",
       "toast_archived": "Component archived",
       "toast_restored": "Component restored",
       "toast_deleted": "Component deleted",
-      "error_duplicate": "A component with this name already exists in this project.",
-      "error_lead": "The component lead must be an active member of the organization.",
-      "error_generic": "Something went wrong. Please try again."
+      "error_duplicate": "In diesem Projekt ist bereits eine Komponente mit diesem Namen vorhanden.",
+      "error_lead": "Die Komponentenleitung muss ein aktives Mitglied der Organisation sein.",
+      "error_generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
     }
   },
   "issueHeader": {
@@ -1075,7 +1075,7 @@
     "toast_refresh_failed_title": "Status konnte nicht aktualisiert werden",
     "registration_invite_required": "Die Registrierung ist nur per Einladung möglich. Bitte einen Admin um eine Einladung.",
     "registration_admin_only": "Die Registrierung ist geschlossen. Bitte einen Admin, dein Konto zu erstellen.",
-    "project_invite_invalid": "This project invite link is expired, revoked, or has no remaining uses."
+    "project_invite_invalid": "Dieser Projekteinladungslink ist abgelaufen, wurde widerrufen oder kann nicht mehr verwendet werden."
   },
   "issuesViews": {
     "loading": "Wird geladen…",
@@ -2434,7 +2434,10 @@
       "no_runs": "Noch keine Agentenläufe. Beginne mit einem Projektzustandsscan oder einer Sprintplanungs-Vorschau.",
       "writes_count": "{count} Schreibvorgänge",
       "no_summary": "Keine Zusammenfassung erfasst.",
-      "run_live": "Live ausführen"
+      "run_live": "Live ausführen",
+      "run_queued": "Agentenlauf eingereiht",
+      "cancel_run": "Lauf abbrechen",
+      "resume_run": "Lauf fortsetzen"
     },
     "agentGovernance": {
       "title": "AGENTOWNERS governance",
@@ -2552,7 +2555,9 @@
         "running": "Läuft",
         "completed": "Abgeschlossen",
         "failed": "Fehlgeschlagen",
-        "unknown": "{status}"
+        "unknown": "{status}",
+        "pending": "Ausstehend",
+        "cancelled": "Abgebrochen"
       },
       "capabilities": {
         "project_tracking": {
@@ -5028,7 +5033,7 @@
     "shareUpdated": "Aktualisiert {date}",
     "sharePublishedFiles": "Veröffentlichte Dateien",
     "sharePublicViewNotice": "Diese öffentliche Ansicht blendet Workspace-Metadaten und nicht veröffentlichte Dateien aus.",
-    "trustMetaTitle": "Trust Center · TaskNebula",
+    "trustMetaTitle": "Vertrauenszentrum · TaskNebula",
     "trustMetaDescription": "Sicherheitsprogramm, Subunternehmer, Compliance-Status und aktuelle Zuverlässigkeitsvorfälle für TaskNebula.",
     "trustEyebrow": "Trust Center",
     "trustLastReviewed": "Zuletzt überprüft: {date}",
@@ -5151,8 +5156,7 @@
         "description": "Ein Befehl startet einen kleinen Compose-Stack. Die Kerndaten liegen in Postgres, der Export ist nur einen pg_dump entfernt und standardmäßig funkt nichts nach Hause — ohne Anbieterbindung.",
         "cards": {
           "postgres": {
-            "title": "Ein Postgres, ein Web-Image",
-            "body": "Postgres 16 mit pgvector-Erweiterung treibt die Suche an; Redis 7 läuft mit. Kein Mongo, kein Elastic, kein Sidecar-Zoo."
+            "title": "Ein Postgres, ein Web-Image"
           },
           "migrations": {
             "title": "Migrationen laufen beim Start",
@@ -5172,46 +5176,18 @@
         "quickstartAria": "Self-hosting-Schnellstartbefehle",
         "terminalNote": "Das Web-Image wartet auf Postgres, führt Migrationen aus und läuft dann auf <code>http://localhost:3000</code> — öffne es und schließe den Admin-Assistenten ab. Image: <imageLink>neuraparse/tasknebula</imageLink>."
       },
-      "migrate": {
-        "kicker": "Migrieren",
-        "title": "Wechsle an einem Nachmittag von Jira oder Linear",
-        "description": "Ein Toolwechsel sollte nicht bedeuten, Historie oder Prozess zu verlieren. Importiere, was du hast, ordne es TaskNebula zu und arbeite weiter, wie dein Team es kennt.",
-        "steps": {
-          "issues": {
-            "title": "Issues mitnehmen",
-            "body": "Importiere Issues aus Jira und Linear mit Beschreibungen, Kommentaren und Historie — nicht flach als CSV-Dump."
-          },
-          "labels": {
-            "title": "Labels und Sprints kommen mit",
-            "body": "Labels, Komponenten und aktive Sprints landen als echte Datensätze, damit Boards und Backlog vom ersten Tag an vertraut wirken."
-          },
-          "fields": {
-            "title": "Felder abbilden, nicht nur Namen",
-            "body": "Ordne Status, Prioritäten und Custom Fields beim Import TaskNebula-Entsprechungen zu — prüfe das Mapping, bevor etwas geschrieben wird."
-          },
-          "workflow": {
-            "title": "Workflow behalten",
-            "body": "Status, Swimlanes und Konventionen ziehen mit um. Wechsle Tools, ohne das Team neu zu schulen oder Prozesse neu aufzubauen."
-          }
-        },
-        "note": "Importe laufen gegen deine eigene Datenbank und sind vollständig rückgängig zu machen — nichts verlässt deinen Server, und du kannst ein Mapping erneut ausführen, bis es passt."
-      },
       "aiMcp": {
         "kicker": "AI-native",
         "title": "Agents arbeiten mit dir am Backlog.",
-        "description": "TaskNebula wurde für die Agent-Ära gebaut. Stelle Fragen über den ganzen Workspace, lass AI neue Arbeit triagieren und schätzen, und gib externen Agents echte Tools über einen erstklassigen MCP-Server.",
         "capabilities": {
           "ask": {
-            "title": "Workspace fragen",
-            "body": "Der /api/ask RAG-Endpunkt antwortet natürlichsprachlich über Issues, Docs und Kommentare — auf Basis von pgvector-Retrieval, mit Quellenangaben."
+            "title": "Workspace fragen"
           },
           "triage": {
-            "title": "AI-Triage und Schätzungen",
-            "body": "Vorgeschlagene Prioritäten, Labels und Aufwand landen auf neuen Issues — gestützt durch echte OpenAI- und Anthropic-Calls, Cost Guard und Tracing. Du behältst die Kontrolle: akzeptieren oder verwerfen."
+            "title": "AI-Triage und Schätzungen"
           },
           "mcp": {
-            "title": "MCP-Tools für Agents",
-            "body": "@tasknebula/mcp-server öffnet den Backlog über MCP — HTTP unter /api/mcp oder stdio — damit externe Agents Issues erstellen, suchen und verschieben können, mit widerrufbaren Keys."
+            "title": "MCP-Tools für Agents"
           }
         },
         "mock": {
@@ -5247,8 +5223,7 @@
             "body": "Ziehe aus dem Backlog in einen Sprint, setze Fix Versions und Komponenten und erkenne den Umfang auf einen Blick. Planung lebt neben der Arbeit, nicht in einem separaten Doc."
           },
           "build": {
-            "title": "Neben Agents bauen",
-            "body": "Agents sind vollwertige Teammitglieder über MCP — sie übernehmen Issues, kommentieren und öffnen Arbeit wie Menschen, jede Aktion auf der gemeinsamen Timeline."
+            "title": "Neben Agents bauen"
           },
           "ship": {
             "title": "Shippen und Ergebnis verfolgen",
@@ -5310,28 +5285,23 @@
             "answer": "Self-hosting ist der Standardweg. Mit Docker startest du einen kleinen Compose-Stack mit Postgres 16 samt pgvector, Redis 7, dem Web-Image neuraparse/tasknebula und den gebündelten oder optionalen Diensten, die du aktivierst. Migrationen laufen beim Start, GET /api/health ist der Prüf-Endpunkt und der Schnellstart öffnet sich unter localhost:3000."
           },
           "aiKeys": {
-            "question": "Brauche ich die KI-Funktionen? Kann ich eigene Schlüssel verwenden?",
-            "answer": "AI is optional — every board, sprint, and doc works with no model keys configured. When you want it, you bring your own OpenAI or Anthropic key as environment variables, so spend and data residency stay yours. There is a cost guard so a runaway prompt cannot run up your bill."
+            "question": "Brauche ich die KI-Funktionen? Kann ich eigene Schlüssel verwenden?"
           },
           "aiReality": {
-            "question": "Wie real sind die KI-Funktionen heute?",
-            "answer": "We build them in the open. The data model and endpoints — triage suggestions, pgvector semantic search, and the /api/ask RAG endpoint — are live, and they make real OpenAI and Anthropic calls. Some surfaces are still labeled preview while we harden them; we would rather say that here than have you discover it after install."
+            "question": "Wie real sind die KI-Funktionen heute?"
           },
           "mcpServer": {
-            "question": "Was ist der MCP-Server?",
-            "answer": "An MCP (Model Context Protocol) server exposes TaskNebula as tools — create, search, move, and comment on issues — so agents like Claude Code and Cursor can drive your tracker. It ships with the repo, HTTP at /api/mcp or stdio via @tasknebula/mcp-server, and is MIT licensed. Heads up: end-to-end agent auth depends on the REST API accepting API keys, which is still being wired, so treat it as preview today."
+            "question": "Was ist der MCP-Server?"
           },
           "imports": {
-            "question": "Importiert es aus Jira oder Linear?",
-            "answer": "Yes — there are importers for Jira, Linear, GitHub, and CSV. Each runs with a preview step so you can inspect the field mapping before anything is written, and you can keep your old tool read-only while you cut over."
+            "question": "Importiert es aus Jira oder Linear?"
           },
           "productionReady": {
             "question": "Ist es produktionsreif?",
             "answer": "Der Kern-Tracker — Vorgänge, Boards, Sprints, Dokumente, Suche, REST API und OpenAPI-Spezifikation — lässt sich selbst hosten. Für OAuth-Anmeldung fehlt noch ein Datenbankadapter; nutze vorerst die Anmeldung mit Zugangsdaten. Echtzeit-Zusammenarbeit ist über Docker/Compose verdrahtet, aber dein Deployment braucht weiterhin eine erreichbare URL und einen Live-Smoke-Test. AI und MCP bleiben Preview. Die Lücken verfolgen wir in docs/STATUS.md."
           },
           "dataVisibility": {
-            "question": "Wer kann meine Daten sehen?",
-            "answer": "You decide. Self-hosted, everything lives in your Postgres on your infrastructure and exports with a plain pg_dump — no telemetry phones home. Inside the product, workspaces are isolated per organization with role-based access, permission schemes, and audit logs."
+            "question": "Wer kann meine Daten sehen?"
           }
         }
       },
@@ -5345,28 +5315,18 @@
             "body": "Drive the whole board from one Cmd+K palette — search, navigate, and run actions without leaving the keys. Drag across columns, plan sprints, and read burndown in the same view."
           },
           "import": {
-            "title": "Import from Jira and Linear",
-            "body": "Bring your backlog with you — Jira, Linear, and CSV importers map issues, statuses, and metadata so you start full, not empty."
+            "title": "Import from Jira and Linear"
           },
-          "structure": {
-            "title": "Jira-parity structure",
-            "body": "First-class labels, components, fix versions, and a resolution model — backlog structure stored in real tables and REST APIs, not JSON strings."
-          },
-          "ai": {
-            "title": "AI-native, auditable",
-            "body": "Real OpenAI and Anthropic calls behind a cost guard and tracing — triage suggestions, AI estimates, and a /api/ask RAG endpoint over pgvector. No black boxes."
-          },
+          "structure": {},
+          "ai": {},
           "agents": {
-            "title": "Agents work the backlog",
-            "body": "A real MCP server — HTTP at /api/mcp or stdio — lets coding agents create, search, and move issues. Backed by a REST API, OpenAPI spec, revocable keys, and webhooks."
+            "title": "Agents work the backlog"
           },
           "realtime": {
-            "title": "Realtime collaboration",
-            "body": "Specs and issue docs edit live — Tiptap on Yjs with presence and conflict-free merges, so two people on one doc just works."
+            "title": "Realtime collaboration"
           },
           "selfHost": {
-            "title": "Self-host in minutes",
-            "body": "One Docker image, Postgres, and you own the data. Multi-tenant from the schema up — every table is organization-scoped, no vendor lock-in."
+            "title": "Self-host in minutes"
           },
           "analytics": {
             "title": "Analytics close to execution",
@@ -5683,11 +5643,22 @@
       "meta": {
         "title": "TaskNebula — Open-source, AI-native Jira & Linear alternative",
         "description": "Keyboard-first boards, sprints, and docs with an MCP server so AI agents work the backlog with you. MIT licensed — self-host with one Docker Compose file.",
-        "skipToContent": "Skip to content"
+        "skipToContent": "Zum Inhalt springen"
+      },
+      "productTruth": {
+        "aiSummary": "KI- und Agentenfunktionen sind optional, konfigurationsabhängig und teilweise noch in der Vorschau.",
+        "ask": "Ask durchsucht derzeit Vorgänge und Dokumente. Semantische Suche benötigt einen organisationssicheren Embedding-Anbieter.",
+        "ai": "KI-Vorschläge sind Vorschaufunktionen und hängen von konfigurierten Anbieterzugängen ab. Prüfe jeden Vorschlag vor der Übernahme.",
+        "mcp": "Vorschau: Das aus dem Quellcode gebaute MCP-Paket unterstützt 11 Werkzeuge mit organisationsgebundenen API-Schlüsseln. OAuth, Audit je Aufruf und öffentliche Paketverteilung sind noch nicht fertig.",
+        "aiKeys": "KI ist optional. Verwende eigene Anbieterschlüssel; Budgetkontrollen senken das Risiko, garantieren aber keine Ausgabenobergrenze.",
+        "data": "Selbst gehostete Anwendungsdaten verwenden dein Postgres. Zugriffskontrollen sind vorhanden, ihre Abdeckung muss aber weiter geprüft werden; optionale Integrationen senden Daten nur nach deiner Konfiguration.",
+        "structureTitle": "Strukturierte Backlog-Felder",
+        "structure": "Labels, Komponenten, Fix-Versionen und Lösungen besitzen eigene Datenbank- und API-Modelle. Die Durchsetzung unterscheidet sich weiterhin je Route.",
+        "realtime": "Yjs-Zusammenarbeit ist verfügbar, wenn Hocuspocus, seine öffentliche URL und passende Secrets konfiguriert und per Smoke-Test geprüft wurden."
       }
     },
     "intake": {
-      "submitMetaTitle": "Submit · TaskNebula"
+      "submitMetaTitle": "Absenden · TaskNebula"
     },
     "stepStart": "Start",
     "setupImportRedirecting": "Dann leite ich dich um, um dich anzumelden{source}Import…",
@@ -6660,7 +6631,7 @@
     "disclosureBadge": "Informationen zur KI-Transparenz",
     "title": "KI-Modellkarten",
     "intro": "Auf dieser Seite werden die dokumentierten KI-Funktionen und die Standardkonfiguration von TaskNebula beschrieben. Die tatsächlichen Modelle, Datenverarbeitung, Aufbewahrung und Überprüfungskontrollen können je nach Arbeitsbereich und Bereitstellung variieren. Bestätigen Sie die aktiven Einstellungen mit Ihrem Administrator. Version der Transparenzmitteilung <version></version>.",
-    "lastReviewed": "Zuletzt überprüft am 12.08.2026. Artikel 50 der Verordnung (EU) 2024/1689 gilt ab dem 02.08.2026.",
+    "lastReviewed": "Zuletzt überprüft am 12.08.2026.",
     "onThisPage": "Auf dieser Seite",
     "model": "Modell",
     "provider": "Anbieter",
@@ -7036,5 +7007,28 @@
       "fetchOrganizations": "Failed to fetch organizations",
       "fetchEpics": "Failed to fetch epics"
     }
+  },
+  "slackCommands": {
+    "userUnmapped": "Ich konnte dein Slack-Konto keinem TaskNebula-Benutzer zuordnen. Bitte einen Administrator, Slack-Profile mit TaskNebula-Konten zu verknüpfen.",
+    "statusUsage": "Verwendung: `/tn status TN-123 done`",
+    "statusUnavailable": "Diese Statusänderung ist nicht verfügbar. Unter `/tn help` findest du die unterstützten Statuswerte.",
+    "notInstalled": "TaskNebula ist in diesem Slack-Workspace noch nicht installiert. Bitte einen Administrator, die Verbindung unter Einstellungen → Integrationen einzurichten.",
+    "help": "*TaskNebula-Befehle*\n`/tn new Titel` — öffnet den Dialog für ein neues Ticket mit deinem Titel\n`/tn list` — listet deine offenen zugewiesenen Tickets auf\n`/tn search Suchbegriff` — zeigt die 5 besten zugänglichen Treffer\n`/tn assign TN-123 @Benutzer` — weist ein Ticket neu zu\n`/tn status TN-123 done` — ändert den Ticketstatus (backlog | in_progress | in_review | done | blocked)",
+    "unknownCommand": "Unbekannter Befehl.",
+    "noOpenAssigned": "Du hast keine offenen zugewiesenen Tickets.",
+    "openIssuesHeader": "Deine offenen Tickets:",
+    "noStatus": "kein Status",
+    "searchUsage": "Verwendung: `/tn search Suchbegriff`",
+    "searchNoMatches": "Keine Tickets stimmen mit `{query}` überein.",
+    "searchTopMatches": "Beste Treffer für `{query}`: {count}",
+    "searchSummary": "Treffer für {query}: {count}",
+    "assignUsage": "Verwendung: `/tn assign TN-123 @Benutzer`",
+    "invalidUserMention": "`{mention}` sieht nicht wie eine Slack-Benutzererwähnung aus.",
+    "issueNotFound": "Ticket `{issueKey}` wurde in diesem Workspace nicht gefunden.",
+    "assigneeUnmapped": "Dieser Slack-Benutzer konnte keinem TaskNebula-Konto zugeordnet werden. Bitte einen Administrator, die Zuordnung unter Einstellungen → Integrationen hinzuzufügen.",
+    "assignmentSuccess": "*{issueKey}* wurde <@{slackUserId}> neu zugewiesen (angefordert von <@{requestedBy}>).",
+    "statusSuccess": "*{issueKey}* wurde nach *{statusName}* verschoben (angefordert von <@{requestedBy}>).",
+    "newUsage": "Verwendung: `/tn new Titel` — öffnet den Dialog für ein neues Ticket.",
+    "newOpening": "Dialog für ein neues Ticket wird mit folgendem Titel geöffnet: _{title}_"
   }
 }

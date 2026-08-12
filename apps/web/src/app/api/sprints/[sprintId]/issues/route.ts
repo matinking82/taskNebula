@@ -15,6 +15,7 @@ import {
 } from '@tasknebula/db';
 import { eq, and } from 'drizzle-orm';
 import { publishEvent } from '@/lib/realtime/events';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 // Granular permission check helper (mirrors api/sprints/[sprintId]/route.ts —
 // Next.js route files may only export handlers, so the helper is duplicated).
@@ -89,9 +90,9 @@ async function checkSprintPermission(
   // Get role defaults
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const toBool = (val: string | null | undefined): boolean => val === 'true';
-
-  if (toBool(projectMember.canManageSprints) || roleDefaults.canManageSprints) {
+  if (
+    resolveProjectMemberPermission(projectMember.canManageSprints, roleDefaults.canManageSprints)
+  ) {
     return { allowed: true };
   }
   return { allowed: false, reason: 'No permission to manage sprints' };

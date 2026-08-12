@@ -13,11 +13,11 @@ The values below are a dated inventory, not agent instructions:
 
 | Surface                                    | 2026-08-12 tree |
 | ------------------------------------------ | --------------: |
-| Next.js API `route.ts` files               |             281 |
-| Drizzle `pgTable` definitions              |             118 |
+| Next.js API `route.ts` files               |             283 |
+| Drizzle `pgTable` definitions              |             120 |
 | Schema files excluding the re-export index |              55 |
-| Journaled SQL migrations                   |              63 |
-| Web Jest test files                        |             285 |
+| Journaled SQL migrations                   |              64 |
+| Web Jest test files                        |             299 |
 | Playwright spec files                      |               9 |
 | Locale catalogs                            |              30 |
 
@@ -35,9 +35,11 @@ The values below are a dated inventory, not agent instructions:
   triage/planning, standup/janitor jobs, and coding-agent session integrations.
 - Ask grounding: one canonical `[TN-…]` / `[DOC-…]` citation grammar, unresolved
   marker reporting, SSE source/citation events, and Sidecar citation links.
-- Agent safety foundation: approval-gated project mutations fail closed to
-  preview; local Claude/Codex subprocesses receive an allowlisted environment;
-  a typed bounded graph/research topology has focused tests.
+- Agent safety/runtime foundation: approval-gated project mutations fail closed
+  to preview; project agents use a durable bounded graph with idempotent UTC
+  admission, checkpoints/events, leased recovery/cancellation and fenced
+  database effects; local Claude/Codex subprocesses receive an allowlisted
+  environment. The separate research topology has focused library tests.
 - Enterprise scaffolding: SAML/SCIM, audit/SIEM, trust and AI transparency
   surfaces, permission/security scheme configuration.
 - CI: MCP build, i18n parity, public-repository hygiene, UI and documentation
@@ -50,9 +52,14 @@ The values below are a dated inventory, not agent instructions:
 
 1. PostgreSQL RLS is not implemented. Tenant isolation depends on explicit
    organization filters and authorization in application code.
-2. Workflow transitions, validators, conditions, roles, approvals, targets,
-   and post-actions are persisted but are not consistently enforced by one service across issue
-   PATCH, board drag, bulk operations, automations, and agent webhooks.
+2. Issue status writes now converge on one tenant-scoped transition service
+   across PATCH/board/MCP, bulk, automation, approved agent actions, remote
+   agent webhooks, Slack, and janitor. Exact edges, workflow roles, and project
+   transition permission are enforced with row locks and status compare-and-swap.
+   Trusted system jobs and superadmins are explicit audited service-level actors.
+   A durable workflow-approval queue and
+   typed condition/validator/post-action language are not shipped: approval
+   requirements and non-empty unsupported policy fail closed with typed codes.
 3. Project-agent approval is containment, not a complete queue: guarded runs
    now make zero writes, but proposed project-engine effects are not yet
    persisted and resumed through the issue-write approval worker.
@@ -62,15 +69,20 @@ The values below are a dated inventory, not agent instructions:
 
 ### Agent and research maturity
 
-1. The tested graph runtime is a library foundation. Current project agents do
-   not persist node checkpoints or resume through a leased worker.
+1. Project tracking, triage and sprint planning/creation now persist bounded
+   `project-agent-v1` checkpoints and step events and resume through a leased
+   reconciler. Admission returns `202` before provider work; tenant-scoped
+   cancellation/resume APIs and settings UI controls cover active and recoverable
+   runs. This durability does not yet cover Ask research, local coding agents,
+   standup, janitor, or every automation surface.
 2. Ask is scoped workspace RAG, not deep research. It has no web crawler,
    durable activity history, source snapshots/claim tables, parallel durable
    fan-out, or mid-run refine/interrupt product flow.
-3. Current project-agent bulk writes need transactional/idempotent effect
-   handling. Ask and project-plan providers now have finite timeouts and request
-   cancellation, but retry policy and global budget/cancellation coverage are
-   not yet uniform across every AI path.
+3. Project-agent triage and bulk writes now use lease-fenced transactional
+   receipts and stale-context checks. Their realtime fan-out is still
+   best-effort rather than outbox-backed. Ask and project-plan providers have
+   finite timeouts, but budget/cancellation coverage is not uniform across every
+   AI path.
 4. Coding-agent local execution still runs from the web request process; a
    restart can lose active work even though its secret environment is now
    constrained.
@@ -82,8 +94,10 @@ definition of a production engine.
 
 - OAuth providers are registered without the complete database-adapter/user
   lifecycle needed for production organization access.
-- MCP tooling is present but package publication and end-to-end API-key route
-  authentication remain incomplete.
+- MCP tooling is present and the current 11-tool REST surface accepts
+  organization-bound API keys with active-user/membership and route-permission
+  checks. Fine-grained scopes, per-call MCP audit, OAuth/Streamable HTTP, clean
+  install proof, and package publication remain incomplete.
 - Some configurable permission/security/feature controls are not enforced by
   all consumers.
 - Notifications, pagination/virtualization, mounted analytics, import depth,
@@ -101,9 +115,10 @@ definition of a production engine.
 The next release work should converge existing paths rather than add another
 parallel agent or workflow surface:
 
-1. atomic workflow-transition service;
-2. durable agent run/step/checkpoint/event/effect storage and leased worker;
-3. expand atomic approval/apply coverage and make external/bulk effects idempotent;
+1. durable workflow-approval apply plus typed condition, validator and
+   post-action execution on the shipped transition service;
+2. extend the durable project-agent runtime to research and other agent surfaces;
+3. expand atomic approval/apply coverage and outbox external agent effects;
 4. tenant/auth hardening and cross-organization negative tests;
 5. source/claim provenance plus replayable research progress;
 6. budget, timeout, cancellation, trace, and recovery coverage on every AI path.

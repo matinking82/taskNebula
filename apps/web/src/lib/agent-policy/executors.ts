@@ -20,6 +20,11 @@ import { syncIssueLabelsWithExecutor } from '@/lib/labels/sync';
 import type { RealtimeEventType } from '@/lib/realtime/events';
 import type { AutomationTrigger } from '@/lib/automation/evaluator';
 import type { AgentApprovalExecutor } from './types';
+import {
+  applyPreparedIssueStatusTransition,
+  prepareIssueStatusTransition,
+  type PreparedIssueStatusTransition,
+} from '@/lib/workflows/issue-transition-policy';
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -424,6 +429,7 @@ async function executeIssueUpdate(
     sprintId: input.data.sprintId,
   });
 
+  let preparedTransition: PreparedIssueStatusTransition | null = null;
   if (input.data.statusId) {
     const workflowId = await resolveWorkflowId(tx, project);
     const [validStatus] = await tx
@@ -437,6 +443,14 @@ async function executeIssueUpdate(
       )
       .limit(1);
     if (!validStatus) throw new Error('status_not_found');
+    preparedTransition = await prepareIssueStatusTransition(tx, {
+      organizationId: approval.workspaceId,
+      projectId: currentIssue.projectId,
+      issueId: input.issueId,
+      toStatusId: input.data.statusId,
+      actorUserId: approval.requestedBy,
+      expectedFromStatusId: currentIssue.statusId,
+    });
   }
 
   const patch = {
@@ -447,11 +461,21 @@ async function executeIssueUpdate(
     updatedBy: approval.requestedBy,
     updatedAt: new Date(),
   };
-  const [updated] = await tx
-    .update(issues)
-    .set(patch)
-    .where(and(eq(issues.id, input.issueId), eq(issues.organizationId, approval.workspaceId)))
-    .returning();
+  const updated = preparedTransition
+    ? await applyPreparedIssueStatusTransition(tx, {
+        prepared: preparedTransition,
+        actorUserId: approval.requestedBy,
+        reason: 'agent_policy_approval',
+        patch,
+        skipWriteWhenUnchanged: false,
+      })
+    : (
+        await tx
+          .update(issues)
+          .set(patch)
+          .where(and(eq(issues.id, input.issueId), eq(issues.organizationId, approval.workspaceId)))
+          .returning()
+      )[0];
   if (!updated) throw new Error('issue_update_failed');
 
   if (input.data.labels !== undefined) {

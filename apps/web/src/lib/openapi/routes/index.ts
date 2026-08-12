@@ -29,3 +29,4 @@ import './components';
 import './users';
 import './search';
 import './health';
+import './agents';

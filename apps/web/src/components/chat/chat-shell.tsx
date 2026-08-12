@@ -1050,6 +1050,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                         type="button"
                         variant="ghost"
                         size="icon"
+                        aria-label={t('chat.conversations')}
                         className="mt-0.5 h-8 w-8 lg:hidden"
                         onClick={() => setIsSidebarOpen(true)}
                       >
@@ -1208,7 +1209,12 @@ export function ChatShell({ projectId }: { projectId: string }) {
                   </div>
                 ) : null}
 
-                <div className="min-h-0 flex-1 overflow-y-auto">
+                <div
+                  className="min-h-0 flex-1 overflow-y-auto"
+                  role="region"
+                  aria-label={t('chat.conversations')}
+                  tabIndex={0}
+                >
                   <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-5 sm:px-6">
                     {messagesQuery.isLoading ? (
                       <div className="text-muted-foreground flex items-center gap-2 py-8 text-sm">

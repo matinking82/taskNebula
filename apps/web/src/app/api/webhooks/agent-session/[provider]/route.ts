@@ -34,9 +34,8 @@ import {
   eq,
   issues,
   issueComments,
-  workflows,
-  workflowStatuses,
   and,
+  organizationMembers,
   users,
 } from '@tasknebula/db';
 import {
@@ -51,6 +50,14 @@ import {
   isTerminalState,
 } from '@/lib/agents/sessions';
 import { childLogger } from '@/lib/logger';
+import {
+  applyPreparedIssueStatusTransition,
+  isWorkflowTransitionError,
+  prepareIssueStatusTransition,
+  resolveProjectWorkflowStatusByCategory,
+  WorkflowTransitionError,
+  type WorkflowTransitionErrorCode,
+} from '@/lib/workflows/issue-transition-policy';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,48 +151,77 @@ async function verifySignature(
 
 async function findAgentUser(
   tx: DbTransaction,
-  provider: AgentProviderKind
+  provider: AgentProviderKind,
+  organizationId: string
 ): Promise<string | null> {
   const [agent] = await tx
     .select({ id: users.id })
     .from(users)
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.userId, users.id),
+        eq(organizationMembers.organizationId, organizationId),
+        eq(organizationMembers.status, 'active')
+      )
+    )
     .where(and(eq(users.isAgent, true), eq(users.agentProvider, provider)))
     .limit(1);
   return agent?.id ?? null;
+}
+
+async function findActiveOrganizationUser(
+  tx: DbTransaction,
+  organizationId: string,
+  userId: string
+): Promise<string | null> {
+  const [user] = await tx
+    .select({ id: users.id })
+    .from(users)
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.userId, users.id),
+        eq(organizationMembers.organizationId, organizationId),
+        eq(organizationMembers.status, 'active')
+      )
+    )
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user?.id ?? null;
 }
 
 async function maybeTransitionIssueOnComplete(
   tx: DbTransaction,
   issueId: string,
   organizationId: string,
+  projectId: string,
+  actorUserId: string,
   event: AgentSessionEvent
 ): Promise<void> {
-  // Look up the org's default workflow.
-  const [workflow] = await tx
-    .select()
-    .from(workflows)
-    .where(and(eq(workflows.organizationId, organizationId), eq(workflows.isDefault, true)))
-    .limit(1);
-  if (!workflow) return;
-
-  const statuses = await tx
-    .select()
-    .from(workflowStatuses)
-    .where(eq(workflowStatuses.workflowId, workflow.id));
-
   // If the agent attached a PR, move to in_review; otherwise mark done.
   const targetCategory: 'in_review' | 'done' = event.pullRequest?.url ? 'in_review' : 'done';
-
-  const candidates = statuses
-    .filter((s) => s.category === targetCategory)
-    .sort((a, b) => a.position - b.position);
-  const target = candidates[0];
-  if (!target) return;
-
-  await tx
-    .update(issues)
-    .set({ statusId: target.id, updatedAt: new Date() })
-    .where(and(eq(issues.id, issueId), eq(issues.organizationId, organizationId)));
+  const targetStatusId = await resolveProjectWorkflowStatusByCategory(tx, {
+    organizationId,
+    projectId,
+    issueId,
+    category: targetCategory,
+  });
+  if (!targetStatusId) {
+    throw new WorkflowTransitionError('workflow_transition_status_invalid');
+  }
+  const prepared = await prepareIssueStatusTransition(tx, {
+    organizationId,
+    projectId,
+    issueId,
+    toStatusId: targetStatusId,
+    actorUserId,
+  });
+  await applyPreparedIssueStatusTransition(tx, {
+    prepared,
+    actorUserId,
+    reason: 'agent_webhook',
+  });
 }
 
 export async function POST(
@@ -254,7 +290,11 @@ export async function POST(
   type DeliveryDecision =
     | { kind: 'duplicate'; state: AgentSessionState }
     | { kind: 'dropped'; state: AgentSessionState; reason: string }
-    | { kind: 'accepted'; state: AgentSessionState };
+    | {
+        kind: 'accepted';
+        state: AgentSessionState;
+        transitionSkipped?: WorkflowTransitionErrorCode;
+      };
 
   let decision: DeliveryDecision;
   try {
@@ -371,7 +411,12 @@ export async function POST(
         .limit(1);
       if (!issue) throw new Error('agent_session_issue_not_found');
 
-      const agentUserId = (await findAgentUser(tx, provider)) ?? issue.reporterId;
+      const dispatchedBy =
+        typeof storedPayload.dispatchedBy === 'string' ? storedPayload.dispatchedBy : null;
+      const agentUserId =
+        (await findAgentUser(tx, provider, workspaceId)) ??
+        (dispatchedBy ? await findActiveOrganizationUser(tx, workspaceId, dispatchedBy) : null) ??
+        issue.reporterId;
       await tx.insert(issueComments).values({
         id: createId(),
         issueId: lockedSession.issueId,
@@ -383,18 +428,35 @@ export async function POST(
         updatedBy: agentUserId,
       });
 
+      let transitionSkipped: WorkflowTransitionErrorCode | undefined;
       if (newState === 'complete') {
-        await maybeTransitionIssueOnComplete(
-          tx,
-          lockedSession.issueId,
-          issue.organizationId,
-          event
-        );
+        try {
+          if (!dispatchedBy) {
+            throw new WorkflowTransitionError('workflow_transition_actor_forbidden');
+          }
+          await maybeTransitionIssueOnComplete(
+            tx,
+            lockedSession.issueId,
+            issue.organizationId,
+            issue.projectId,
+            dispatchedBy,
+            event
+          );
+        } catch (error) {
+          if (!isWorkflowTransitionError(error)) throw error;
+          // Completion/comments remain durable and idempotent, but a rejected
+          // workflow move is explicitly recorded instead of bypassed or retried.
+          transitionSkipped = error.code;
+        }
       }
 
       await tx
         .update(agentSessionWebhookDeliveries)
-        .set({ status: 'completed', completedAt: new Date(), lastError: null })
+        .set({
+          status: 'completed',
+          completedAt: new Date(),
+          lastError: transitionSkipped ?? null,
+        })
         .where(
           and(
             eq(agentSessionWebhookDeliveries.id, delivery.id),
@@ -403,7 +465,7 @@ export async function POST(
           )
         );
 
-      return { kind: 'accepted', state: newState };
+      return { kind: 'accepted', state: newState, transitionSkipped };
     });
   } catch (err) {
     log.error({ err, sessionId: session.id }, 'agent-session atomic delivery failed');
@@ -438,5 +500,6 @@ export async function POST(
     ok: true,
     sessionId: session.id,
     state: decision.state,
+    ...(decision.transitionSkipped ? { transitionSkipped: decision.transitionSkipped } : {}),
   });
 }

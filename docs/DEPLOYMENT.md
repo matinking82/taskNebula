@@ -110,12 +110,12 @@ remain reachable from the server and browser respectively.
 
 ### Approval and scheduled workers
 
-The base Compose lifecycle includes `approval-reconciler`; it calls the durable
-approval outbox every minute so a failed response fast-path cannot strand a
-committed effect. Non-Compose deployments must schedule
-`POST /api/cron/agent-approval-effects` with `CRON_SECRET` at least once per
-minute. The separate `cron` profile enables standup, janitor, embeddings,
-version-check, and cycle-rollover schedules:
+The base Compose lifecycle includes `approval-reconciler`; every minute it
+drains both the durable approval-effect outbox and recoverable project-agent
+runs. Non-Compose deployments must schedule both
+`POST /api/cron/agent-approval-effects` and `POST /api/cron/agent-runs` with
+`CRON_SECRET` at least once per minute. The separate `cron` profile enables
+standup, janitor, embeddings, version-check, and cycle-rollover schedules:
 
 ```bash
 docker compose --profile cron up -d cron

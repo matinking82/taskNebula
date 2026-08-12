@@ -1151,9 +1151,9 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                               {formatAgentRunDisplayText(t, run.summary)}
                             </p>
                           ) : null}
-                          {run.error ? (
+                          {run.errorCode ? (
                             <p className="text-destructive text-sm">
-                              {formatAgentRunDisplayText(t, run.error)}
+                              {t('agentShared.runMessages.agentRunFailed')}
                             </p>
                           ) : null}
                         </div>

@@ -19,10 +19,19 @@ const faqItemKeys = [
 
 export function Faq() {
   const t = useTranslations('publicPages.landing.faq');
+  const truth = useTranslations('publicPages.landing.productTruth');
+  const importT = useTranslations('pagesSettings.import');
+  const answerOverrides: Partial<Record<(typeof faqItemKeys)[number], string>> = {
+    aiKeys: truth('aiKeys'),
+    aiReality: truth('ai'),
+    mcpServer: truth('mcp'),
+    imports: importT('subtitle'),
+    dataVisibility: truth('data'),
+  };
   const faqItems = faqItemKeys.map((key) => ({
     key,
     question: t(`items.${key}.question`),
-    answer: t(`items.${key}.answer`),
+    answer: answerOverrides[key] ?? t(`items.${key}.answer`),
   }));
 
   return (

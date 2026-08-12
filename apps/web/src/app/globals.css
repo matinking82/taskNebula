@@ -947,6 +947,14 @@
     box-shadow: 0 0 0 3px hsl(var(--accent-emerald) / 0.18);
   }
 
+  /* The project chrome is always zinc-950, even while the app uses its light
+     theme. Use a theme-independent foreground so the status remains AA. */
+  .live-pill-on-dark {
+    background: hsl(158 64% 54% / 0.12);
+    color: hsl(158 64% 64%);
+    border-color: hsl(158 64% 54% / 0.32);
+  }
+
   /* Dashboard-only Carbon treatment: crisp panels, square controls, no lift. */
   .dashboard-carbon {
     font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, var(--font-sans), sans-serif;

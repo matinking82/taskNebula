@@ -197,7 +197,12 @@ export function ActivityFeed({ organizationId, limit = 20 }: ActivityFeedProps) 
           <p className="text-muted-foreground text-sm">{t('activity.empty')}</p>
         </div>
       ) : (
-        <div className="custom-scrollbar -mr-2 max-h-[560px] space-y-5 overflow-y-auto pr-2">
+        <div
+          className="custom-scrollbar -mr-2 max-h-[560px] space-y-5 overflow-y-auto pr-2"
+          role="region"
+          aria-label={t('activity.title')}
+          tabIndex={0}
+        >
           {groups.map((group) => (
             <section key={group.key} className="space-y-1.5">
               <span className="kicker">{group.label}</span>

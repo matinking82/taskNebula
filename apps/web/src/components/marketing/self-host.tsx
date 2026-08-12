@@ -35,7 +35,7 @@ export function SelfHost() {
                     {t(`cards.${key}.title`)}
                   </p>
                   <p className="text-[12px] leading-5 text-[var(--landing-text-subtle)]">
-                    {t(`cards.${key}.body`)}
+                    {key === 'postgres' ? t('description') : t(`cards.${key}.body`)}
                   </p>
                 </li>
               ))}

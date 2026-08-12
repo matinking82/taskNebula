@@ -7,7 +7,6 @@ import {
   createAuditLog,
   getIssueById,
 } from '@tasknebula/db';
-import { auth } from '@/auth';
 import { createId } from '@paralleldrive/cuid2';
 import { notifyIssueEvent } from '@/lib/notifications/send-notification';
 import { publishEvent } from '@/lib/realtime/events';
@@ -18,6 +17,7 @@ import {
   readAgentPolicyMarker,
   stripAgentPolicyMarker,
 } from '@/lib/agent-policy/guard';
+import { apiActorCanAccessOrganization, resolveApiActor } from '@/lib/auth/api-actor';
 
 // Validation schema for creating a comment
 const createCommentSchema = z.object({
@@ -44,17 +44,20 @@ export async function GET(
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { issueId } = await params;
-    const access = await canReadIssue(session.user.id!, issueId);
+    const access = await canReadIssue(actor.userId, issueId);
     if (!access.issue) {
       return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
     }
     if (!access.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    if (!apiActorCanAccessOrganization(actor, access.issue.organizationId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -79,16 +82,19 @@ export const POST = withValidation({
 })(async (request, { body: validatedData, params }) => {
   const { issueId } = params;
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const access = await canCommentOnIssue(session.user.id!, issueId);
+    const access = await canCommentOnIssue(actor.userId, issueId);
     if (!access.issue) {
       return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
     }
     if (!access.allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    if (!apiActorCanAccessOrganization(actor, access.issue.organizationId)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -98,7 +104,7 @@ export const POST = withValidation({
       const guard = await guardAgentAction({
         workspaceId: access.issue.organizationId,
         projectId: access.issue.projectId,
-        requestedBy: session.user.id!,
+        requestedBy: actor.userId,
         actor: agentPolicy.actor,
         resource: agentPolicy.resource || 'issues',
         action: agentPolicy.action || 'comment',
@@ -129,8 +135,8 @@ export const POST = withValidation({
       mentions: commentInput.mentions,
       reactions: [],
       isInternal: commentInput.isInternal ? 'true' : 'false',
-      createdBy: session.user.id,
-      updatedBy: session.user.id,
+      createdBy: actor.userId,
+      updatedBy: actor.userId,
     });
 
     if (!newComment) {
@@ -140,7 +146,7 @@ export const POST = withValidation({
     // Defer activity log, audit log, realtime publish, and notification
     // emails until after the response ships. The caller only needs the
     // newly-created comment payload to render optimistically.
-    const actorUserId = session.user.id!;
+    const actorUserId = actor.userId;
     const commentSnippet = commentInput.content.substring(0, 200);
     after(async () => {
       try {

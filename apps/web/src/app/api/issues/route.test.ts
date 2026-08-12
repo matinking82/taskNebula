@@ -29,6 +29,7 @@ jest.mock('drizzle-orm', () => ({
   desc: (value: unknown) => ({ op: 'desc', value }),
   eq: (left: unknown, right: unknown) => ({ op: 'eq', left, right }),
   inArray: (left: unknown, right: unknown) => ({ op: 'inArray', left, right }),
+  or: (...args: unknown[]) => ({ op: 'or', args }),
   sql: Object.assign((parts: TemplateStringsArray) => ({ op: 'sql', parts }), {
     raw: (value: string) => value,
   }),

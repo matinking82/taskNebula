@@ -7,6 +7,7 @@
  *   - 1 project:       "E2E Project"  (key: E2E)
  *   - default workflow with statuses Backlog / In Progress / Done
  *   - 5 issues with stable keys E2E-1..E2E-5
+ *   - 1 reusable project invitation for signup/join browser coverage
  *
  * Run standalone:
  *   pnpm --filter @tasknebula/web exec tsx e2e/fixtures/seed.ts
@@ -16,6 +17,7 @@
  */
 
 import bcrypt from 'bcryptjs';
+import { createHash } from 'node:crypto';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { and, eq } from 'drizzle-orm';
@@ -51,6 +53,7 @@ export const E2E_PROJECT = {
 } as const;
 
 export const E2E_PUBLIC_SHARE_TOKEN = 'e2e-public-share-2026';
+export const E2E_PROJECT_INVITE_TOKEN = 'e2e-project-invite-2026';
 
 export interface SeededIds {
   organizationId: string;
@@ -62,6 +65,7 @@ export interface SeededIds {
   intakeFormId: string;
   publicDocumentPageId: string;
   publicShareToken: string;
+  projectInviteToken: string;
   statusIds: { backlog: string; inProgress: string; done: string };
   issueIds: string[];
 }
@@ -148,6 +152,45 @@ export async function ensureSeed(): Promise<SeededIds> {
       });
     }
 
+    // --- Reusable project invite ------------------------------------------
+    // Store only the hash, matching production invite creation. Reset the
+    // bounded fixture on each suite setup so repeated local E2E runs remain
+    // deterministic without creating an unbounded set of invite rows.
+    const projectInviteTokenHash = createHash('sha256')
+      .update(E2E_PROJECT_INVITE_TOKEN)
+      .digest('hex');
+    const existingProjectInvite = (
+      await db
+        .select({ id: schema.projectInviteLinks.id })
+        .from(schema.projectInviteLinks)
+        .where(eq(schema.projectInviteLinks.tokenHash, projectInviteTokenHash))
+        .limit(1)
+    )[0];
+    const projectInviteValues = {
+      organizationId,
+      projectId,
+      tokenHash: projectInviteTokenHash,
+      role: 'developer' as const,
+      maxUses: 25,
+      usedCount: 0,
+      expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      revokedAt: null,
+      revokedBy: null,
+      createdBy: userId,
+      updatedAt: new Date(),
+    };
+    if (existingProjectInvite) {
+      await db
+        .update(schema.projectInviteLinks)
+        .set(projectInviteValues)
+        .where(eq(schema.projectInviteLinks.id, existingProjectInvite.id));
+    } else {
+      await db.insert(schema.projectInviteLinks).values({
+        id: createId(),
+        ...projectInviteValues,
+      });
+    }
+
     // --- Workflow + statuses -----------------------------------------------
     const existingWorkflow = (
       await db
@@ -206,6 +249,59 @@ export async function ensureSeed(): Promise<SeededIds> {
       backlogId = byCategory('backlog')!.id;
       inProgressId = byCategory('in_progress')!.id;
       doneId = byCategory('done')!.id;
+    }
+
+    // Repair older fixture databases that predate explicit project workflow
+    // selection. Production transition resolution treats this link as the
+    // project's canonical workflow boundary.
+    if (existingProject?.defaultWorkflowId !== workflowId) {
+      await db
+        .update(schema.projects)
+        .set({ defaultWorkflowId: workflowId, updatedBy: userId, updatedAt: new Date() })
+        .where(
+          and(eq(schema.projects.id, projectId), eq(schema.projects.organizationId, organizationId))
+        );
+    }
+
+    // The transition service requires an exact persisted from→to edge. Keep
+    // the fixture idempotent so both fresh and already-seeded databases obey
+    // the same policy contract. Backward edges reset E2E-1 after prior runs;
+    // forward edges cover lifecycle and Kanban moves.
+    const requiredTransitions = [
+      { name: 'Start Progress', fromStatusId: backlogId, toStatusId: inProgressId },
+      { name: 'Complete', fromStatusId: inProgressId, toStatusId: doneId },
+      { name: 'Return to Backlog', fromStatusId: inProgressId, toStatusId: backlogId },
+      { name: 'Reopen to Backlog', fromStatusId: doneId, toStatusId: backlogId },
+    ];
+    for (const transition of requiredTransitions) {
+      const existingTransition = (
+        await db
+          .select({ id: schema.workflowTransitions.id })
+          .from(schema.workflowTransitions)
+          .where(
+            and(
+              eq(schema.workflowTransitions.workflowId, workflowId),
+              eq(schema.workflowTransitions.fromStatusId, transition.fromStatusId),
+              eq(schema.workflowTransitions.toStatusId, transition.toStatusId)
+            )
+          )
+          .limit(1)
+      )[0];
+      if (!existingTransition) {
+        await db.insert(schema.workflowTransitions).values({
+          id: createId(),
+          workflowId,
+          ...transition,
+          allowedRoles: ['admin', 'member'],
+          requiresApproval: false,
+          approverRoles: ['admin'],
+          approvedTargetStatusId: null,
+          rejectedTargetStatusId: null,
+          conditions: [],
+          validators: [],
+          postActions: [],
+        });
+      }
     }
 
     // --- 5 deterministic issues --------------------------------------------
@@ -435,6 +531,7 @@ export async function ensureSeed(): Promise<SeededIds> {
       intakeFormId,
       publicDocumentPageId,
       publicShareToken: E2E_PUBLIC_SHARE_TOKEN,
+      projectInviteToken: E2E_PROJECT_INVITE_TOKEN,
       statusIds: { backlog: backlogId, inProgress: inProgressId, done: doneId },
       issueIds,
     };

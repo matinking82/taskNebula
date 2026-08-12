@@ -16,6 +16,8 @@ const dbSelectMock = jest.fn();
 const publishEventMock = jest.fn();
 const notifyIssueEventMock = jest.fn();
 const runAutomationsMock = jest.fn();
+const prepareTransitionMock = jest.fn();
+const applyTransitionMock = jest.fn();
 
 // --- next/server shim ---------------------------------------------------
 // Provide enough of `NextRequest` / `NextResponse` for the route + the
@@ -88,9 +90,29 @@ jest.mock('@/lib/automation/evaluator', () => ({
   runAutomations: (...args: unknown[]) => runAutomationsMock(...args),
 }));
 
+jest.mock('@/lib/workflows/issue-transition-policy', () => {
+  class MockWorkflowTransitionError extends Error {
+    code: string;
+    httpStatus: number;
+    constructor(code: string) {
+      super(code);
+      this.code = code;
+      this.httpStatus = code === 'workflow_transition_status_invalid' ? 400 : 409;
+    }
+  }
+  return {
+    WorkflowTransitionError: MockWorkflowTransitionError,
+    isWorkflowTransitionError: (error: unknown) => error instanceof MockWorkflowTransitionError,
+    prepareIssueStatusTransition: (...args: unknown[]) => prepareTransitionMock(...args),
+    applyPreparedIssueStatusTransition: (...args: unknown[]) => applyTransitionMock(...args),
+    resolveProjectWorkflowStatusByCategory: jest.fn(),
+  };
+});
+
 jest.mock('@tasknebula/db', () => ({
   db: {
     select: (...args: unknown[]) => dbSelectMock(...args),
+    transaction: (callback: (tx: unknown) => unknown) => callback({}),
   },
   getIssueById: (...args: unknown[]) => getIssueByIdMock(...args),
   updateIssue: (...args: unknown[]) => updateIssueMock(...args),
@@ -201,6 +223,15 @@ describe('PATCH /api/issues/[issueId] — estimate & rich description persistenc
     updateIssueMock.mockImplementation((_id: string, data: Record<string, unknown>) =>
       Promise.resolve({ ...SAMPLE_ISSUE, ...data })
     );
+    prepareTransitionMock.mockResolvedValue({
+      issue: SAMPLE_ISSUE,
+      workflowId: 'workflow-1',
+      fromStatusId: 'status-1',
+      toStatusId: 'status-2',
+      changed: true,
+      transitionId: 'transition-1',
+    });
+    applyTransitionMock.mockResolvedValue({ ...SAMPLE_ISSUE, statusId: 'status-2' });
   });
 
   it('persists estimateHours and estimateSource together', async () => {
@@ -296,12 +327,12 @@ describe('PATCH /api/issues/[issueId] — estimate & rich description persistenc
   });
 
   it('rejects a direct status id from a different workflow', async () => {
-    dbSelectMock
-      .mockReset()
-      .mockReturnValueOnce(
-        chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
-      )
-      .mockReturnValueOnce(chainable([]));
+    const { WorkflowTransitionError } = jest.requireMock(
+      '@/lib/workflows/issue-transition-policy'
+    ) as { WorkflowTransitionError: new (code: string) => Error };
+    prepareTransitionMock.mockRejectedValueOnce(
+      new WorkflowTransitionError('workflow_transition_status_invalid')
+    );
 
     const response = await PATCH(makePatch({ statusId: 'foreign-status' }) as never, {
       params: Promise.resolve({ issueId: 'issue-1' }),
@@ -309,7 +340,8 @@ describe('PATCH /api/issues/[issueId] — estimate & rich description persistenc
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: 'Status does not belong to the project workflow',
+      error: 'workflow_transition_status_invalid',
+      code: 'workflow_transition_status_invalid',
     });
     expect(updateIssueMock).not.toHaveBeenCalled();
   });

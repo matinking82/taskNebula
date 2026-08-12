@@ -11,8 +11,11 @@ import {
 } from '@tasknebula/db';
 import { and, eq } from 'drizzle-orm';
 
-function toBool(value: unknown): boolean {
-  return value === true || value === 'true';
+/** Resolve a nullable per-member override without letting explicit denials fall through. */
+export function resolvePermission(value: unknown, fallback: boolean): boolean {
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  return fallback;
 }
 
 export async function isActiveOrganizationMember(
@@ -59,14 +62,15 @@ async function getProjectMembership(userId: string, projectId: string) {
 
 export async function canReadProject(
   userId: string,
-  project: typeof projects.$inferSelect
+  project: typeof projects.$inferSelect,
+  options?: { allowSuperAdmin?: boolean }
 ): Promise<boolean> {
   const [user] = await db
     .select({ isSuperAdmin: users.isSuperAdmin })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  if (user?.isSuperAdmin) return true;
+  if (user?.isSuperAdmin && options?.allowSuperAdmin !== false) return true;
 
   const [orgMember] = await db
     .select({ role: organizationMembers.role })
@@ -83,13 +87,16 @@ export async function canReadProject(
   if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
     return true;
   }
+  // Project membership is subordinate to organization membership. A stale
+  // project_members row must not preserve access after workspace removal.
+  if (!orgMember) return false;
 
   const projectMember = await getProjectMembership(userId, project.id);
   if (!projectMember) return false;
 
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  return toBool(projectMember.canBrowseProject) || roleDefaults.canBrowseProject;
+  return resolvePermission(projectMember.canBrowseProject, roleDefaults.canBrowseProject);
 }
 
 export async function canManageProject(
@@ -124,7 +131,7 @@ export async function canManageProject(
 
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  return toBool(projectMember.canAdministerProject) || roleDefaults.canAdministerProject;
+  return resolvePermission(projectMember.canAdministerProject, roleDefaults.canAdministerProject);
 }
 
 export async function canReadIssue(
@@ -165,7 +172,7 @@ export async function canCommentOnIssue(
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
   return {
     issue: result.issue,
-    allowed: toBool(projectMember.canAddComments) || roleDefaults.canAddComments,
+    allowed: resolvePermission(projectMember.canAddComments, roleDefaults.canAddComments),
   };
 }
 
@@ -194,6 +201,6 @@ export async function canEditIssue(
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
   return {
     issue: result.issue,
-    allowed: toBool(projectMember.canEditIssues) || roleDefaults.canEditIssues,
+    allowed: resolvePermission(projectMember.canEditIssues, roleDefaults.canEditIssues),
   };
 }

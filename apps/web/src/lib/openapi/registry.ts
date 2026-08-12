@@ -31,7 +31,14 @@ export const TAGS = {
   Users: 'Users',
   Search: 'Search',
   Health: 'Health',
+  Agents: 'Agents',
 } as const;
+
+/** Browser sessions and organization-bound TaskNebula API keys are alternatives. */
+export const SESSION_OR_API_KEY_SECURITY: Array<Record<string, string[]>> = [
+  { cookieAuth: [] },
+  { taskNebulaApiKey: [] },
+];
 
 type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -47,6 +54,7 @@ export interface RegisterRouteInput {
   tags?: string[];
   request?: {
     params?: z.ZodTypeAny;
+    headers?: z.ZodTypeAny;
     query?: z.ZodTypeAny;
     body?: {
       description?: string;
@@ -101,6 +109,17 @@ export function buildOpenApiDocument(opts?: { version?: string }): any {
       // cookies map to the same conceptual scheme. We document the prod name.
       name: '__Secure-authjs.session-token',
       description: 'NextAuth session cookie. In dev the cookie is named `authjs.session-token`.',
+    });
+  } catch {
+    // already registered — ignore
+  }
+  try {
+    registry.registerComponent('securitySchemes', 'taskNebulaApiKey', {
+      type: 'apiKey',
+      in: 'header',
+      name: 'X-API-Key',
+      description:
+        'TaskNebula `sk_live_*` API key. Keys are bound to one organization and the creator must retain an active user and organization membership; route permissions still apply.',
     });
   } catch {
     // already registered — ignore

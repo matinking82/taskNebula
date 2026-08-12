@@ -47,6 +47,7 @@ export type AuditLogAction =
   | 'agent.run_requested'
   | 'agent.run_completed'
   | 'agent.run_failed'
+  | 'agent.run_cancelled'
   | 'agent.policy.allow'
   | 'agent.policy.deny'
   | 'agent.policy.require_approval'

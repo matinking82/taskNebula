@@ -128,7 +128,7 @@ export async function GET(
         writeActionsCount: agentRuns.writeActionsCount,
         createdAt: agentRuns.createdAt,
         completedAt: agentRuns.completedAt,
-        error: agentRuns.error,
+        output: agentRuns.output,
         projectId: projects.id,
         projectName: projects.name,
         initiatedBy: users.name,
@@ -231,10 +231,16 @@ export async function GET(
       lastRunAt: recentRuns[0]?.createdAt ?? null,
       lastCompletedAt: lastCompletedRun?.completedAt ?? lastCompletedRun?.createdAt ?? null,
       lastFailedAt: lastFailedRun?.completedAt ?? lastFailedRun?.createdAt ?? null,
-      lastFailure: lastFailedRun?.error ?? null,
+      lastFailure: lastFailedRun ? 'agent_run_failed' : null,
     },
     serviceStatus,
-    recentRuns,
+    recentRuns: recentRuns.map(({ output, ...run }) => ({
+      ...run,
+      errorCode:
+        typeof (output as Record<string, unknown> | null)?.errorCode === 'string'
+          ? (output as Record<string, unknown>).errorCode
+          : null,
+    })),
     updatedAt: organization.updatedAt,
   });
 }

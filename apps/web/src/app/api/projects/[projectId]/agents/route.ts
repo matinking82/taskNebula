@@ -63,33 +63,34 @@ export async function GET(
     return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 });
   }
 
-  const [[project], [organization], recentRuns, systemControl, runningRunsResult] = await Promise.all([
-    db
-      .select({
-        id: projects.id,
-        key: projects.key,
-        name: projects.name,
-        settings: projects.settings,
-      })
-      .from(projects)
-      .where(eq(projects.id, access.project.id))
-      .limit(1),
-    db
-      .select({
-        id: organizations.id,
-        settings: organizations.settings,
-        name: organizations.name,
-      })
-      .from(organizations)
-      .where(eq(organizations.id, access.project.organizationId))
-      .limit(1),
-    listProjectAgentRuns(access.project.id, 10),
-    getSystemAgentControlSettingsFromDb(),
-    db
-      .select({ count: count() })
-      .from(agentRuns)
-      .where(and(eq(agentRuns.projectId, access.project.id), eq(agentRuns.status, 'running'))),
-  ]);
+  const [[project], [organization], recentRuns, systemControl, runningRunsResult] =
+    await Promise.all([
+      db
+        .select({
+          id: projects.id,
+          key: projects.key,
+          name: projects.name,
+          settings: projects.settings,
+        })
+        .from(projects)
+        .where(eq(projects.id, access.project.id))
+        .limit(1),
+      db
+        .select({
+          id: organizations.id,
+          settings: organizations.settings,
+          name: organizations.name,
+        })
+        .from(organizations)
+        .where(eq(organizations.id, access.project.organizationId))
+        .limit(1),
+      listProjectAgentRuns(access.project.id, 10),
+      getSystemAgentControlSettingsFromDb(),
+      db
+        .select({ count: count() })
+        .from(agentRuns)
+        .where(and(eq(agentRuns.projectId, access.project.id), eq(agentRuns.status, 'running'))),
+    ]);
 
   if (!project || !organization) {
     return NextResponse.json({ error: 'Project context could not be loaded' }, { status: 404 });
@@ -105,7 +106,11 @@ export async function GET(
   const projectSettings = normalizeProjectAgentSettings(
     (project.settings as Record<string, unknown> | null)?.aiAgents
   );
-  const effectiveSettings = resolveEffectiveProjectAgentSettings(workspaceSettings, projectSettings, systemControl);
+  const effectiveSettings = resolveEffectiveProjectAgentSettings(
+    workspaceSettings,
+    projectSettings,
+    systemControl
+  );
   const providerCredential = getProviderCredentialStatusFromSettings(
     organization.settings as Record<string, unknown> | null,
     effectiveSettings.provider
@@ -125,17 +130,23 @@ export async function GET(
   const runningRuns = Number(runningRunsResult[0]?.count || 0);
   const lastCompletedRun = recentRuns.find((run) => run.status === 'completed') ?? null;
   const lastFailedRun = recentRuns.find((run) => run.status === 'failed') ?? null;
-  const lastRunByKind = recentRuns.reduce<Record<string, (typeof recentRuns)[number]>>((accumulator, run) => {
-    if (!accumulator[run.kind]) {
-      accumulator[run.kind] = run;
-    }
+  const lastRunByKind = recentRuns.reduce<Record<string, (typeof recentRuns)[number]>>(
+    (accumulator, run) => {
+      if (!accumulator[run.kind]) {
+        accumulator[run.kind] = run;
+      }
 
-    return accumulator;
-  }, {});
+      return accumulator;
+    },
+    {}
+  );
   const executionIssue = runAvailability.blockingIssue;
-  const writeIssue = runAvailability.issues.find(
-    (issue) => !issue.blocksRuns && (issue.code === 'writes_preview_only' || issue.code === 'write_approval_required')
-  ) ?? null;
+  const writeIssue =
+    runAvailability.issues.find(
+      (issue) =>
+        !issue.blocksRuns &&
+        (issue.code === 'writes_preview_only' || issue.code === 'write_approval_required')
+    ) ?? null;
   const serviceStatus = [
     {
       key: 'provider',
@@ -189,7 +200,7 @@ export async function GET(
       lastRunAt: recentRuns[0]?.createdAt ?? null,
       lastCompletedAt: lastCompletedRun?.completedAt ?? lastCompletedRun?.createdAt ?? null,
       lastFailedAt: lastFailedRun?.completedAt ?? lastFailedRun?.createdAt ?? null,
-      lastFailure: lastFailedRun?.error ?? null,
+      lastFailure: lastFailedRun ? 'agent_run_failed' : null,
     },
     runAvailability: {
       canRun: runAvailability.canRun,
@@ -214,7 +225,10 @@ export async function PATCH(
   const { projectId } = await params;
   const access = await getProjectAgentAccess(session.user.id, projectId);
   if (!access.canManage || !access.project) {
-    return NextResponse.json({ error: 'You do not have permission to manage project agents.' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'You do not have permission to manage project agents.' },
+      { status: 403 }
+    );
   }
 
   try {
@@ -279,7 +293,10 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
     }
 
     console.error('Failed to update project AI agents:', error);

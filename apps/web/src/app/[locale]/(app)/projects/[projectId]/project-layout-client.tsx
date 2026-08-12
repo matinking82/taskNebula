@@ -174,7 +174,7 @@ export function ProjectLayoutClient({
                   <TooltipTrigger asChild>
                     <Link
                       href={`/projects/${projectId}/sprints/${activeSprint.id}`}
-                      className="live-pill inline-flex items-center gap-1 text-[10px]"
+                      className="live-pill live-pill-on-dark inline-flex items-center gap-1 text-[10px]"
                     >
                       <span className="font-medium">{activeSprint.name}</span>
                     </Link>

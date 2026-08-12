@@ -128,13 +128,13 @@
       "create_submit": "Create label",
       "save_submit": "Save changes",
       "delete_title": "Delete label?",
-      "delete_warning": "This permanently deletes “{name}” and removes it from every issue that uses it. This cannot be undone.",
+      "delete_warning": "Esta acción elimina permanentemente la etiqueta «{name}» y la quita de todas las incidencias que la usan. No se puede deshacer.",
       "delete_submit": "Delete label",
       "toast_created": "Label created",
       "toast_updated": "Label updated",
       "toast_deleted": "Label deleted",
-      "error_duplicate": "A label with this name already exists.",
-      "error_generic": "Something went wrong. Please try again."
+      "error_duplicate": "Ya existe una etiqueta con este nombre.",
+      "error_generic": "Algo salió mal. Inténtalo de nuevo."
     },
     "versions": {
       "kicker": "Releases",
@@ -179,11 +179,11 @@
       "toast_archived": "Version archived",
       "toast_restored": "Version restored",
       "toast_deleted": "Version deleted",
-      "delete_title": "Delete version?",
-      "delete_warning": "This permanently deletes “{name}” and removes it from every issue’s fix and affects versions. This cannot be undone.",
+      "delete_title": "¿Eliminar versión?",
+      "delete_warning": "Esta acción elimina permanentemente «{name}» y la quita de los campos de versión corregida y versión afectada de todas las incidencias. No se puede deshacer.",
       "delete_submit": "Delete version",
-      "error_duplicate": "A version with this name already exists in this project.",
-      "error_generic": "Something went wrong. Please try again."
+      "error_duplicate": "Ya existe una versión con este nombre en el proyecto.",
+      "error_generic": "Algo salió mal. Inténtalo de nuevo."
     },
     "components": {
       "kicker": "Components",
@@ -215,17 +215,17 @@
       "default_assignee_label": "Default assignee",
       "create_submit": "Create component",
       "save_submit": "Save changes",
-      "delete_title": "Delete component?",
-      "delete_warning": "This permanently deletes “{name}” and removes it from every issue that uses it. This cannot be undone.",
+      "delete_title": "¿Eliminar componente?",
+      "delete_warning": "Esta acción elimina permanentemente «{name}» y lo quita de todas las incidencias que usan este componente. No se puede deshacer.",
       "delete_submit": "Delete component",
       "toast_created": "Component created",
       "toast_updated": "Component updated",
       "toast_archived": "Component archived",
       "toast_restored": "Component restored",
       "toast_deleted": "Component deleted",
-      "error_duplicate": "A component with this name already exists in this project.",
-      "error_lead": "The component lead must be an active member of the organization.",
-      "error_generic": "Something went wrong. Please try again."
+      "error_duplicate": "Ya existe un componente con este nombre en el proyecto.",
+      "error_lead": "La persona responsable del componente debe ser un miembro activo de la organización.",
+      "error_generic": "Algo salió mal. Inténtalo de nuevo."
     }
   },
   "issueHeader": {
@@ -1075,7 +1075,7 @@
     "toast_refresh_failed_title": "No se pudo actualizar el estado",
     "registration_invite_required": "El registro es solo con invitación. Pide una invitación a un administrador.",
     "registration_admin_only": "El registro está cerrado. Pide a un administrador que cree tu cuenta.",
-    "project_invite_invalid": "This project invite link is expired, revoked, or has no remaining uses."
+    "project_invite_invalid": "Este enlace de invitación al proyecto ha caducado, se ha revocado o ya no tiene usos disponibles."
   },
   "issuesViews": {
     "loading": "Cargando…",
@@ -2434,7 +2434,10 @@
       "no_runs": "Aún no hay ejecuciones de agentes. Empieza con un análisis de salud del proyecto o una vista previa de planificación de sprint.",
       "writes_count": "{count} escrituras",
       "no_summary": "No se registró ningún resumen.",
-      "run_live": "Ejecutar en vivo"
+      "run_live": "Ejecutar en vivo",
+      "run_queued": "Ejecución del agente en cola",
+      "cancel_run": "Cancelar ejecución",
+      "resume_run": "Reanudar ejecución"
     },
     "agentGovernance": {
       "title": "AGENTOWNERS governance",
@@ -2552,7 +2555,9 @@
         "running": "En ejecución",
         "completed": "Completado",
         "failed": "Fallido",
-        "unknown": "{status}"
+        "unknown": "{status}",
+        "pending": "Pendiente",
+        "cancelled": "Cancelado"
       },
       "capabilities": {
         "project_tracking": {
@@ -5151,8 +5156,7 @@
         "description": "Un comando inicia una pequeña pila Compose. Los datos principales viven en Postgres, exportarlos está a un pg_dump y, por defecto, nada envía datos fuera — sin dependencia de proveedor por diseño.",
         "cards": {
           "postgres": {
-            "title": "Un Postgres, una imagen web",
-            "body": "Postgres 16 con la extensión pgvector impulsa la búsqueda; Redis 7 acompaña. Sin Mongo, sin Elastic, sin zoológico de sidecars."
+            "title": "Un Postgres, una imagen web"
           },
           "migrations": {
             "title": "Las migraciones corren al iniciar",
@@ -5172,46 +5176,18 @@
         "quickstartAria": "Comandos de inicio rápido para autohospedaje",
         "terminalNote": "La imagen web espera a Postgres, ejecuta migraciones y sirve en <code>http://localhost:3000</code>; ábrela y completa el asistente admin inicial. Imagen: <imageLink>neuraparse/tasknebula</imageLink>."
       },
-      "migrate": {
-        "kicker": "Migrar",
-        "title": "Pasa de Jira o Linear en una tarde",
-        "description": "Cambiar de herramienta no debería significar perder tu historia o tu proceso. Importa lo que tienes, mapéalo a TaskNebula y sigue trabajando como tu equipo ya lo hace.",
-        "steps": {
-          "issues": {
-            "title": "Trae tus issues",
-            "body": "Importa issues de Jira y Linear con descripciones, comentarios e historial intactos; no aplanados en un CSV."
-          },
-          "labels": {
-            "title": "Etiquetas y sprints también llegan",
-            "body": "Etiquetas, componentes y sprints activos entran como registros de primera clase, para que tableros y backlog se sientan familiares desde el primer día."
-          },
-          "fields": {
-            "title": "Mapea campos, no solo nombres",
-            "body": "Relaciona estados, prioridades y campos personalizados con equivalentes de TaskNebula durante la importación; revisa el mapeo antes de escribir."
-          },
-          "workflow": {
-            "title": "Conserva tu flujo",
-            "body": "Tus estados, swimlanes y convenciones se mueven contigo. Cambia de herramienta sin reentrenar al equipo ni reconstruir el proceso."
-          }
-        },
-        "note": "Las importaciones corren contra tu propia base de datos y son totalmente reversibles; nada sale de tu servidor y puedes repetir el mapeo hasta que quede bien."
-      },
       "aiMcp": {
         "kicker": "Nativo de IA",
         "title": "Los agentes trabajan el backlog contigo.",
-        "description": "TaskNebula fue creado para la era de los agentes. Haz preguntas en todo el workspace, deja que la IA priorice y estime trabajo nuevo, y da herramientas reales a agentes externos mediante un servidor MCP de primera clase.",
         "capabilities": {
           "ask": {
-            "title": "Pregunta a tu workspace",
-            "body": "El endpoint RAG /api/ask responde en lenguaje natural sobre issues, docs y comentarios, basado en recuperación pgvector y con citas a la fuente."
+            "title": "Pregunta a tu workspace"
           },
           "triage": {
-            "title": "Triage y estimaciones con IA",
-            "body": "Prioridad, etiquetas y esfuerzo sugeridos llegan a nuevos issues, respaldados por llamadas reales a OpenAI y Anthropic, control de coste y trazas. Tú mantienes el control: aceptar o descartar."
+            "title": "Triage y estimaciones con IA"
           },
           "mcp": {
-            "title": "Herramientas MCP para agentes",
-            "body": "@tasknebula/mcp-server expone el backlog por MCP — HTTP en /api/mcp o stdio — para que agentes externos creen, busquen y muevan issues con claves revocables."
+            "title": "Herramientas MCP para agentes"
           }
         },
         "mock": {
@@ -5247,8 +5223,7 @@
             "body": "Tira del backlog hacia un sprint, define versiones y componentes, y lee el alcance de un vistazo. La planificación vive junto al trabajo, no en otro documento."
           },
           "build": {
-            "title": "Construye junto a agentes",
-            "body": "Los agentes son compañeros de primera clase vía MCP: toman issues, comentan y abren trabajo igual que las personas, con cada acción en la línea de tiempo compartida."
+            "title": "Construye junto a agentes"
           },
           "ship": {
             "title": "Entrega y mide el resultado",
@@ -5310,28 +5285,23 @@
             "answer": "El autohospedaje es la opción predeterminada. Con Docker inicias una pequeña pila Compose con Postgres 16 y pgvector, Redis 7, la imagen web neuraparse/tasknebula y los servicios incluidos u opcionales que actives. Las migraciones se ejecutan al arrancar, GET /api/health es el endpoint de comprobación y el inicio rápido se abre en localhost:3000."
           },
           "aiKeys": {
-            "question": "¿Necesito las funciones de IA? ¿Puedo traer mis propias claves?",
-            "answer": "AI is optional — every board, sprint, and doc works with no model keys configured. When you want it, you bring your own OpenAI or Anthropic key as environment variables, so spend and data residency stay yours. There is a cost guard so a runaway prompt cannot run up your bill."
+            "question": "¿Necesito las funciones de IA? ¿Puedo traer mis propias claves?"
           },
           "aiReality": {
-            "question": "¿Qué tan reales son hoy las funciones de IA?",
-            "answer": "We build them in the open. The data model and endpoints — triage suggestions, pgvector semantic search, and the /api/ask RAG endpoint — are live, and they make real OpenAI and Anthropic calls. Some surfaces are still labeled preview while we harden them; we would rather say that here than have you discover it after install."
+            "question": "¿Qué tan reales son hoy las funciones de IA?"
           },
           "mcpServer": {
-            "question": "¿Qué es el servidor MCP?",
-            "answer": "An MCP (Model Context Protocol) server exposes TaskNebula as tools — create, search, move, and comment on issues — so agents like Claude Code and Cursor can drive your tracker. It ships with the repo, HTTP at /api/mcp or stdio via @tasknebula/mcp-server, and is MIT licensed. Heads up: end-to-end agent auth depends on the REST API accepting API keys, which is still being wired, so treat it as preview today."
+            "question": "¿Qué es el servidor MCP?"
           },
           "imports": {
-            "question": "¿Importa desde Jira o Linear?",
-            "answer": "Yes — there are importers for Jira, Linear, GitHub, and CSV. Each runs with a preview step so you can inspect the field mapping before anything is written, and you can keep your old tool read-only while you cut over."
+            "question": "¿Importa desde Jira o Linear?"
           },
           "productionReady": {
             "question": "¿Está listo para producción?",
             "answer": "El tracker principal — incidencias, tableros, sprints, documentos, búsqueda, REST API y especificación OpenAPI — se puede autohospedar. El acceso con OAuth todavía necesita un adaptador de base de datos, así que por ahora usa autenticación con credenciales. La colaboración en tiempo real está conectada mediante Docker/Compose, pero tu despliegue aún necesita una URL accesible y una prueba de humo en vivo. AI y MCP siguen en preview. Seguimos las carencias en docs/STATUS.md."
           },
           "dataVisibility": {
-            "question": "¿Quién puede ver mis datos?",
-            "answer": "You decide. Self-hosted, everything lives in your Postgres on your infrastructure and exports with a plain pg_dump — no telemetry phones home. Inside the product, workspaces are isolated per organization with role-based access, permission schemes, and audit logs."
+            "question": "¿Quién puede ver mis datos?"
           }
         }
       },
@@ -5345,28 +5315,18 @@
             "body": "Drive the whole board from one Cmd+K palette — search, navigate, and run actions without leaving the keys. Drag across columns, plan sprints, and read burndown in the same view."
           },
           "import": {
-            "title": "Import from Jira and Linear",
-            "body": "Bring your backlog with you — Jira, Linear, and CSV importers map issues, statuses, and metadata so you start full, not empty."
+            "title": "Import from Jira and Linear"
           },
-          "structure": {
-            "title": "Jira-parity structure",
-            "body": "First-class labels, components, fix versions, and a resolution model — backlog structure stored in real tables and REST APIs, not JSON strings."
-          },
-          "ai": {
-            "title": "AI-native, auditable",
-            "body": "Real OpenAI and Anthropic calls behind a cost guard and tracing — triage suggestions, AI estimates, and a /api/ask RAG endpoint over pgvector. No black boxes."
-          },
+          "structure": {},
+          "ai": {},
           "agents": {
-            "title": "Agents work the backlog",
-            "body": "A real MCP server — HTTP at /api/mcp or stdio — lets coding agents create, search, and move issues. Backed by a REST API, OpenAPI spec, revocable keys, and webhooks."
+            "title": "Agents work the backlog"
           },
           "realtime": {
-            "title": "Realtime collaboration",
-            "body": "Specs and issue docs edit live — Tiptap on Yjs with presence and conflict-free merges, so two people on one doc just works."
+            "title": "Realtime collaboration"
           },
           "selfHost": {
-            "title": "Self-host in minutes",
-            "body": "One Docker image, Postgres, and you own the data. Multi-tenant from the schema up — every table is organization-scoped, no vendor lock-in."
+            "title": "Self-host in minutes"
           },
           "analytics": {
             "title": "Analytics close to execution",
@@ -5683,11 +5643,22 @@
       "meta": {
         "title": "TaskNebula — Open-source, AI-native Jira & Linear alternative",
         "description": "Keyboard-first boards, sprints, and docs with an MCP server so AI agents work the backlog with you. MIT licensed — self-host with one Docker Compose file.",
-        "skipToContent": "Skip to content"
+        "skipToContent": "Saltar al contenido"
+      },
+      "productTruth": {
+        "aiSummary": "Las funciones de IA y agentes son opcionales, dependen de la configuración y algunas siguen en vista previa.",
+        "ask": "Ask busca actualmente en incidencias y documentos. La recuperación semántica necesita un proveedor de embeddings seguro para la organización.",
+        "ai": "Las sugerencias de IA son funciones en vista previa y dependen de credenciales de proveedor configuradas. Revisa cada sugerencia antes de aplicarla.",
+        "mcp": "Vista previa: el paquete MCP compilado desde el código fuente admite 11 herramientas con claves de API vinculadas a la organización. OAuth, la auditoría por llamada y la distribución pública del paquete no están terminados.",
+        "aiKeys": "La IA es opcional. Usa tus propias claves de proveedor; los controles de presupuesto reducen el riesgo, pero no garantizan un límite de gasto.",
+        "data": "Los datos de la aplicación autoalojada usan tu Postgres. Hay controles de acceso, pero su cobertura aún debe revisarse; las integraciones opcionales solo envían datos cuando las configuras.",
+        "structureTitle": "Campos estructurados del backlog",
+        "structure": "Las etiquetas, los componentes, las versiones de corrección y las resoluciones tienen modelos propios de base de datos y API. La aplicación de controles aún varía según la ruta.",
+        "realtime": "La colaboración con Yjs está disponible cuando Hocuspocus, su URL pública y los secretos coincidentes están configurados y verificados con una prueba de humo."
       }
     },
     "intake": {
-      "submitMetaTitle": "Submit · TaskNebula"
+      "submitMetaTitle": "Enviar · TaskNebula"
     },
     "stepStart": "Comenzar",
     "setupImportRedirecting": "Redirigiendo para iniciar sesión, luego{source}importar…",
@@ -6660,7 +6631,7 @@
     "disclosureBadge": "Información de transparencia de IA",
     "title": "Fichas de modelos de IA",
     "intro": "Esta página describe las funciones de IA documentadas y la configuración predeterminada de TaskNebula. Los modelos reales, el manejo de datos, la retención y los controles de revisión pueden variar según el espacio de trabajo y la implementación; Confirme la configuración activa con su administrador. Aviso de transparencia versión <version></version>.",
-    "lastReviewed": "Última revisión 2026-08-12. El artículo 50 del Reglamento (UE) 2024/1689 se aplica a partir del 2026-08-02.",
+    "lastReviewed": "Última revisión 2026-08-12.",
     "onThisPage": "En esta página",
     "model": "Modelo",
     "provider": "Proveedor",
@@ -7036,5 +7007,28 @@
       "fetchOrganizations": "Failed to fetch organizations",
       "fetchEpics": "Failed to fetch epics"
     }
+  },
+  "slackCommands": {
+    "userUnmapped": "No pude vincular tu cuenta de Slack con un usuario de TaskNebula. Pide a un administrador que asocie los perfiles de Slack con las cuentas de TaskNebula.",
+    "statusUsage": "Uso: `/tn status TN-123 done`",
+    "statusUnavailable": "Ese cambio de estado no está disponible. Consulta `/tn help` para ver los estados admitidos.",
+    "notInstalled": "TaskNebula aún no está instalado en este espacio de trabajo de Slack. Pide a un administrador que lo conecte en Configuración → Integraciones.",
+    "help": "*Comandos de TaskNebula*\n`/tn new título` — abre el cuadro de una incidencia nueva con el título indicado\n`/tn list` — muestra tus incidencias abiertas asignadas\n`/tn search consulta` — muestra los 5 mejores resultados accesibles\n`/tn assign TN-123 @usuario` — reasigna una incidencia\n`/tn status TN-123 done` — cambia el estado de una incidencia (backlog | in_progress | in_review | done | blocked)",
+    "unknownCommand": "Comando desconocido.",
+    "noOpenAssigned": "No tienes incidencias abiertas asignadas.",
+    "openIssuesHeader": "Tus incidencias abiertas:",
+    "noStatus": "sin estado",
+    "searchUsage": "Uso: `/tn search consulta`",
+    "searchNoMatches": "No hay incidencias que coincidan con `{query}`.",
+    "searchTopMatches": "Mejores resultados para `{query}`: {count}",
+    "searchSummary": "Resultados para {query}: {count}",
+    "assignUsage": "Uso: `/tn assign TN-123 @usuario`",
+    "invalidUserMention": "`{mention}` no parece una mención de usuario de Slack.",
+    "issueNotFound": "No se encontró la incidencia `{issueKey}` en este espacio de trabajo.",
+    "assigneeUnmapped": "No pude vincular ese usuario de Slack con una cuenta de TaskNebula. Pide a un administrador que añada la asociación en Configuración → Integraciones.",
+    "assignmentSuccess": "Se reasignó *{issueKey}* a <@{slackUserId}> (solicitado por <@{requestedBy}>).",
+    "statusSuccess": "Se movió *{issueKey}* a *{statusName}* (solicitado por <@{requestedBy}>).",
+    "newUsage": "Uso: `/tn new título` — abre el cuadro de una incidencia nueva.",
+    "newOpening": "Abriendo el cuadro de una incidencia nueva para: _{title}_"
   }
 }

@@ -9,7 +9,6 @@ import {
   db,
   issues,
   workflowStatuses,
-  workflows,
   projects,
   sprints,
   projectMembers,
@@ -19,7 +18,6 @@ import {
   hasPermission as roleHasPermission,
   type ProjectRole,
 } from '@tasknebula/db';
-import { auth } from '@/auth';
 import { eq, and } from 'drizzle-orm';
 import { publishEvent } from '@/lib/realtime/events';
 import { notifyIssueEvent } from '@/lib/notifications/send-notification';
@@ -31,6 +29,15 @@ import {
   readAgentPolicyMarker,
   stripAgentPolicyMarker,
 } from '@/lib/agent-policy/guard';
+import { apiActorCanAccessOrganization, resolveApiActor } from '@/lib/auth/api-actor';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import {
+  applyPreparedIssueStatusTransition,
+  isWorkflowTransitionError,
+  prepareIssueStatusTransition,
+  resolveProjectWorkflowStatusByCategory,
+  WorkflowTransitionError,
+} from '@/lib/workflows/issue-transition-policy';
 
 // Params schema for /api/issues/[issueId] — kept loose (`min(1)`) to allow
 // the existing dataset of mixed-format ids; tighten to `id` from
@@ -96,6 +103,9 @@ async function checkIssuePermission(
   if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
     return { allowed: true };
   }
+  if (!orgMember) {
+    return { allowed: false, reason: 'Not an active organization member' };
+  }
 
   // Get project membership with all permission columns
   const [projectMember] = await db
@@ -111,7 +121,6 @@ async function checkIssuePermission(
   // Get role defaults
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const toBool = (val: string | null | undefined): boolean => val === 'true';
   const isOwnIssue = issueReporterId === userId;
 
   // Check specific permissions based on action
@@ -121,53 +130,80 @@ async function checkIssuePermission(
 
     case 'edit':
       // Check if can edit all issues or own issues
-      if (toBool(projectMember.canEditIssues) || roleDefaults.canEditIssues) {
+      if (resolveProjectMemberPermission(projectMember.canEditIssues, roleDefaults.canEditIssues)) {
         return { allowed: true };
       }
-      if (isOwnIssue && (toBool(projectMember.canEditOwnIssues) || roleDefaults.canEditOwnIssues)) {
+      if (
+        isOwnIssue &&
+        resolveProjectMemberPermission(
+          projectMember.canEditOwnIssues,
+          roleDefaults.canEditOwnIssues
+        )
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to edit issues' };
 
     case 'delete':
       // Check if can delete all issues or own issues
-      if (toBool(projectMember.canDeleteIssues) || roleDefaults.canDeleteIssues) {
+      if (
+        resolveProjectMemberPermission(projectMember.canDeleteIssues, roleDefaults.canDeleteIssues)
+      ) {
         return { allowed: true };
       }
       if (
         isOwnIssue &&
-        (toBool(projectMember.canDeleteOwnIssues) || roleDefaults.canDeleteOwnIssues)
+        resolveProjectMemberPermission(
+          projectMember.canDeleteOwnIssues,
+          roleDefaults.canDeleteOwnIssues
+        )
       ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to delete issues' };
 
     case 'assign':
-      if (toBool(projectMember.canAssignIssues) || roleDefaults.canAssignIssues) {
+      if (
+        resolveProjectMemberPermission(projectMember.canAssignIssues, roleDefaults.canAssignIssues)
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to assign issues' };
 
     case 'transition':
-      if (toBool(projectMember.canTransitionIssues) || roleDefaults.canTransitionIssues) {
+      if (
+        resolveProjectMemberPermission(
+          projectMember.canTransitionIssues,
+          roleDefaults.canTransitionIssues
+        )
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to transition issues' };
 
     case 'schedule':
-      if (toBool(projectMember.canScheduleIssues) || roleDefaults.canScheduleIssues) {
+      if (
+        resolveProjectMemberPermission(
+          projectMember.canScheduleIssues,
+          roleDefaults.canScheduleIssues
+        )
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to schedule issues' };
 
     case 'close':
-      if (toBool(projectMember.canCloseIssues) || roleDefaults.canCloseIssues) {
+      if (
+        resolveProjectMemberPermission(projectMember.canCloseIssues, roleDefaults.canCloseIssues)
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to close issues' };
 
     case 'reopen':
-      if (toBool(projectMember.canReopenIssues) || roleDefaults.canReopenIssues) {
+      if (
+        resolveProjectMemberPermission(projectMember.canReopenIssues, roleDefaults.canReopenIssues)
+      ) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to reopen issues' };
@@ -242,8 +278,8 @@ export async function GET(
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -253,10 +289,13 @@ export async function GET(
     if (!issue) {
       return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
     }
+    if (!apiActorCanAccessOrganization(actor, issue.organizationId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Permission check: ensure caller can view this issue
     const permission = await checkIssuePermission(
-      session.user.id,
+      actor.userId,
       issue.projectId,
       'view',
       issue.reporterId
@@ -285,8 +324,8 @@ export const PATCH = withValidation({
 })(async (request, { body: validatedData, params }) => {
   const { issueId } = params;
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -294,6 +333,9 @@ export const PATCH = withValidation({
     const currentIssue = await getIssueById(issueId);
     if (!currentIssue) {
       return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
+    }
+    if (!apiActorCanAccessOrganization(actor, currentIssue.organizationId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const agentPolicy = readAgentPolicyMarker(validatedData.agentPolicy);
@@ -391,44 +433,6 @@ export const PATCH = withValidation({
       }
     }
 
-    if (issueInput.statusId && issueInput.statusId !== currentIssue.statusId) {
-      let workflowId = currentProject.defaultWorkflowId;
-      if (!workflowId) {
-        const [defaultWorkflow] = await db
-          .select({ id: workflows.id })
-          .from(workflows)
-          .where(
-            and(
-              eq(workflows.organizationId, currentIssue.organizationId),
-              eq(workflows.isDefault, true)
-            )
-          )
-          .limit(1);
-        workflowId = defaultWorkflow?.id ?? null;
-      }
-
-      if (!workflowId) {
-        return NextResponse.json({ error: 'No workflow found' }, { status: 500 });
-      }
-
-      const [targetStatus] = await db
-        .select({ id: workflowStatuses.id })
-        .from(workflowStatuses)
-        .where(
-          and(
-            eq(workflowStatuses.id, issueInput.statusId),
-            eq(workflowStatuses.workflowId, workflowId)
-          )
-        )
-        .limit(1);
-      if (!targetStatus) {
-        return NextResponse.json(
-          { error: 'Status does not belong to the project workflow' },
-          { status: 400 }
-        );
-      }
-    }
-
     // Determine required permissions based on what's being changed
     const permissionChecks: IssueAction[] = [];
 
@@ -474,7 +478,7 @@ export const PATCH = withValidation({
     // Check all required permissions
     for (const action of permissionChecks) {
       const permission = await checkIssuePermission(
-        session.user.id!,
+        actor.userId,
         currentIssue.projectId,
         action,
         currentIssue.reporterId
@@ -512,7 +516,7 @@ export const PATCH = withValidation({
       const guard = await guardAgentAction({
         workspaceId: currentIssue.organizationId,
         projectId: currentIssue.projectId,
-        requestedBy: session.user.id!,
+        requestedBy: actor.userId,
         actor: agentPolicy.actor,
         resource: policyResource,
         action: policyAction,
@@ -535,45 +539,11 @@ export const PATCH = withValidation({
       }
     }
 
-    // If status category is provided instead of statusId, convert it
+    // Resolve and apply status mutations in one transaction. The canonical
+    // policy service locks the issue, validates the tenant/workflow edge and
+    // performs a CAS update, so concurrent board/API moves cannot both win.
     const updateData = { ...issueInput };
-    if (issueInput.status && !issueInput.statusId) {
-      // Get the workflow for this project's organization
-      const workflowResults = await db
-        .select()
-        .from(workflows)
-        .where(
-          and(
-            eq(workflows.organizationId, currentIssue.organizationId),
-            eq(workflows.isDefault, true)
-          )
-        )
-        .limit(1);
-
-      const workflow = workflowResults[0];
-      if (!workflow) {
-        return NextResponse.json({ error: 'No workflow found' }, { status: 500 });
-      }
-
-      // Get the first status with the matching category
-      const statusResults = await db
-        .select()
-        .from(workflowStatuses)
-        .where(eq(workflowStatuses.workflowId, workflow.id));
-
-      const matchingStatuses = statusResults
-        .filter((s) => s.category === issueInput.status)
-        .sort((a, b) => a.position - b.position);
-
-      const firstMatching = matchingStatuses[0];
-      if (!firstMatching) {
-        return NextResponse.json({ error: 'Status not found' }, { status: 404 });
-      }
-
-      // Use the first matching status
-      updateData.statusId = firstMatching.id;
-      delete updateData.status;
-    }
+    delete updateData.status;
 
     // Resolution write-through: setting a resolution stamps `resolvedAt`;
     // an explicit `resolution: null` clears both fields.
@@ -582,7 +552,40 @@ export const PATCH = withValidation({
         ? { resolvedAt: updateData.resolution === null ? null : new Date() }
         : {};
 
-    const updatedIssueData = await updateIssue(issueId, { ...updateData, ...resolutionPatch });
+    const statusRequested = issueInput.statusId !== undefined || issueInput.status !== undefined;
+    const updatedIssueData = statusRequested
+      ? await db.transaction(async (tx) => {
+          let targetStatusId = issueInput.statusId;
+          if (!targetStatusId && issueInput.status) {
+            targetStatusId =
+              (await resolveProjectWorkflowStatusByCategory(tx, {
+                organizationId: currentIssue.organizationId,
+                projectId: currentIssue.projectId,
+                issueId,
+                category: issueInput.status as typeof workflowStatuses.$inferSelect.category,
+              })) ?? undefined;
+          }
+          if (!targetStatusId) {
+            throw new WorkflowTransitionError('workflow_transition_status_invalid');
+          }
+          updateData.statusId = targetStatusId;
+          const prepared = await prepareIssueStatusTransition(tx, {
+            organizationId: currentIssue.organizationId,
+            projectId: currentIssue.projectId,
+            issueId,
+            toStatusId: targetStatusId,
+            actorUserId: actor.userId,
+            expectedFromStatusId: currentIssue.statusId,
+          });
+          return applyPreparedIssueStatusTransition(tx, {
+            prepared,
+            actorUserId: actor.userId,
+            reason: 'user_api',
+            patch: { ...updateData, ...resolutionPatch },
+            skipWriteWhenUnchanged: false,
+          });
+        })
+      : await updateIssue(issueId, { ...updateData, ...resolutionPatch });
 
     if (!updatedIssueData) {
       return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
@@ -596,7 +599,7 @@ export const PATCH = withValidation({
         organizationId: currentIssue.organizationId,
         issueId,
         labels: issueInput.labels,
-        createdBy: session.user.id ?? null,
+        createdBy: actor.userId,
       });
     }
 
@@ -607,7 +610,7 @@ export const PATCH = withValidation({
       activityPromises.push(
         createActivity({
           issueId,
-          userId: session.user.id,
+          userId: actor.userId,
           type: 'status_changed',
           field: 'status',
           oldValue: currentIssue.statusId,
@@ -620,7 +623,7 @@ export const PATCH = withValidation({
       activityPromises.push(
         createActivity({
           issueId,
-          userId: session.user.id,
+          userId: actor.userId,
           type: 'assigned',
           field: 'assignee',
           oldValue: currentIssue.assigneeId || null,
@@ -633,7 +636,7 @@ export const PATCH = withValidation({
       activityPromises.push(
         createActivity({
           issueId,
-          userId: session.user.id,
+          userId: actor.userId,
           type: 'updated',
           field: 'priority',
           oldValue: currentIssue.priority,
@@ -646,7 +649,7 @@ export const PATCH = withValidation({
       activityPromises.push(
         createActivity({
           issueId,
-          userId: session.user.id,
+          userId: actor.userId,
           type: 'updated',
           field: 'title',
           oldValue: currentIssue.title,
@@ -659,7 +662,7 @@ export const PATCH = withValidation({
       activityPromises.push(
         createActivity({
           issueId,
-          userId: session.user.id,
+          userId: actor.userId,
           type: 'updated',
           field: 'resolution',
           oldValue: currentIssue.resolution ?? null,
@@ -672,7 +675,7 @@ export const PATCH = withValidation({
       activityPromises.push(
         createActivity({
           issueId,
-          userId: session.user.id,
+          userId: actor.userId,
           type: 'updated',
           field: 'flagged',
           oldValue: String(currentIssue.flagged ?? false),
@@ -688,7 +691,7 @@ export const PATCH = withValidation({
       activityPromises.push(
         createActivity({
           issueId,
-          userId: session.user.id,
+          userId: actor.userId,
           type: 'updated',
           field: 'description',
         })
@@ -714,7 +717,7 @@ export const PATCH = withValidation({
     }
 
     // Publish realtime event synchronously (in-process bus, microseconds).
-    publishEvent('issue.updated', session.user.id!, {
+    publishEvent('issue.updated', actor.userId, {
       projectId: currentIssue.projectId,
       issueId,
       sprintId: currentIssue.sprintId || undefined,
@@ -722,7 +725,7 @@ export const PATCH = withValidation({
     });
 
     // Defer audit log and notification emails to after the response is sent.
-    const actorUserId = session.user.id!;
+    const actorUserId = actor.userId;
     const projectName = currentIssue.key?.split('-')[0] || '';
     const changesSnapshot = changes;
     const newAssigneeId =
@@ -910,6 +913,12 @@ export const PATCH = withValidation({
 
     return NextResponse.json(updatedIssueData);
   } catch (error) {
+    if (isWorkflowTransitionError(error)) {
+      return NextResponse.json(
+        { error: error.code, code: error.code },
+        { status: error.httpStatus }
+      );
+    }
     console.error('Error updating issue:', error);
     return NextResponse.json({ error: 'Failed to update issue' }, { status: 500 });
   }
@@ -917,12 +926,12 @@ export const PATCH = withValidation({
 
 // DELETE /api/issues/[issueId] - Delete an issue
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ issueId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -933,10 +942,13 @@ export async function DELETE(
     if (!issue) {
       return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
     }
+    if (!apiActorCanAccessOrganization(actor, issue.organizationId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Check permission to delete issues (with reporter check for own issues)
     const permission = await checkIssuePermission(
-      session.user.id!,
+      actor.userId,
       issue.projectId,
       'delete',
       issue.reporterId
@@ -950,7 +962,7 @@ export async function DELETE(
 
     await deleteIssue(issueId);
 
-    publishEvent('issue.deleted', session.user.id!, {
+    publishEvent('issue.deleted', actor.userId, {
       projectId: issue.projectId,
       issueId,
       sprintId: issue.sprintId || undefined,

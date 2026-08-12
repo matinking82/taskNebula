@@ -15,6 +15,7 @@ import {
 import { eq, and, desc, count, inArray } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { publishEvent } from '@/lib/realtime/events';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 // Permission check helper
 async function checkSprintPermission(
@@ -87,8 +88,10 @@ async function checkSprintPermission(
   // Check role defaults and explicit overrides
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const toBool = (val: string | null | undefined): boolean => val === 'true';
-  const canManage = toBool(projectMember.canManageSprints) || roleDefaults.canManageSprints;
+  const canManage = resolveProjectMemberPermission(
+    projectMember.canManageSprints,
+    roleDefaults.canManageSprints
+  );
 
   if (action === 'view') {
     return { allowed: true };

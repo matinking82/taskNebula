@@ -22,17 +22,21 @@ import {
   organizationMembers,
   integrationConnections,
   issues,
-  projects,
   users,
   workflowStatuses,
-  workflows,
 } from '@tasknebula/db';
 import { createId } from '@paralleldrive/cuid2';
-import {
-  parseSlackUserMention,
-  type ParsedSlashCommand,
-} from './slack';
+import { getTranslations } from 'next-intl/server';
+import { parseSlackUserMention, type ParsedSlashCommand } from './slack';
+import { defaultLocale, isSupportedLocale, type Locale } from '@/lib/i18n/config';
 import { triggerWebhooks } from '@/lib/webhooks/dispatcher';
+import {
+  applyPreparedIssueStatusTransition,
+  isWorkflowTransitionError,
+  prepareIssueStatusTransition,
+  resolveProjectWorkflowStatusByCategory,
+  WorkflowTransitionError,
+} from '@/lib/workflows/issue-transition-policy';
 
 export interface SlackCommandContext {
   /** Slack team/workspace id (from slash command form). */
@@ -51,23 +55,15 @@ export interface SlackSlashResponse {
   blocks?: unknown[];
 }
 
-const ERR_NOT_INSTALLED: SlackSlashResponse = {
-  response_type: 'ephemeral',
-  text:
-    "TaskNebula isn't installed for this Slack workspace yet. Ask an admin to connect it in Settings → Integrations.",
-};
+async function getSlackTranslator(locale: Locale) {
+  return getTranslations({ locale, namespace: 'slackCommands' });
+}
 
-const HELP_TEXT: SlackSlashResponse = {
-  response_type: 'ephemeral',
-  text: [
-    '*TaskNebula commands*',
-    '`/tn new <title>` — open the new-issue modal pre-filled with your title',
-    '`/tn list` — list your open assigned issues',
-    '`/tn search <query>` — top 5 matches across your accessible issues',
-    '`/tn assign TN-123 @user` — reassign an issue',
-    '`/tn status TN-123 done` — transition an issue (backlog | in_progress | in_review | done | blocked)',
-  ].join('\n'),
-};
+type SlackTranslator = Awaited<ReturnType<typeof getSlackTranslator>>;
+
+function ephemeral(text: string, blocks?: unknown[]): SlackSlashResponse {
+  return { response_type: 'ephemeral', text, ...(blocks ? { blocks } : {}) };
+}
 
 /**
  * Resolve the TaskNebula organization + connection row that owns a Slack
@@ -75,21 +71,21 @@ const HELP_TEXT: SlackSlashResponse = {
  * `integration_connections.external_account_id`. Returns null when no org has
  * the bot installed.
  */
-export async function resolveSlackOrg(teamId: string): Promise<
-  | {
-      organizationId: string;
-      connectionId: string;
-      botUserId: string | null;
-    }
-  | null
-> {
+export async function resolveSlackOrg(teamId: string): Promise<{
+  organizationId: string;
+  connectionId: string;
+  botUserId: string | null;
+  locale: Locale;
+} | null> {
   const [row] = await db
     .select({
       organizationId: integrationConnections.organizationId,
       id: integrationConnections.id,
       metadata: integrationConnections.metadata,
+      locale: users.locale,
     })
     .from(integrationConnections)
+    .leftJoin(users, eq(users.id, integrationConnections.connectedById))
     .where(
       and(
         eq(integrationConnections.provider, 'slack'),
@@ -103,8 +99,11 @@ export async function resolveSlackOrg(teamId: string): Promise<
   return {
     organizationId: row.organizationId,
     connectionId: row.id,
-    botUserId:
-      typeof metadata.botUserId === 'string' ? metadata.botUserId : null,
+    botUserId: typeof metadata.botUserId === 'string' ? metadata.botUserId : null,
+    // Slack slash payloads do not include the user's locale. Until durable
+    // Slack→TaskNebula identity mapping exists, use the installer's supported
+    // locale and fall back to the product default.
+    locale: isSupportedLocale(row.locale) ? row.locale : defaultLocale,
   };
 }
 
@@ -141,27 +140,25 @@ export async function handleSlashCommand(
   ctx: SlackCommandContext
 ): Promise<SlackSlashResponse> {
   const org = await resolveSlackOrg(ctx.teamId);
-  if (!org) return ERR_NOT_INSTALLED;
+  const t = await getSlackTranslator(org?.locale ?? defaultLocale);
+  if (!org) return ephemeral(t('notInstalled'));
 
   switch (parsed.verb) {
     case 'help':
-      return HELP_TEXT;
+      return ephemeral(t('help'));
     case 'list':
-      return handleListMine(org.organizationId, ctx);
+      return handleListMine(org.organizationId, ctx, t);
     case 'search':
-      return handleSearch(org.organizationId, parsed.raw, ctx);
+      return handleSearch(org.organizationId, parsed.raw, ctx, t);
     case 'assign':
-      return handleAssign(org.organizationId, parsed.args, ctx);
+      return handleAssign(org.organizationId, parsed.args, ctx, t);
     case 'status':
-      return handleStatus(org.organizationId, parsed.args, ctx);
+      return handleStatus(org.organizationId, parsed.args, ctx, t);
     case 'new':
-      return handleNew(org.organizationId, parsed.raw, ctx);
+      return handleNew(org.organizationId, parsed.raw, ctx, t);
     case 'unknown':
     default:
-      return {
-        response_type: 'ephemeral',
-        text: `Unknown command. ${HELP_TEXT.text}`,
-      };
+      return ephemeral(`${t('unknownCommand')}\n${t('help')}`);
   }
 }
 
@@ -171,18 +168,12 @@ export async function handleSlashCommand(
 
 async function handleListMine(
   organizationId: string,
-  ctx: SlackCommandContext
+  ctx: SlackCommandContext,
+  t: SlackTranslator
 ): Promise<SlackSlashResponse> {
-  const userId = await lookupTaskNebulaUserBySlackId(
-    organizationId,
-    ctx.slackUserId
-  );
+  const userId = await lookupTaskNebulaUserBySlackId(organizationId, ctx.slackUserId);
   if (!userId) {
-    return {
-      response_type: 'ephemeral',
-      text:
-        "I couldn't link your Slack account to a TaskNebula user. Ask an admin to map Slack profiles to TaskNebula accounts (follow-up).",
-    };
+    return ephemeral(t('userUnmapped'));
   }
 
   const rows = await db
@@ -194,43 +185,28 @@ async function handleListMine(
     })
     .from(issues)
     .leftJoin(workflowStatuses, eq(issues.statusId, workflowStatuses.id))
-    .where(
-      and(
-        eq(issues.organizationId, organizationId),
-        eq(issues.assigneeId, userId)
-      )
-    )
+    .where(and(eq(issues.organizationId, organizationId), eq(issues.assigneeId, userId)))
     .orderBy(desc(issues.updatedAt))
     .limit(15);
 
   const open = rows.filter((r) => r.category !== 'done');
   if (open.length === 0) {
-    return {
-      response_type: 'ephemeral',
-      text: "You have no open assigned issues.",
-    };
+    return ephemeral(t('noOpenAssigned'));
   }
 
-  const lines = open.map(
-    (r) => `• *${r.key}* — ${r.title} _(${r.statusName ?? 'no status'})_`
-  );
-  return {
-    response_type: 'ephemeral',
-    text: `Your open issues:\n${lines.join('\n')}`,
-  };
+  const lines = open.map((r) => `• *${r.key}* — ${r.title} _(${r.statusName ?? t('noStatus')})_`);
+  return ephemeral(`${t('openIssuesHeader')}\n${lines.join('\n')}`);
 }
 
 async function handleSearch(
   organizationId: string,
   query: string,
-  _ctx: SlackCommandContext
+  _ctx: SlackCommandContext,
+  t: SlackTranslator
 ): Promise<SlackSlashResponse> {
   const q = query.trim();
   if (!q) {
-    return {
-      response_type: 'ephemeral',
-      text: 'Usage: `/tn search <query>`',
-    };
+    return ephemeral(t('searchUsage'));
   }
 
   const like = `%${q}%`;
@@ -252,10 +228,7 @@ async function handleSearch(
     .limit(5);
 
   if (rows.length === 0) {
-    return {
-      response_type: 'ephemeral',
-      text: `No issues matched \`${q}\`.`,
-    };
+    return ephemeral(t('searchNoMatches', { query: q }));
   }
 
   // Block Kit list — each result as a section so they wrap nicely in mobile.
@@ -264,7 +237,7 @@ async function handleSearch(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Top ${rows.length} match${rows.length === 1 ? '' : 'es'} for* \`${q}\``,
+        text: `*${t('searchTopMatches', { count: rows.length, query: q })}*`,
       },
     },
     { type: 'divider' },
@@ -272,58 +245,39 @@ async function handleSearch(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*${r.key}* — ${r.title}\n_${r.statusName ?? 'no status'}_`,
+        text: `*${r.key}* — ${r.title}\n_${r.statusName ?? t('noStatus')}_`,
       },
     })),
   ];
 
-  return {
-    response_type: 'ephemeral',
-    text: `${rows.length} match${rows.length === 1 ? '' : 'es'} for ${q}`,
-    blocks,
-  };
+  return ephemeral(t('searchSummary', { count: rows.length, query: q }), blocks);
 }
 
 async function handleAssign(
   organizationId: string,
   args: string[],
-  ctx: SlackCommandContext
+  ctx: SlackCommandContext,
+  t: SlackTranslator
 ): Promise<SlackSlashResponse> {
   const issueKey = args[0];
   const mention = args[1];
   if (!issueKey || !mention) {
-    return {
-      response_type: 'ephemeral',
-      text: 'Usage: `/tn assign TN-123 @user`',
-    };
+    return ephemeral(t('assignUsage'));
   }
 
   const slackUserId = parseSlackUserMention(mention);
   if (!slackUserId) {
-    return {
-      response_type: 'ephemeral',
-      text: `\`${mention}\` doesn't look like a Slack user mention.`,
-    };
+    return ephemeral(t('invalidUserMention', { mention }));
   }
 
   const issueRow = await loadIssueByKey(organizationId, issueKey);
   if (!issueRow) {
-    return {
-      response_type: 'ephemeral',
-      text: `Issue \`${issueKey}\` not found in this workspace's org.`,
-    };
+    return ephemeral(t('issueNotFound', { issueKey }));
   }
 
-  const newAssigneeId = await lookupTaskNebulaUserBySlackId(
-    organizationId,
-    slackUserId
-  );
+  const newAssigneeId = await lookupTaskNebulaUserBySlackId(organizationId, slackUserId);
   if (!newAssigneeId) {
-    return {
-      response_type: 'ephemeral',
-      text:
-        "I couldn't map that Slack user to a TaskNebula account. Add the mapping in Settings → Integrations (follow-up).",
-    };
+    return ephemeral(t('assigneeUnmapped'));
   }
 
   await db
@@ -347,82 +301,87 @@ async function handleAssign(
 
   return {
     response_type: 'in_channel',
-    text: `Reassigned *${issueRow.key}* to <@${slackUserId}> (requested by <@${ctx.slackUserId}>).`,
+    text: t('assignmentSuccess', {
+      issueKey: issueRow.key,
+      slackUserId,
+      requestedBy: ctx.slackUserId,
+    }),
   };
 }
 
 async function handleStatus(
   organizationId: string,
   args: string[],
-  ctx: SlackCommandContext
+  ctx: SlackCommandContext,
+  t: SlackTranslator
 ): Promise<SlackSlashResponse> {
   const issueKey = args[0];
   const requested = (args[1] ?? '').toLowerCase();
   if (!issueKey || !requested) {
-    return {
-      response_type: 'ephemeral',
-      text: 'Usage: `/tn status TN-123 done`',
-    };
+    return ephemeral(t('statusUsage'));
   }
 
   const issueRow = await loadIssueByKey(organizationId, issueKey);
   if (!issueRow) {
-    return {
-      response_type: 'ephemeral',
-      text: `Issue \`${issueKey}\` not found in this workspace's org.`,
-    };
+    return ephemeral(t('issueNotFound', { issueKey }));
   }
 
-  // Resolve the workflow status by category, then by name as a fallback.
+  const actorUserId = await lookupTaskNebulaUserBySlackId(organizationId, ctx.slackUserId);
+  if (!actorUserId) {
+    return ephemeral(t('userUnmapped'));
+  }
+
+  // Slash commands only advertise canonical workflow categories. Free-text
+  // names cannot be authorized safely without a mapped workflow target.
   const targetCategory = mapStatusKeyword(requested);
-  const project = await db
-    .select({ defaultWorkflowId: projects.defaultWorkflowId })
-    .from(projects)
-    .where(eq(projects.id, issueRow.projectId))
-    .limit(1);
-  const workflowId = project[0]?.defaultWorkflowId;
-  if (!workflowId) {
-    // Fall back to org default workflow.
-    const [defaultWf] = await db
-      .select({ id: workflows.id })
-      .from(workflows)
-      .where(
-        and(
-          eq(workflows.organizationId, organizationId),
-          eq(workflows.isDefault, true)
-        )
-      )
-      .limit(1);
-    if (!defaultWf) {
-      return {
-        response_type: 'ephemeral',
-        text: `Project ${issueRow.projectId} has no workflow configured.`,
-      };
-    }
-  }
-  const wfStatuses = await db
-    .select()
-    .from(workflowStatuses)
-    .where(eq(workflowStatuses.workflowId, workflowId!));
-
-  const match =
-    (targetCategory && wfStatuses.find((s) => s.category === targetCategory)) ||
-    wfStatuses.find((s) => s.name.toLowerCase() === requested);
-
-  if (!match) {
-    const known = wfStatuses
-      .map((s) => `\`${s.name}\``)
-      .join(', ');
-    return {
-      response_type: 'ephemeral',
-      text: `Unknown status \`${requested}\`. Known statuses: ${known}.`,
-    };
+  if (!targetCategory) {
+    return ephemeral(t('statusUnavailable'));
   }
 
-  await db
-    .update(issues)
-    .set({ statusId: match.id, updatedAt: new Date() })
-    .where(eq(issues.id, issueRow.id));
+  let match: { id: string; name: string };
+  try {
+    match = await db.transaction(async (tx) => {
+      const targetStatusId = await resolveProjectWorkflowStatusByCategory(tx, {
+        organizationId,
+        projectId: issueRow.projectId,
+        issueId: issueRow.id,
+        category: targetCategory,
+      });
+      if (!targetStatusId) {
+        throw new WorkflowTransitionError('workflow_transition_status_invalid');
+      }
+      const prepared = await prepareIssueStatusTransition(tx, {
+        organizationId,
+        projectId: issueRow.projectId,
+        issueId: issueRow.id,
+        toStatusId: targetStatusId,
+        actorUserId,
+        expectedFromStatusId: issueRow.statusId,
+      });
+      await applyPreparedIssueStatusTransition(tx, {
+        prepared,
+        actorUserId,
+        reason: 'slack_slash',
+      });
+      const [status] = await tx
+        .select({ id: workflowStatuses.id, name: workflowStatuses.name })
+        .from(workflowStatuses)
+        .where(eq(workflowStatuses.id, targetStatusId))
+        .limit(1);
+      if (!status) {
+        throw new WorkflowTransitionError('workflow_transition_status_invalid');
+      }
+      return status;
+    });
+  } catch (error) {
+    if (!isWorkflowTransitionError(error)) throw error;
+    console.warn('[slack-commands] status transition rejected', {
+      organizationId,
+      issueId: issueRow.id,
+      code: error.code,
+    });
+    return ephemeral(t('statusUnavailable'));
+  }
 
   void triggerWebhooks({
     organizationId,
@@ -440,7 +399,11 @@ async function handleStatus(
 
   return {
     response_type: 'in_channel',
-    text: `Moved *${issueRow.key}* to *${match.name}* (requested by <@${ctx.slackUserId}>).`,
+    text: t('statusSuccess', {
+      issueKey: issueRow.key,
+      statusName: match.name,
+      requestedBy: ctx.slackUserId,
+    }),
   };
 }
 
@@ -453,23 +416,18 @@ async function handleStatus(
 function handleNew(
   organizationId: string,
   title: string,
-  _ctx: SlackCommandContext
+  _ctx: SlackCommandContext,
+  t: SlackTranslator
 ): SlackSlashResponse {
   void organizationId;
   const trimmed = title.trim();
   if (!trimmed) {
-    return {
-      response_type: 'ephemeral',
-      text: 'Usage: `/tn new <title>` — opens the new-issue modal.',
-    };
+    return ephemeral(t('newUsage'));
   }
   // The route handler opens the modal directly via views.open using the
   // trigger_id. We respond with a short ack so the user sees something
   // immediately even if Slack rate-limits the modal.
-  return {
-    response_type: 'ephemeral',
-    text: `Opening the new-issue modal for: _${trimmed}_`,
-  };
+  return ephemeral(t('newOpening', { title: trimmed }));
 }
 
 // ---------------------------------------------------------------------------
@@ -486,12 +444,7 @@ async function loadIssueByKey(organizationId: string, key: string) {
       statusId: issues.statusId,
     })
     .from(issues)
-    .where(
-      and(
-        eq(issues.organizationId, organizationId),
-        eq(issues.key, normalized)
-      )
-    )
+    .where(and(eq(issues.organizationId, organizationId), eq(issues.key, normalized)))
     .limit(1);
   return row ?? null;
 }

@@ -153,6 +153,7 @@ jest.mock('next-intl', () => {
   return {
     __esModule: true,
     NextIntlClientProvider: ({ children }) => children,
+    createTranslator: ({ namespace }) => getT(namespace),
     useTranslations: (namespace) => getT(namespace),
     useLocale: () => 'en',
     useMessages: () => enMessages,

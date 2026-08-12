@@ -43,6 +43,64 @@ const isRawMessage = (key) =>
   key === 'adminPanels.systemCredentials.smtp.fromAddressPlaceholder' ||
   /^settingsClients\.audit\.hint\.(splunk_hec|datadog|s3)$/.test(key);
 
+// These keys formerly carried public claims that exceeded the implemented
+// importer/AI/MCP/realtime contracts. Components now reuse bounded source
+// descriptions plus the localized `productTruth` block. Keeping the obsolete
+// paths out of every catalog prevents an unused translation from being wired
+// back into the landing page later.
+const obsoleteMarketingClaimKeys = new Set([
+  'publicPages.landing.aiMcp.description',
+  'publicPages.landing.aiMcp.capabilities.ask.body',
+  'publicPages.landing.aiMcp.capabilities.triage.body',
+  'publicPages.landing.aiMcp.capabilities.mcp.body',
+  'publicPages.landing.faq.items.aiKeys.answer',
+  'publicPages.landing.faq.items.aiReality.answer',
+  'publicPages.landing.faq.items.mcpServer.answer',
+  'publicPages.landing.faq.items.imports.answer',
+  'publicPages.landing.faq.items.dataVisibility.answer',
+  'publicPages.landing.features.cards.import.body',
+  'publicPages.landing.features.cards.structure.title',
+  'publicPages.landing.features.cards.structure.body',
+  'publicPages.landing.features.cards.ai.title',
+  'publicPages.landing.features.cards.ai.body',
+  'publicPages.landing.features.cards.agents.body',
+  'publicPages.landing.features.cards.realtime.body',
+  'publicPages.landing.features.cards.selfHost.body',
+  'publicPages.landing.selfHost.cards.postgres.body',
+  'publicPages.landing.workflow.steps.build.body',
+]);
+const isObsoleteMarketingClaimKey = (key) =>
+  key.startsWith('publicPages.landing.migrate.') || obsoleteMarketingClaimKeys.has(key);
+
+// Dynamic template keys cannot be checked by TypeScript. Keep this list beside
+// the stale-claim guard so every catalog proves the four marketing components
+// can resolve their capability-bounded copy at runtime.
+const marketingRuntimeKeys = [
+  'publicPages.setupImportTitle',
+  'pagesSettings.import.subtitle',
+  'settingsClients.import.previewBadge',
+  ...['jira', 'linear', 'csv', 'github'].flatMap((source) => [
+    `settingsClients.import.source.${source}.label`,
+    `settingsClients.import.source.${source}.description`,
+  ]),
+  'publicPages.landing.aiMcp.kicker',
+  'publicPages.landing.aiMcp.title',
+  ...['ask', 'triage', 'mcp'].map(
+    (capability) => `publicPages.landing.aiMcp.capabilities.${capability}.title`
+  ),
+  ...[
+    'aiSummary',
+    'ask',
+    'ai',
+    'mcp',
+    'aiKeys',
+    'data',
+    'structureTitle',
+    'structure',
+    'realtime',
+  ].map((key) => `publicPages.landing.productTruth.${key}`),
+];
+
 function messageContract(message) {
   const atoms = new Set();
   const pluralForms = new Map();
@@ -193,6 +251,26 @@ for (const file of files.sort()) {
     bad++;
     continue;
   }
+  const obsoleteClaims = Object.keys(data).filter(isObsoleteMarketingClaimKey);
+  if (obsoleteClaims.length) {
+    console.error(
+      `✗ ${locale}: obsolete marketing claim key(s): ${obsoleteClaims.slice(0, 5).join(', ')}`
+    );
+    bad++;
+    continue;
+  }
+  if (catalogDirFlag === -1) {
+    const missingRuntimeKeys = marketingRuntimeKeys.filter(
+      (key) => typeof data[key] !== 'string' || data[key].trim().length === 0
+    );
+    if (missingRuntimeKeys.length) {
+      console.error(
+        `✗ ${locale}: missing marketing runtime key(s): ${missingRuntimeKeys.slice(0, 5).join(', ')}`
+      );
+      bad++;
+      continue;
+    }
+  }
   if (locale === 'en') continue;
   const keys = new Set(Object.keys(data));
   const missing = enKeys.filter((k) => !keys.has(k));
@@ -211,6 +289,10 @@ for (const file of files.sort()) {
     }
 
     if (isLikelyEnglishCopy(source, translation)) localeEnglishCopies++;
+    if (key.startsWith('publicPages.landing.productTruth.') && source === translation) {
+      contractErrors.push(`${key}: critical public claim must be localized`);
+      continue;
+    }
     if (isRawMessage(key)) continue;
 
     try {

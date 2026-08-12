@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { z } from 'zod';
 import {
-  getIssues,
-  createIssue,
   createActivity,
   createAuditLog,
   db,
@@ -18,9 +16,8 @@ import {
   hasPermission as roleHasPermission,
   type ProjectRole,
 } from '@tasknebula/db';
-import { auth } from '@/auth';
 import { createId } from '@paralleldrive/cuid2';
-import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, or } from 'drizzle-orm';
 import { publishEvent } from '@/lib/realtime/events';
 import { notifyIssueEvent } from '@/lib/notifications/send-notification';
 import { runAutomations } from '@/lib/automation/evaluator';
@@ -32,6 +29,9 @@ import {
   readAgentPolicyMarker,
   stripAgentPolicyMarker,
 } from '@/lib/agent-policy/guard';
+import { apiActorCanAccessOrganization, resolveApiActor } from '@/lib/auth/api-actor';
+import { canReadProject } from '@/lib/auth/access-control';
+import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 
 // Permission check helper for issues
 async function checkIssuePermission(
@@ -81,6 +81,9 @@ async function checkIssuePermission(
   if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
     return { allowed: true };
   }
+  if (!orgMember) {
+    return { allowed: false, reason: 'Not an active organization member' };
+  }
 
   // Get project membership
   const [projectMember] = await db
@@ -101,8 +104,6 @@ async function checkIssuePermission(
   // Check role defaults and explicit overrides
   const roleDefaults =
     ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const toBool = (val: string | null | undefined): boolean => val === 'true';
-
   if (action === 'view') {
     return { allowed: true };
   }
@@ -110,8 +111,11 @@ async function checkIssuePermission(
   if (action === 'create' || action === 'edit') {
     const canModify =
       action === 'create'
-        ? toBool(projectMember.canCreateIssues) || roleDefaults.canCreateIssues
-        : toBool(projectMember.canEditIssues) || roleDefaults.canEditIssues;
+        ? resolveProjectMemberPermission(
+            projectMember.canCreateIssues,
+            roleDefaults.canCreateIssues
+          )
+        : resolveProjectMemberPermission(projectMember.canEditIssues, roleDefaults.canEditIssues);
     if (canModify) {
       return { allowed: true };
     }
@@ -119,7 +123,9 @@ async function checkIssuePermission(
   }
 
   if (action === 'delete') {
-    if (toBool(projectMember.canDeleteIssues) || roleDefaults.canDeleteIssues) {
+    if (
+      resolveProjectMemberPermission(projectMember.canDeleteIssues, roleDefaults.canDeleteIssues)
+    ) {
       return { allowed: true };
     }
     return { allowed: false, reason: 'Insufficient permissions to delete issues' };
@@ -158,8 +164,8 @@ const createIssueSchema = z.object({
 // GET /api/issues - List issues with filters
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -171,73 +177,56 @@ export async function GET(request: NextRequest) {
     const parentId = searchParams.get('parentId');
     const type = searchParams.get('type');
 
-    // If projectId looks like a key (e.g., "demo", "PROJ"), convert to ID
-    let actualProjectId = projectIdParam;
-    if (projectIdParam && !projectIdParam.includes('_')) {
-      // Looks like a key, find the project by key
-      const projectByKey = await db
-        .select()
-        .from(projects)
-        .where(eq(projects.key, projectIdParam.toUpperCase()))
-        .limit(1);
+    // Resolve project keys only inside organizations the actor can reach.
+    // Project keys are not globally unique, so a bare key lookup could select
+    // a private project with the same key from another organization.
+    let requestedProject: typeof projects.$inferSelect | null = null;
+    if (projectIdParam) {
+      const projectLookup = or(
+        eq(projects.id, projectIdParam),
+        eq(projects.key, projectIdParam.toUpperCase())
+      );
+      const candidates = await db.select().from(projects).where(projectLookup);
+      const exactIdFirst = [...candidates].sort((project) =>
+        project.id === projectIdParam ? -1 : 1
+      );
+      for (const project of exactIdFirst) {
+        if (!apiActorCanAccessOrganization(actor, project.organizationId)) continue;
+        const canRead = await canReadProject(actor.userId, project, {
+          allowSuperAdmin: actor.authType === 'session',
+        });
+        if (canRead) {
+          requestedProject = project;
+          break;
+        }
+      }
 
-      if (projectByKey[0]) {
-        actualProjectId = projectByKey[0].id;
+      if (!requestedProject) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
 
-    // Determine accessible organization scope (super admin bypasses)
-    const [currentUser] = await db
-      .select({ isSuperAdmin: users.isSuperAdmin })
-      .from(users)
-      .where(eq(users.id, session.user.id))
-      .limit(1);
-
-    const isSuperAdmin = currentUser?.isSuperAdmin === true;
-
-    // Load orgs the caller is a member of
-    const orgMemberships = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.status, 'active')
-        )
-      );
-    const accessibleOrgIds = orgMemberships.map((m) => m.organizationId);
-
-    // If projectId was given, verify the caller can access that project's org
-    if (actualProjectId) {
-      const [project] = await db
-        .select({ id: projects.id, organizationId: projects.organizationId })
-        .from(projects)
-        .where(eq(projects.id, actualProjectId))
-        .limit(1);
-
-      if (!project) {
-        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-      }
-
-      if (!isSuperAdmin && !accessibleOrgIds.includes(project.organizationId)) {
-        // Fall back to project membership check
-        const [projectMember] = await db
-          .select({ userId: projectMembers.userId })
-          .from(projectMembers)
-          .where(
-            and(
-              eq(projectMembers.userId, session.user.id),
-              eq(projectMembers.projectId, actualProjectId)
-            )
-          )
-          .limit(1);
-
-        if (!projectMember) {
-          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Unfiltered issue lists must be constrained to readable projects, not
+    // merely organizations where the caller has some membership.
+    let readableProjectIds: string[] = [];
+    if (requestedProject) {
+      readableProjectIds = [requestedProject.id];
+    } else {
+      const projectCandidates = actor.organizationId
+        ? await db.select().from(projects).where(eq(projects.organizationId, actor.organizationId))
+        : await db.select().from(projects);
+      for (const project of projectCandidates) {
+        if (!apiActorCanAccessOrganization(actor, project.organizationId)) continue;
+        if (
+          await canReadProject(actor.userId, project, {
+            allowSuperAdmin: actor.authType === 'session',
+          })
+        ) {
+          readableProjectIds.push(project.id);
         }
       }
-    } else if (!isSuperAdmin && accessibleOrgIds.length === 0) {
-      // No projectId and no org memberships — caller sees nothing
+    }
+    if (readableProjectIds.length === 0) {
       return NextResponse.json({ issues: [], total: 0 });
     }
 
@@ -283,12 +272,7 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
     const conditions = [];
-    if (actualProjectId) {
-      conditions.push(eq(issues.projectId, actualProjectId));
-    } else if (!isSuperAdmin) {
-      // No projectId: restrict to issues belonging to orgs the caller is in
-      conditions.push(inArray(issues.organizationId, accessibleOrgIds));
-    }
+    conditions.push(inArray(issues.projectId, readableProjectIds));
     if (assigneeId) {
       conditions.push(eq(issues.assigneeId, assigneeId));
     }
@@ -334,47 +318,44 @@ export const POST = withValidation({ body: createIssueSchema })(async (
   { body: validatedData }
 ) => {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const actor = await resolveApiActor(request);
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // If projectId looks like a key (e.g., "demo", "PROJ"), convert to ID
-    let actualProjectId = validatedData.projectId;
-
-    if (!validatedData.projectId.includes('_')) {
-      // Looks like a key, find the project by key
-      const projectByKey = await db
-        .select()
-        .from(projects)
-        .where(eq(projects.key, validatedData.projectId.toUpperCase()))
-        .limit(1);
-
-      if (projectByKey[0]) {
-        actualProjectId = projectByKey[0].id;
-      }
-    }
-
-    // Get project to get organization ID and generate issue number
+    // Resolve an id or key only among projects the actor may create in. Keys
+    // are unique per organization, not globally.
     const projectResults = await db
       .select()
       .from(projects)
-      .where(eq(projects.id, actualProjectId))
-      .limit(1);
+      .where(
+        or(
+          eq(projects.id, validatedData.projectId),
+          eq(projects.key, validatedData.projectId.toUpperCase())
+        )
+      );
+    const exactIdFirst = [...projectResults].sort((candidate) =>
+      candidate.id === validatedData.projectId ? -1 : 1
+    );
+    let project: (typeof projectResults)[number] | null = null;
+    let permissionReason = 'Permission denied';
+    for (const candidate of exactIdFirst) {
+      if (!apiActorCanAccessOrganization(actor, candidate.organizationId)) continue;
+      const permission = await checkIssuePermission(actor.userId, candidate.id, 'create');
+      if (permission.allowed) {
+        project = candidate;
+        break;
+      }
+      permissionReason = permission.reason || permissionReason;
+    }
 
-    const project = projectResults[0];
-    if (!project) {
+    if (!project && projectResults.length === 0) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
-
-    // Check permission to create issues
-    const permission = await checkIssuePermission(session.user.id!, actualProjectId, 'create');
-    if (!permission.allowed) {
-      return NextResponse.json(
-        { error: permission.reason || 'Permission denied' },
-        { status: 403 }
-      );
+    if (!project) {
+      return NextResponse.json({ error: permissionReason }, { status: 403 });
     }
+    const actualProjectId = project.id;
 
     const agentPolicy = readAgentPolicyMarker(validatedData.agentPolicy);
     const issueInput = stripAgentPolicyMarker(validatedData);
@@ -455,7 +436,7 @@ export const POST = withValidation({ body: createIssueSchema })(async (
       const guard = await guardAgentAction({
         workspaceId: project.organizationId,
         projectId: actualProjectId,
-        requestedBy: session.user.id!,
+        requestedBy: actor.userId,
         actor: agentPolicy.actor,
         resource: agentPolicy.resource || 'issues',
         action: agentPolicy.action || 'create',
@@ -557,7 +538,7 @@ export const POST = withValidation({ body: createIssueSchema })(async (
           statusId: finalStatusId,
           priority: issueInput.priority,
           type: issueInput.type,
-          reporterId: session.user.id,
+          reporterId: actor.userId,
           assigneeId: issueInput.assigneeId || null,
           sprintId: issueInput.sprintId || null,
           epicId: issueInput.epicId || null,
@@ -567,8 +548,8 @@ export const POST = withValidation({ body: createIssueSchema })(async (
           labels: issueInput.labels || [],
           customFields: issueInput.customFields || {},
           metadata: {},
-          createdBy: session.user.id,
-          updatedBy: session.user.id,
+          createdBy: actor.userId,
+          updatedBy: actor.userId,
         };
 
         const newIssueResults = await tx.insert(issues).values(issueData).returning();
@@ -581,7 +562,7 @@ export const POST = withValidation({ body: createIssueSchema })(async (
 
       // Publish realtime event synchronously so other clients see the new
       // issue immediately (in-process bus, ~microseconds).
-      publishEvent('issue.created', session.user.id!, {
+      publishEvent('issue.created', actor.userId, {
         projectId: newIssue.projectId,
         issueId: newIssue.id,
         sprintId: newIssue.sprintId || undefined,
@@ -600,7 +581,7 @@ export const POST = withValidation({ body: createIssueSchema })(async (
         organizationId: newIssue.organizationId,
         issueId: newIssue.id,
         labels: issueInput.labels,
-        createdBy: session.user.id ?? null,
+        createdBy: actor.userId,
       });
     }
 
@@ -608,7 +589,7 @@ export const POST = withValidation({ body: createIssueSchema })(async (
     // audit log, assignee notification email, and automation rules. The response
     // payload is finalised below — `after()` runs once it has been flushed
     // to the client, so request latency reflects only the DB insert.
-    const actorUserId = session.user.id!;
+    const actorUserId = actor.userId;
     const createdIssue = newIssue;
     const projectKey = project.key;
     after(async () => {

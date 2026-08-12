@@ -63,7 +63,7 @@ export async function GET() {
         summary: agentRuns.summary,
         writeActionsCount: agentRuns.writeActionsCount,
         createdAt: agentRuns.createdAt,
-        error: agentRuns.error,
+        output: agentRuns.output,
         organizationId: organizations.id,
         organizationName: organizations.name,
         projectId: projects.id,
@@ -150,7 +150,7 @@ export async function GET() {
         executionMode: workspaceSettings.executionMode,
         providerStatus,
         lastRunAt: lastRun?.createdAt ?? null,
-        lastFailure: lastFailure?.error ?? null,
+        lastFailure: lastFailure ? 'agent_run_failed' : null,
       };
     })
     .sort((left, right) => {
@@ -260,7 +260,13 @@ export async function GET() {
     serviceStatus,
     providerBreakdown,
     workspaceCoverage,
-    recentRuns,
+    recentRuns: recentRuns.map(({ output, ...run }) => ({
+      ...run,
+      errorCode:
+        typeof (output as Record<string, unknown> | null)?.errorCode === 'string'
+          ? (output as Record<string, unknown>).errorCode
+          : null,
+    })),
   });
 }
 
