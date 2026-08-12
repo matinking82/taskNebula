@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import { ProjectAccessDenied } from '@/components/projects/project-access-denied';
 import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
@@ -25,8 +26,11 @@ export default async function ProjectVersionsSettingsPage({
     return <ProjectAccessDenied />;
   }
 
+  const t = await getTranslations('settings.versions');
+
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-8">
+      <h1 className="sr-only">{t('title')}</h1>
       <VersionsManager projectId={projectId} />
     </div>
   );

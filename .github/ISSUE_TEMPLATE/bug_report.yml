@@ -6,7 +6,7 @@ body:
     id: version
     attributes:
       label: TaskNebula version
-      placeholder: 0.2.6
+      placeholder: Release tag, image tag/digest, or Admin → System version
     validations:
       required: true
   - type: dropdown
@@ -24,12 +24,12 @@ body:
     id: os
     attributes:
       label: Operating system
-      placeholder: Ubuntu 24.04 / macOS 15 / Windows 11
+      placeholder: Distribution/platform and version
   - type: input
     id: browser
     attributes:
       label: Browser (if relevant)
-      placeholder: Chrome 138 / Firefox 142
+      placeholder: Browser name and version
   - type: textarea
     id: repro
     attributes:

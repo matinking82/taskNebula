@@ -41,7 +41,13 @@ const FEATURE_SETTING_MAP: Partial<
   triage: { type: 'capability', key: 'backlog_triage' },
 };
 
-export function AiTransparencyClient({ organizationId }: { organizationId: string }) {
+export function AiTransparencyClient({
+  organizationId,
+  headingLevel = 1,
+}: {
+  organizationId: string;
+  headingLevel?: 1 | 2;
+}) {
   const t = useTranslations('pagesSettings');
   const tConfig = useTranslations('settingsConfig');
   const tCards = useTranslations('aiModelCards.features');
@@ -99,42 +105,55 @@ export function AiTransparencyClient({ organizationId }: { organizationId: strin
     return workspaceSettings.capabilities[mapping.key] ?? false;
   }
 
+  const Heading = headingLevel === 1 ? 'h1' : 'h2';
+  const header = (
+    <div>
+      <Heading className="flex items-center gap-2 text-xl font-semibold">
+        <Sparkles className="text-primary h-5 w-5" />
+        {t('aiTransparency.title')}
+      </Heading>
+      <p className="text-muted-foreground mt-1 text-sm">
+        {t.rich('aiTransparency.subtitle', {
+          link: (chunks) => (
+            <Link
+              href="/ai-model-cards"
+              className="hover:text-foreground inline-flex items-center gap-0.5 underline"
+              target="_blank"
+            >
+              {chunks}
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          ),
+        })}
+      </p>
+    </div>
+  );
+
   if (isLoading) {
-    return <div className="text-muted-foreground p-4 text-sm">{t('loading')}</div>;
+    return (
+      <div className="space-y-6">
+        {header}
+        <div className="text-muted-foreground text-sm">{t('loading')}</div>
+      </div>
+    );
   }
 
   if (error || !data) {
     return (
-      <Card>
-        <CardContent className="text-destructive py-8 text-sm">
-          {tConfig('orgAi.load_error')}
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {header}
+        <Card>
+          <CardContent className="text-destructive py-8 text-sm">
+            {tConfig('orgAi.load_error')}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Sparkles className="text-primary h-5 w-5" />
-          {t('aiTransparency.title')}
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {t.rich('aiTransparency.subtitle', {
-            link: (chunks) => (
-              <Link
-                href="/ai-model-cards"
-                className="hover:text-foreground inline-flex items-center gap-0.5 underline"
-                target="_blank"
-              >
-                {chunks}
-                <ExternalLink className="h-3 w-3" />
-              </Link>
-            ),
-          })}
-        </p>
-      </div>
+      {header}
 
       <Card>
         <CardHeader>

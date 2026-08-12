@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,11 +26,21 @@ interface StatusPickerProps {
   value: string; // statusId
   onChange: (statusId: string) => void;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
-export function StatusPicker({ projectId, value, onChange, disabled }: StatusPickerProps) {
+export function StatusPicker({
+  projectId,
+  value,
+  onChange,
+  disabled,
+  ariaLabel,
+}: StatusPickerProps) {
   const t = useTranslations('issueMisc');
+  const tRows = useTranslations('issueSidebar.rows');
   const [open, setOpen] = useState(false);
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
   const [statuses, setStatuses] = useState<WorkflowStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,19 +70,27 @@ export function StatusPicker({ projectId, value, onChange, disabled }: StatusPic
           variant="ghost"
           role="combobox"
           aria-expanded={open}
+          aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
           className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
           disabled={disabled || loading}
         >
+          <span id={triggerLabelId} className="sr-only">
+            {ariaLabel ?? tRows('state')}
+          </span>
           {selectedStatus ? (
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <div
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: selectedStatus.color }}
               />
-              <span className="truncate">{selectedStatus.name}</span>
+              <span id={triggerValueId} className="truncate">
+                {selectedStatus.name}
+              </span>
             </div>
           ) : (
-            <span className="text-muted-foreground truncate">{t('select_status_placeholder')}</span>
+            <span id={triggerValueId} className="text-muted-foreground truncate">
+              {t('select_status_placeholder')}
+            </span>
           )}
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-40" />
         </Button>

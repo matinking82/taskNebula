@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * Unit tests for AI Cost Guard (Roadmap P0-07).
+ * Unit tests for the AI Cost Guard.
  *
  * The budget helpers depend on Drizzle's `db.transaction` + raw SQL, so
  * we run them against an in-memory mock of the Postgres state machine.
@@ -188,7 +188,11 @@ function makeTx(orgId: string) {
       values: (vals: unknown) => {
         const rows = Array.isArray(vals) ? vals : [vals];
         const isBudget = rows.some(
-          (r) => r && typeof r === 'object' && 'organizationId' in (r as Record<string, unknown>) && !('feature' in (r as Record<string, unknown>))
+          (r) =>
+            r &&
+            typeof r === 'object' &&
+            'organizationId' in (r as Record<string, unknown>) &&
+            !('feature' in (r as Record<string, unknown>))
         );
         const isAudit = rows.some(
           (r) => r && typeof r === 'object' && 'feature' in (r as Record<string, unknown>)
@@ -342,9 +346,7 @@ describe('estimatePromptTokens / hashPrompt', () => {
 
 describe('checkAndReserveTokens', () => {
   it('initialises a budget row on first call and allows when no limits configured', async () => {
-    const result = await withOrg('org_a', () =>
-      checkAndReserveTokens('org_a', 100, 'gpt-4o-mini')
-    );
+    const result = await withOrg('org_a', () => checkAndReserveTokens('org_a', 100, 'gpt-4o-mini'));
     expect(result.allowed).toBe(true);
     const row = budgets.get('org_a');
     expect(row).toBeDefined();
@@ -370,9 +372,7 @@ describe('checkAndReserveTokens', () => {
       updatedAt: new Date(),
     });
 
-    const result = await withOrg('org_b', () =>
-      checkAndReserveTokens('org_b', 50, 'gpt-4o-mini')
-    );
+    const result = await withOrg('org_b', () => checkAndReserveTokens('org_b', 50, 'gpt-4o-mini'));
     expect(result.allowed).toBe(false);
     if (!result.allowed) {
       expect(result.reason).toBe('kill_switch');
@@ -398,9 +398,7 @@ describe('checkAndReserveTokens', () => {
       updatedAt: new Date(),
     });
 
-    const result = await withOrg('org_c', () =>
-      checkAndReserveTokens('org_c', 500, 'gpt-4o-mini')
-    );
+    const result = await withOrg('org_c', () => checkAndReserveTokens('org_c', 500, 'gpt-4o-mini'));
     expect(result.allowed).toBe(false);
     if (!result.allowed) {
       expect(result.reason).toBe('daily_tokens_exceeded');

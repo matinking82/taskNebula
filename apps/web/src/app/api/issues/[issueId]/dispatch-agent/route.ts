@@ -1,7 +1,7 @@
 /**
  * POST /api/issues/[issueId]/dispatch-agent
  *
- * Linear Agent Protocol entry point (P0-04). Body:
+ * Linear Agent Protocol entry point. Body:
  *   { provider: 'claude' | 'codex' | 'cursor' | 'devin' | 'copilot' | 'openhands' | 'custom',
  *     prompt_override?: string }
  *
@@ -57,10 +57,16 @@ import {
   resolveLocalAgentRunner,
   runLocalAgentSession,
 } from '@/lib/agents/local-runner';
+import {
+  postAgentProviderEndpoint,
+  validateAgentProviderEndpoint,
+} from '@/lib/agents/provider-endpoint';
+import { childLogger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 const DISPATCH_TIMEOUT_MS = 10_000;
+const log = childLogger('api/issues/dispatch-agent');
 
 const bodySchema = z.object({
   provider: z.enum(AGENT_PROVIDERS as readonly [AgentProviderKind, ...AgentProviderKind[]]),
@@ -195,6 +201,19 @@ export async function POST(
     );
   }
 
+  let providerEndpoint: URL | null = null;
+  if (!localRunner && provider?.enabled) {
+    try {
+      providerEndpoint = await validateAgentProviderEndpoint(provider.endpointUrl);
+    } catch (error) {
+      log.warn(
+        { err: error, provider: parsed.provider, workspaceId: issue.organizationId },
+        'blocked unsafe agent provider endpoint'
+      );
+      return NextResponse.json({ error: 'Provider endpoint is not allowed' }, { status: 422 });
+    }
+  }
+
   const sessionSecret = generateAgentSecret();
 
   const [created] = await db
@@ -275,6 +294,10 @@ export async function POST(
     );
   }
 
+  if (!providerEndpoint) {
+    return NextResponse.json({ error: 'Provider endpoint is not allowed' }, { status: 422 });
+  }
+
   const body = JSON.stringify(envelope);
   const signature = signAgentPayload(body, provider.hmacSecret);
   const deliveryId = generateDeliveryId();
@@ -287,8 +310,7 @@ export async function POST(
   let errorMessage: string | null = null;
 
   try {
-    const resp = await fetch(provider.endpointUrl, {
-      method: 'POST',
+    const resp = await postAgentProviderEndpoint(providerEndpoint.toString(), {
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
@@ -331,7 +353,7 @@ export async function POST(
           status,
           statusCode,
           errorMessage,
-          endpointUrl: provider.endpointUrl,
+          endpointUrl: providerEndpoint.toString(),
         },
       },
     })

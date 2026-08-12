@@ -18,9 +18,10 @@ export interface AgentExecutionPolicy {
 const WRITE_CAPABLE_KINDS = new Set<AgentRunKind>(['backlog_triage', 'bulk_sprint_creation']);
 
 /**
- * Fail-closed policy shared by project-agent entry points. Until the durable
- * approval/apply worker exists, approval-gated runs produce a preview and zero
- * writes instead of silently bypassing human oversight.
+ * Fail-closed policy shared by project-agent entry points. The durable
+ * approval/apply worker currently covers marked issue/comment REST effects,
+ * not the project engine's bulk effects, so approval-gated project runs
+ * produce a preview and zero writes.
  */
 export function resolveAgentExecutionPolicy(input: {
   kind: AgentRunKind;

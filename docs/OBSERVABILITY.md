@@ -2,24 +2,27 @@
 
 **Verified:** 2026-08-12
 
-TaskNebula ships with hooks for an end-to-end self-hostable observability
-stack. This document explains how each layer plugs in, what to expect when
-it is _not_ configured, and the recommended tier matrix.
-
-Reference: roadmap task **OBS-35** (Langfuse + OpenTelemetry).
+TaskNebula contains optional observability hooks, not a preconfigured
+end-to-end stack. OpenTelemetry and Langfuse have guarded runtime adapters;
+Sentry application-error export is only an integration seam until SDK
+initialization is added. This document distinguishes those states explicitly.
 
 ## Layers at a glance
 
-| Layer             | Tool                                      | Activation env                                                | Default |
-| ----------------- | ----------------------------------------- | ------------------------------------------------------------- | ------- |
-| Error tracking    | Sentry (cloud or self-host)               | `SENTRY_DSN` (server) / `NEXT_PUBLIC_SENTRY_DSN` (browser)    | off     |
-| LLM tracing       | Langfuse (cloud or self-host)             | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | off     |
-| Distributed trace | OpenTelemetry → SigNoz / Grafana Tempo    | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`            | off     |
-| DB query stats    | `pg_stat_statements` + pgHero / pganalyze | shipped on by default in `docker-compose.yml`                 | **on**  |
-| Realtime (RTC)    | LiveKit Prometheus exporter               | `LIVEKIT_PROMETHEUS_PORT` (set to a free port, e.g. `6789`)   | off     |
+| Layer             | Tool                                       | Activation env                                                | Default  |
+| ----------------- | ------------------------------------------ | ------------------------------------------------------------- | -------- |
+| Error tracking    | Sentry (cloud or self-host)                | SDK initialization plus server/browser DSNs                   | scaffold |
+| LLM tracing       | Langfuse (cloud or self-host)              | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | off      |
+| Distributed trace | OpenTelemetry → SigNoz / Grafana Tempo     | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`            | off      |
+| DB query stats    | `pg_stat_statements` + pgHero / pganalyze  | shipped on by default in `docker-compose.yml`                 | **on**   |
+| Realtime (RTC)    | LiveKit Prometheus exporter                | `LIVEKIT_PROMETHEUS_PORT` (set to a free port, e.g. `6789`)   | off      |
+| Web process       | Prometheus text endpoint at `/api/metrics` | `METRICS_TOKEN` (minimum 16 characters)                       | off      |
 
-When an env var is unset the matching code path is a no-op — TaskNebula has
-no observability dependencies in dev / CI.
+The maintained production Compose file does not forward Sentry, Langfuse, or
+OpenTelemetry variables into `web`; add them through a deployment-specific
+Compose override or inject them directly into the process. Never commit their
+secret values. When their activation variables are absent, the implemented
+OpenTelemetry and Langfuse adapters are no-ops in dev and CI.
 
 ## OpenTelemetry
 
@@ -35,10 +38,10 @@ OTEL_EXPORTER_OTLP_HEADERS=x-honeycomb-team=...
 OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod
 ```
 
-The same file exports `onRequestError` which Next.js 15 invokes whenever a
-server-side error escapes a route handler / RSC. We forward the error to
-Sentry via `@sentry/nextjs` so unhandled exceptions show up in the existing
-issue triage workflow.
+The same file exports the Next.js 15 `onRequestError` hook and delegates to
+`@sentry/nextjs` when a DSN exists. The repository does not yet initialize a
+Sentry client, so this hook is an extension seam rather than a verified error
+export path.
 
 ### LLM trace correlation
 
@@ -80,13 +83,14 @@ await traceLlmCall({
 
 ## Sentry
 
-Sentry already has two integration surfaces:
+Sentry has two distinct integration surfaces:
 
 1. **OAuth + webhook** — for ingesting Sentry issues into TaskNebula
    (commit `1ea6f14`). Configured under Admin → Integrations.
-2. **Error capture** — the new `instrumentation.ts#onRequestError` hook ships
-   server errors back to Sentry. To enable, install `@sentry/nextjs`
-   (already in `package.json`) and set `SENTRY_DSN`.
+2. **Application error capture scaffold** — `instrumentation.ts#onRequestError`
+   delegates to the installed SDK when a DSN exists, but server/edge/client
+   `Sentry.init(...)` configuration is not present. Do not claim export is live
+   until initialization and a controlled error smoke test are added.
 
 For client-side errors create `apps/web/sentry.client.config.ts` per the
 Sentry Next.js docs.
@@ -123,8 +127,10 @@ SELECT query, calls, total_exec_time, mean_exec_time
   `pg_stat_statements`:
 
   ```bash
+  # Set this in your shell/secret manager; do not commit it.
+  export PGHERO_DATABASE_URL='postgres://USER:PASSWORD@host.docker.internal:5432/tasknebula'
   docker run -d --name pghero \
-    -e DATABASE_URL=postgres://postgres:postgres@host.docker.internal:5432/tasknebula \
+    -e DATABASE_URL="$PGHERO_DATABASE_URL" \
     -p 8080:8080 ankane/pghero
   ```
 
@@ -175,16 +181,17 @@ Key series to alert on: `livekit_room_participants`, `livekit_packets_lost`,
 
 For a single-VM hobby / small-team deployment we suggest:
 
-1. **Sentry** (cloud) — free for individuals.
-2. **Langfuse** cloud — free tier covers small workloads.
+1. **Sentry** — managed or self-hosted error tracking after SDK initialization.
+2. **Langfuse** — managed or self-hosted LLM tracing.
 3. **SigNoz** single-node Docker — OpenTelemetry + APM + logs in one UI.
-4. **pgHero** in the existing docker-compose network — `pg_stat_statements`
-   is already on by default thanks to OBS-35.
+4. **pgHero** in the existing Docker Compose network —
+   `pg_stat_statements` is already on by default.
 5. **LiveKit Prometheus** exporter scraped by SigNoz collector.
 
 ## Verifying after enabling
 
-After setting envs, restart the web container and run:
+After injecting the variables through the process environment or a Compose
+override, restart the web container and run:
 
 ```bash
 # OTel
@@ -202,6 +209,7 @@ psql "$DATABASE_URL" -c "SELECT count(*) FROM pg_stat_statements;"
 curl -fsS http://localhost:${LIVEKIT_PROMETHEUS_PORT:-6789}/metrics | head
 ```
 
-If any of those fail, check the container logs — every layer's failure mode
-is "log a warning and continue", so TaskNebula will keep serving traffic
-even when telemetry is broken.
+If a check fails, inspect that layer's logs and health independently.
+OpenTelemetry registration and Langfuse emission are designed to warn and
+continue; do not generalize that behavior to PostgreSQL, LiveKit, or an
+uninitialized Sentry client.

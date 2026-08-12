@@ -4,17 +4,17 @@
  *
  * To keep the suite hermetic (no live OpenAI calls), we install a Playwright
  * route handler that intercepts `/api/ai/draft-issues` and returns a stubbed
- * payload matching the route's response shape.
- *
- * Follow-up: replace the route handler with a server-side flag
- * (PLAYWRIGHT_AI_STUB=1) honored by the route itself, so we can drop the
- * client mock and exercise the real endpoint end-to-end.
+ * payload matching the route's response shape. This verifies the client flow;
+ * provider/route integration requires a separate controlled-environment test.
  */
 import { test, expect } from '@playwright/test';
 import { ensureSeed } from './fixtures/seed';
 
 test.describe('ai draft', () => {
   test('drafts issues from a prompt and shows them in the dialog', async ({ page }) => {
+    // A cold Next.js development server may need to compile the backlog and
+    // its data routes before the hydrated action becomes available.
+    test.setTimeout(90_000);
     const seed = await ensureSeed();
 
     // Intercept the AI endpoint with a deterministic response.
@@ -64,7 +64,7 @@ test.describe('ai draft', () => {
     await page.goto(`/projects/${seed.projectId}/backlog`);
 
     const draftBtn = page.getByRole('button', { name: /draft with ai/i });
-    await expect(draftBtn).toBeVisible({ timeout: 20_000 });
+    await expect(draftBtn).toBeVisible({ timeout: 45_000 });
     await draftBtn.click();
 
     const dialog = page.getByRole('dialog');

@@ -10,10 +10,11 @@
  *
  * Optional checks (degraded but still healthy when failing — only when configured):
  *   - redis: pinged when REDIS_URL is set
+ *   - collaboration: checks Hocuspocus readiness when collaboration is enabled
  *   - livekit: marks degraded when env vars are configured but reachability fails
  *   - smtp: passive — only reports configuration state, not reachability
  *
- * MIGRATED (P0-06):
+ * Error-envelope hardening:
  *   - Uses `withErrorHandler` so any unexpected exception (e.g. a sudden v8
  *     module failure) becomes a standardised 500 envelope instead of an
  *     unhandled rejection.
@@ -45,6 +46,7 @@ interface HealthStatus {
     database: CheckState;
     memory: CheckState;
     redis: CheckState;
+    collaboration: CheckState;
     livekit: CheckState;
     smtp: CheckState;
   };
@@ -53,6 +55,7 @@ interface HealthStatus {
 }
 
 const REDIS_PING_TIMEOUT_MS = 1500;
+const COLLABORATION_TIMEOUT_MS = 1500;
 
 async function pingRedis(): Promise<{ state: CheckState; detail?: string }> {
   if (!isRedisConfigured()) {
@@ -71,15 +74,42 @@ async function pingRedis(): Promise<{ state: CheckState; detail?: string }> {
     const result = await Promise.race([
       client.ping(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('redis ping timeout')), REDIS_PING_TIMEOUT_MS),
+        setTimeout(() => reject(new Error('redis ping timeout')), REDIS_PING_TIMEOUT_MS)
       ),
     ]);
-    return result === 'PONG' ? { state: 'ok' } : { state: 'warning', detail: `unexpected reply: ${result}` };
+    return result === 'PONG'
+      ? { state: 'ok' }
+      : { state: 'warning', detail: 'unexpected redis response' };
   } catch (error) {
+    log.warn({ err: error }, 'redis health check failed');
     return {
       state: 'error',
-      detail: error instanceof Error ? error.message : 'redis ping failed',
+      detail: 'redis unreachable',
     };
+  }
+}
+
+async function pingCollaboration(): Promise<{ state: CheckState; detail?: string }> {
+  if (process.env.NEXT_PUBLIC_COLLAB_ENABLED !== 'true') {
+    return { state: 'skipped' };
+  }
+
+  const healthUrl = process.env.HOCUSPOCUS_INTERNAL_URL;
+  if (!healthUrl) {
+    return { state: 'warning', detail: 'collaboration health URL not configured' };
+  }
+
+  try {
+    const response = await fetch(healthUrl, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(COLLABORATION_TIMEOUT_MS),
+    });
+    return response.ok
+      ? { state: 'ok' }
+      : { state: 'error', detail: 'collaboration service unavailable' };
+  } catch (error) {
+    log.warn({ err: error }, 'collaboration health check failed');
+    return { state: 'error', detail: 'collaboration service unreachable' };
   }
 }
 
@@ -90,6 +120,7 @@ export const GET = withErrorHandler(
       database: 'ok',
       memory: 'ok',
       redis: 'skipped',
+      collaboration: 'skipped',
       livekit: 'skipped',
       smtp: 'skipped',
     };
@@ -104,7 +135,7 @@ export const GET = withErrorHandler(
     } catch (error) {
       log.error({ err: error }, 'database health check failed');
       checks.database = 'error';
-      details.database = error instanceof Error ? error.message : 'database unreachable';
+      details.database = 'database unreachable';
       unhealthy = true;
     }
 
@@ -134,6 +165,13 @@ export const GET = withErrorHandler(
       log.warn({ detail: redisResult.detail }, 'redis ping failed');
     }
 
+    const collaborationResult = await pingCollaboration();
+    checks.collaboration = collaborationResult.state;
+    if (collaborationResult.detail) details.collaboration = collaborationResult.detail;
+    if (collaborationResult.state === 'error' || collaborationResult.state === 'warning') {
+      degraded = true;
+    }
+
     // LiveKit — passive: env-config check only (avoids tying the API process
     // healthcheck to LiveKit reachability, which has its own container probe).
     const livekitStatus = getLivekitStatus();
@@ -150,7 +188,11 @@ export const GET = withErrorHandler(
       checks.smtp = 'ok';
     }
 
-    const status: HealthStatus['status'] = unhealthy ? 'unhealthy' : degraded ? 'degraded' : 'healthy';
+    const status: HealthStatus['status'] = unhealthy
+      ? 'unhealthy'
+      : degraded
+        ? 'degraded'
+        : 'healthy';
 
     const response: HealthStatus = {
       status,
@@ -183,5 +225,5 @@ export const GET = withErrorHandler(
       },
     });
   },
-  { scope: 'api/health' },
+  { scope: 'api/health' }
 );

@@ -31,7 +31,7 @@ describe('OpenAPI registry', () => {
     expect(built.openapi).toBe('3.1.0');
   });
 
-  it('registers the public surface that the MCP server (task #5) targets', () => {
+  it('registers the public surface that the MCP server targets', () => {
     const required: Array<[string, string]> = [
       ['/api/issues', 'get'],
       ['/api/issues', 'post'],

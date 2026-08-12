@@ -31,7 +31,7 @@ function OrgAvatar({ name }: { name: string }) {
     .join('');
 
   return (
-    <span className="bg-primary/10 text-primary inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold">
+    <span className="bg-current/10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold text-current">
       {initials}
     </span>
   );

@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
   const { provider, apiKey } = await resolveProviderAndKey(body.provider, project.organizationId);
   const modelToUse = workspace.model?.trim() || null;
 
-  // P1-16
+  // Apply the workspace prompt-injection policy before provider dispatch.
   const safetyMode = workspace.aiSafetyMode ?? 'warn';
   const verdict = await evaluateInjectionRisk(body.prompt, {
     mode: safetyMode,

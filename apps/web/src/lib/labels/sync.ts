@@ -15,7 +15,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq, inArray, isNull, notInArray } from 'drizzle-orm';
 
 /** Root drizzle client or a transaction handle — both expose the same builder API. */
-type DbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type LabelDbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Normalize a raw label-name array: trim, drop empties, drop names longer
@@ -50,7 +50,7 @@ export interface ResolveLabelsParams {
  */
 export async function resolveLabels(
   params: ResolveLabelsParams,
-  executor: DbExecutor = db
+  executor: LabelDbExecutor = db
 ): Promise<Label[]> {
   const names = normalizeLabelNames(params.names);
   if (names.length === 0) return [];
@@ -115,60 +115,69 @@ export interface SyncIssueLabelsParams {
  * (org_id stamped). Runs in a single transaction.
  */
 export async function syncIssueLabels(params: SyncIssueLabelsParams): Promise<Label[]> {
-  return db.transaction(async (tx) => {
-    const resolved = await resolveLabels(
-      {
-        organizationId: params.organizationId,
-        names: params.labels,
-        createdBy: params.createdBy ?? null,
-      },
-      tx
-    );
-    const labelIds = resolved.map((row) => row.id);
+  return db.transaction((tx) => syncIssueLabelsWithExecutor(params, tx));
+}
 
-    if (labelIds.length === 0) {
-      await tx
-        .delete(issueLabels)
-        .where(
-          and(
-            eq(issueLabels.issueId, params.issueId),
-            eq(issueLabels.organizationId, params.organizationId)
-          )
-        );
-      return resolved;
-    }
+/**
+ * Transaction-aware variant used when the JSONB issue mutation and the
+ * first-class label mirror must commit atomically with a larger operation.
+ */
+export async function syncIssueLabelsWithExecutor(
+  params: SyncIssueLabelsParams,
+  executor: LabelDbExecutor
+): Promise<Label[]> {
+  const resolved = await resolveLabels(
+    {
+      organizationId: params.organizationId,
+      names: params.labels,
+      createdBy: params.createdBy ?? null,
+    },
+    executor
+  );
+  const labelIds = resolved.map((row) => row.id);
 
-    // Delete junction rows for labels that are no longer on the issue.
-    await tx
+  if (labelIds.length === 0) {
+    await executor
       .delete(issueLabels)
       .where(
         and(
           eq(issueLabels.issueId, params.issueId),
-          eq(issueLabels.organizationId, params.organizationId),
-          notInArray(issueLabels.labelId, labelIds)
+          eq(issueLabels.organizationId, params.organizationId)
         )
       );
-
-    const existingRows = await tx
-      .select({ labelId: issueLabels.labelId })
-      .from(issueLabels)
-      .where(eq(issueLabels.issueId, params.issueId));
-    const existingIds = new Set(existingRows.map((row) => row.labelId));
-
-    const toInsert = labelIds
-      .filter((labelId) => !existingIds.has(labelId))
-      .map((labelId) => ({
-        issueId: params.issueId,
-        labelId,
-        organizationId: params.organizationId,
-      }));
-
-    if (toInsert.length > 0) {
-      await tx.insert(issueLabels).values(toInsert).onConflictDoNothing();
-    }
-
     return resolved;
-  });
+  }
+
+  // Delete junction rows for labels that are no longer on the issue.
+  await executor
+    .delete(issueLabels)
+    .where(
+      and(
+        eq(issueLabels.issueId, params.issueId),
+        eq(issueLabels.organizationId, params.organizationId),
+        notInArray(issueLabels.labelId, labelIds)
+      )
+    );
+
+  const existingRows = await executor
+    .select({ labelId: issueLabels.labelId })
+    .from(issueLabels)
+    .where(eq(issueLabels.issueId, params.issueId));
+  const existingIds = new Set(existingRows.map((row) => row.labelId));
+
+  const toInsert = labelIds
+    .filter((labelId) => !existingIds.has(labelId))
+    .map((labelId) => ({
+      issueId: params.issueId,
+      labelId,
+      organizationId: params.organizationId,
+    }));
+
+  if (toInsert.length > 0) {
+    await executor.insert(issueLabels).values(toInsert).onConflictDoNothing();
+  }
+
+  return resolved;
 }
 
 /**

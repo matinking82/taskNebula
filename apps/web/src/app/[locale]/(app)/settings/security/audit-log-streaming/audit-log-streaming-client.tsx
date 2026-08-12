@@ -322,9 +322,9 @@ export function AuditLogStreamingClient({ organizationId }: { organizationId: st
             />
             <span className="text-muted-foreground text-xs">
               {form.type === 'webhook' ? t('audit.hint.webhook') : null}
-              {form.type === 'splunk_hec' ? t('audit.hint.splunk_hec') : null}
-              {form.type === 'datadog' ? t('audit.hint.datadog') : null}
-              {form.type === 's3' ? t('audit.hint.s3') : null}
+              {form.type === 'splunk_hec' ? String(t.raw('audit.hint.splunk_hec')) : null}
+              {form.type === 'datadog' ? String(t.raw('audit.hint.datadog')) : null}
+              {form.type === 's3' ? String(t.raw('audit.hint.s3')) : null}
             </span>
           </label>
           <div className="flex justify-end gap-2">

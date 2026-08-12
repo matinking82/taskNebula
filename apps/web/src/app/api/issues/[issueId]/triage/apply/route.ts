@@ -300,5 +300,5 @@ export async function POST(
   }
 }
 
-// TODO(P1): when the issue schema gains a `team_id` column (roadmap task
-// for team-scoped boards), also apply `payload.team_id` here.
+// When the issue schema gains a `team_id` column for team-scoped boards, also
+// apply `payload.team_id` here.

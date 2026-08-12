@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { CheckCircle2, ChevronsUpDown, XCircle } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ interface ResolutionSelectProps {
   /** `null` clears the resolution (and `resolvedAt`) server-side. */
   onChange: (resolution: IssueResolution | null) => void;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
 export function ResolutionSelect({
@@ -41,9 +43,12 @@ export function ResolutionSelect({
   resolvedAt,
   onChange,
   disabled = false,
+  ariaLabel,
 }: ResolutionSelectProps) {
   const t = useTranslations('issueSidebar.resolution');
   const format = useFormatter();
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
 
   const resolution = value && isIssueResolution(value) ? value : null;
 
@@ -74,10 +79,16 @@ export function ResolutionSelect({
           <Button
             variant="ghost"
             role="combobox"
+            aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
             className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
             disabled={disabled}
           >
-            <span className="text-muted-foreground min-w-0 flex-1 truncate">{t('unresolved')}</span>
+            <span id={triggerLabelId} className="sr-only">
+              {ariaLabel ?? t('label')}
+            </span>
+            <span id={triggerValueId} className="text-muted-foreground min-w-0 flex-1 truncate">
+              {t('unresolved')}
+            </span>
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-40" />
           </Button>
         </DropdownMenuTrigger>
@@ -87,7 +98,7 @@ export function ResolutionSelect({
   }
 
   const chip = (
-    <span className="chip-emerald inline-flex items-center gap-1 rounded-sm">
+    <span id={triggerValueId} className="chip-emerald inline-flex items-center gap-1 rounded-sm">
       <CheckCircle2 className="h-3 w-3 shrink-0" />
       {t(`values.${resolution}`)}
     </span>
@@ -95,6 +106,9 @@ export function ResolutionSelect({
 
   return (
     <div className="flex items-center justify-between gap-2">
+      <span id={triggerLabelId} className="sr-only">
+        {ariaLabel ?? t('label')}
+      </span>
       {resolvedAt ? (
         <TooltipProvider delayDuration={200}>
           <Tooltip>
@@ -115,7 +129,7 @@ export function ResolutionSelect({
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground h-6 w-6 rounded-md p-0"
-            aria-label={t('set')}
+            aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
             disabled={disabled}
           >
             <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />

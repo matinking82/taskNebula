@@ -25,6 +25,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  varchar,
 } from 'drizzle-orm/pg-core';
 import { issues } from './issues';
 import { organizations } from './organizations';
@@ -50,6 +51,8 @@ export const agentSessionProviderEnum = pgEnum('agent_session_provider', [
   'openhands',
   'custom',
 ]);
+
+export type AgentSessionWebhookDeliveryStatus = 'processing' | 'completed' | 'dropped' | 'failed';
 
 export const agentSessions = pgTable(
   'agent_sessions',
@@ -88,6 +91,60 @@ export const agentSessions = pgTable(
     stateIdx: index('agent_session_state_idx').on(table.state),
     providerIdx: index('agent_session_provider_idx').on(table.provider),
     issueStateIdx: index('agent_session_issue_state_idx').on(table.issueId, table.state),
+  })
+);
+
+/**
+ * Durable inbound webhook receipts.
+ *
+ * The workspace id is intentionally denormalized: it makes every operational
+ * query tenant-scoped even though the session can also reach the workspace via
+ * its issue. The composite unique index is the concurrency gate that allows a
+ * provider event to execute downstream side effects at most once per session.
+ */
+export const agentSessionWebhookDeliveries = pgTable(
+  'agent_session_webhook_deliveries',
+  {
+    id: text('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => agentSessions.id, { onDelete: 'cascade' }),
+    provider: agentSessionProviderEnum('provider').notNull(),
+    fingerprint: varchar('fingerprint', { length: 64 }).notNull(),
+    eventState: agentSessionStateEnum('event_state').notNull(),
+    payload: jsonb('payload').notNull(),
+    status: text('status')
+      .$type<AgentSessionWebhookDeliveryStatus>()
+      .notNull()
+      .default('processing'),
+    lastError: text('last_error'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    completedAt: timestamp('completed_at'),
+  },
+  (table) => ({
+    workspaceIdx: index('agent_session_webhook_delivery_workspace_idx').on(
+      table.workspaceId,
+      table.createdAt
+    ),
+    sessionIdx: index('agent_session_webhook_delivery_session_idx').on(
+      table.sessionId,
+      table.createdAt
+    ),
+    sessionFingerprintIdx: uniqueIndex('agent_session_webhook_delivery_session_fingerprint_idx').on(
+      table.workspaceId,
+      table.sessionId,
+      table.fingerprint
+    ),
+    statusIdx: index('agent_session_webhook_delivery_status_idx').on(
+      table.workspaceId,
+      table.status,
+      table.createdAt
+    ),
   })
 );
 
@@ -137,5 +194,7 @@ export const agentProviders = pgTable(
 
 export type AgentSession = typeof agentSessions.$inferSelect;
 export type NewAgentSession = typeof agentSessions.$inferInsert;
+export type AgentSessionWebhookDelivery = typeof agentSessionWebhookDeliveries.$inferSelect;
+export type NewAgentSessionWebhookDelivery = typeof agentSessionWebhookDeliveries.$inferInsert;
 export type AgentProvider = typeof agentProviders.$inferSelect;
 export type NewAgentProvider = typeof agentProviders.$inferInsert;

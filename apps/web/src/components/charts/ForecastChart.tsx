@@ -56,7 +56,7 @@ export function ForecastChart({
             borderRadius: 8,
             fontSize: 12,
           }}
-          formatter={(v: number) => [t('trajectoriesCount', { count: v }), t('count')]}
+          formatter={(value) => [t('trajectoriesCount', { count: Number(value ?? 0) }), t('count')]}
           labelFormatter={(l) => t('sprintsLabel', { count: Number(l) })}
         />
         <Bar dataKey="count" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />

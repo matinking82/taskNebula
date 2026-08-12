@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        For general "how do I…" questions please use [GitHub Discussions](https://github.com/neuraparse/tasknebula/discussions) — they are easier to search and reuse.
+        Search existing issues and the canonical documentation first, then use this template for a reproducible usage question.
   - type: textarea
     id: question
     attributes:

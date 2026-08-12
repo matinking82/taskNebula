@@ -113,6 +113,7 @@ const UNGATED_TABS = new Set<TabValue>(['labels', 'notifications', 'appearance']
 
 export default function SettingsPage() {
   const t = useTranslations('pagesSettings');
+  const tNav = useTranslations('nav');
   const { currentOrganizationId } = useOrganization();
   const { aiEnabled } = useAiFeature();
   const perms = useOrganizationPermissions(currentOrganizationId ?? undefined);
@@ -191,7 +192,8 @@ export default function SettingsPage() {
       </div>
 
       <div className="animate-fade-up flex-1 overflow-y-auto p-6 lg:p-8">
-        <div className="mx-auto w-full max-w-5xl">
+        <div className="mx-auto w-full max-w-5xl" data-settings-tab={activeTab}>
+          <h1 className="sr-only">{tNav('settings')}</h1>
           {activeTabDenied ? (
             <NoAccessNotice />
           ) : (
@@ -219,7 +221,7 @@ function renderContent(tab: TabValue, organizationId: string | null, aiEnabled: 
       return <OrganizationAiAgentsSettings organizationId={organizationId} />;
     case 'ai-transparency':
       if (!organizationId) return <NoAccessNotice />;
-      return <AiTransparencyClient organizationId={organizationId} />;
+      return <AiTransparencyClient organizationId={organizationId} headingLevel={2} />;
     case 'communications':
       if (!organizationId) return <NoAccessNotice />;
       return <OrganizationCommunicationsSettings organizationId={organizationId} />;

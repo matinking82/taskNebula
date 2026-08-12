@@ -14,7 +14,7 @@ import {
   hasPermission as roleHasPermission,
   type ProjectRole,
 } from '@tasknebula/db';
-import { eq, and, inArray, desc } from 'drizzle-orm';
+import { eq, and, inArray, desc, ne } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { publishEvent } from '@/lib/realtime/events';
 import { notifyProjectCreated } from '@/lib/notifications/project-events';
@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const requestedOrganizationId = searchParams.get('organizationId');
     const requestedTeamId = searchParams.get('teamId');
+    const excludeArchived = searchParams.get('includeArchived') === 'false';
+    const requestedLimit = Math.min(
+      100,
+      Math.max(1, Number.parseInt(searchParams.get('limit') || '100', 10) || 100)
+    );
 
     // Check if user is super admin
     const [user] = await db
@@ -106,17 +111,26 @@ export async function GET(request: NextRequest) {
     >(
       rows: T[]
     ) =>
-      rows.map((row) => ({
-        ...row.project,
-        organizationName: row.organizationName ?? '',
-        team: row.teamId
-          ? {
-              id: row.teamId,
-              name: row.teamName ?? 'Unknown teamspace',
-              slug: row.teamSlug ?? row.teamId,
-            }
-          : null,
-      }));
+      [...rows]
+        .sort((left, right) => {
+          const leftTime = new Date(String(left.project.updatedAt)).getTime();
+          const rightTime = new Date(String(right.project.updatedAt)).getTime();
+          return (
+            (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime)
+          );
+        })
+        .map((row) => ({
+          ...row.project,
+          organizationName: row.organizationName ?? '',
+          team: row.teamId
+            ? {
+                id: row.teamId,
+                name: row.teamName ?? 'Unknown teamspace',
+                slug: row.teamSlug ?? row.teamId,
+              }
+            : null,
+        }))
+        .slice(0, requestedLimit);
 
     const selectProjects = async (
       visibleOrgIds?: string[],
@@ -130,6 +144,7 @@ export async function GET(request: NextRequest) {
         ...(visibleOrgIds ? [inArray(projects.organizationId, visibleOrgIds)] : []),
         ...(visibleProjectIds ? [inArray(projects.id, visibleProjectIds)] : []),
         ...(teamFilter ? [teamFilter] : []),
+        ...(excludeArchived ? [ne(projects.status, 'archived')] : []),
       ];
 
       const query = db

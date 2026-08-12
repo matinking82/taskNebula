@@ -289,6 +289,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               value={issue.statusId}
               onChange={handleStatusChange}
               disabled={updateIssue.isPending}
+              ariaLabel={t('rows.state')}
             />
           </PropertyRow>
 
@@ -330,6 +331,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               value={components}
               onChange={handleComponentsChange}
               disabled={setIssueComponents.isPending}
+              ariaLabel={t('components.label')}
             />
           </PropertyRow>
 
@@ -339,6 +341,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               value={fixVersions}
               onChange={handleFixVersionsChange}
               disabled={setIssueVersions.isPending}
+              ariaLabel={t('versions.fixLabel')}
             />
           </PropertyRow>
 
@@ -349,6 +352,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
                 value={affectsVersions}
                 onChange={handleAffectsVersionsChange}
                 disabled={setIssueVersions.isPending}
+                ariaLabel={t('versions.affectsLabel')}
               />
             </PropertyRow>
           ) : (
@@ -371,6 +375,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               resolvedAt={issueDetail?.resolvedAt ?? null}
               onChange={handleResolutionChange}
               disabled={updateIssue.isPending}
+              ariaLabel={t('resolution.label')}
             />
           </PropertyRow>
         </div>
@@ -383,6 +388,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               value={issue.assigneeId || null}
               onChange={handleAssigneeChange}
               disabled={updateIssue.isPending}
+              ariaLabel={t('rows.assignee')}
             />
           </PropertyRow>
 
@@ -412,6 +418,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               value={issueDetail?.sprintId ?? null}
               onChange={handleSprintChange}
               disabled={updateIssue.isPending}
+              ariaLabel={t('rows.sprint')}
             />
           </PropertyRow>
 
@@ -422,6 +429,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               onChange={handleEpicChange}
               excludeIssueId={issue.id}
               disabled={updateIssue.isPending}
+              ariaLabel={t('rows.epic')}
             />
           </PropertyRow>
 
@@ -432,6 +440,7 @@ export function IssueSidebar({ issue }: IssueSidebarProps) {
               value={issueDetail?.parentId ?? null}
               onChange={handleParentChange}
               disabled={updateIssue.isPending}
+              ariaLabel={t('rows.parent')}
             />
           </PropertyRow>
         </div>

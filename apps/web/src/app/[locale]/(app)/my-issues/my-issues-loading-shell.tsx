@@ -1,11 +1,11 @@
 import { Skeleton, SkeletonPageHeader, SkeletonList } from '@/components/ui/skeleton';
 
-export function MyIssuesLoadingShell() {
+export function MyIssuesLoadingShell({ title }: { title: string }) {
   return (
     <div className="custom-scrollbar flex h-full flex-col overflow-y-auto">
       <div className="space-y-6 px-6 py-6">
         <div className="flex items-center justify-between">
-          <SkeletonPageHeader />
+          <SkeletonPageHeader title={title} />
           <Skeleton className="h-9 w-28 rounded-md" />
         </div>
         <div className="flex items-center gap-2">

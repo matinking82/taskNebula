@@ -152,7 +152,7 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
   }, [toggle]);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, organizationIdOverride?: string | null) => {
       const trimmed = content.trim();
       if (!trimmed) return;
 
@@ -178,14 +178,22 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
       ]);
 
       try {
-        if (!currentOrganizationId) throw new Error('ask_organization_required');
+        // The command palette can open before this provider has rerendered
+        // after organization-store hydration. Prefer the organization captured
+        // by that command, then read the live store before falling back to the
+        // render snapshot so a valid first request is never dropped as a race.
+        const organizationId =
+          organizationIdOverride ??
+          useOrganization.getState().currentOrganizationId ??
+          currentOrganizationId;
+        if (!organizationId) throw new Error('ask_organization_required');
         const projectId = entity?.kind === 'project' ? entity.id : undefined;
         const response = await fetch('/api/ask', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             query: trimmed,
-            organizationId: currentOrganizationId,
+            organizationId,
             ...(projectId ? { projectId } : {}),
           }),
         });
@@ -234,11 +242,19 @@ function AiSidecarProviderInner({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return;
 
     const onAskAi = (event: Event) => {
-      const prompt = (event as CustomEvent<{ prompt?: unknown }>).detail?.prompt;
+      const detail = (
+        event as CustomEvent<{
+          prompt?: unknown;
+          organizationId?: unknown;
+        }>
+      ).detail;
+      const prompt = detail?.prompt;
       if (typeof prompt !== 'string' || !prompt.trim()) return;
+      const organizationId =
+        typeof detail?.organizationId === 'string' ? detail.organizationId : undefined;
 
       setOpenState(true);
-      void sendMessage(prompt);
+      void sendMessage(prompt, organizationId);
     };
 
     window.addEventListener('tasknebula:ask-ai', onAskAi);

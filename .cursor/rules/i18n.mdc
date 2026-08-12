@@ -8,9 +8,11 @@ alwaysApply: true
 
 # i18n is MANDATORY — zero hardcoded user-facing strings
 
-TaskNebula ships **30 languages** with device/browser auto-detection. Every
-contribution must keep the app fully localized. This applies to all assistants
-and tools (Claude, Cursor, Codex, Copilot, etc.).
+TaskNebula contains **30 locale catalogs** with device/browser auto-detection.
+Catalog/ICU parity is automated while linguistic review of legacy copy
+continues. Every contribution must add real translations for new copy and keep
+all catalogs in parity. This applies to all assistants and tools (Claude,
+Cursor, Codex, Copilot, etc.).
 
 ## The rule
 
@@ -38,7 +40,7 @@ and tools (Claude, Cursor, Codex, Copilot, etc.).
 3. Preserve ICU placeholders verbatim (`{count}`, `{name}`, plural/select, `#`).
    Never translate placeholder names or brand/tech terms (TaskNebula, GitHub,
    Docker, Jira, Linear, MCP, API, AI, …).
-4. Verify with `node scripts/i18n-check.mjs` (key parity across all locales).
+4. Verify with `pnpm i18n:check` (parser fixtures, key/ICU parity, and catalogs).
 
 ## Notes
 

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { CheckCircle2, Loader2, ShieldCheck, Workflow, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { TransitionRuleRow } from '@/components/workflows/transition-rule-row';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -98,7 +98,6 @@ export function WorkflowBuilder({ projectId }: WorkflowBuilderProps) {
 
   const t = useTranslations('projectConfig');
   const tActions = useTranslations('actions');
-  const tPagesProjects = useTranslations('pagesProjects');
   const { toast } = useToast();
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
 
@@ -151,7 +150,7 @@ export function WorkflowBuilder({ projectId }: WorkflowBuilderProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <nav
-            aria-label={tPagesProjects('breadcrumb')}
+            aria-label={t('wf_breadcrumb_workflows')}
             className="text-muted-foreground flex items-center gap-1.5 text-xs"
           >
             <Link
@@ -179,7 +178,7 @@ export function WorkflowBuilder({ projectId }: WorkflowBuilderProps) {
         {/* Left pane: transition matrix */}
         <Card>
           <CardHeader className="space-y-1 p-5">
-            <CardTitle className="text-sm font-semibold">{t('wf_allowed_transitions')}</CardTitle>
+            <h2 className="text-sm font-semibold">{t('wf_allowed_transitions')}</h2>
             <CardDescription className="text-xs">{t('wf_matrix_help')}</CardDescription>
           </CardHeader>
           <CardContent className="p-5 pt-0">
@@ -266,7 +265,7 @@ export function WorkflowBuilder({ projectId }: WorkflowBuilderProps) {
         {/* Right pane: selected transition details */}
         <Card>
           <CardHeader className="space-y-1 p-5">
-            <CardTitle className="text-sm font-semibold">{t('wf_transition_rule')}</CardTitle>
+            <h2 className="text-sm font-semibold">{t('wf_transition_rule')}</h2>
             <CardDescription className="text-xs">
               {selectedRule ? t('wf_transition_rule_selected') : t('wf_transition_rule_none')}
             </CardDescription>

@@ -232,7 +232,7 @@ describe('ProjectViewsShell', () => {
     const user = userEvent.setup();
     renderWithQueryClient(<ProjectViewsShell projectId="project-1" />);
 
-    expect(await screen.findByText('Views')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Views' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'List' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Board' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Timeline' })).toBeInTheDocument();
@@ -286,7 +286,7 @@ describe('ProjectViewsShell', () => {
     const user = userEvent.setup();
     renderWithQueryClient(<ProjectViewsShell projectId="project-1" />);
 
-    await screen.findByText('Views');
+    await screen.findByRole('heading', { level: 1, name: 'Views' });
 
     await user.click(screen.getByRole('tab', { name: 'Calendar' }));
     await user.click(screen.getByRole('button', { name: /Save view/i }));
@@ -372,7 +372,7 @@ describe('ProjectViewsShell', () => {
     const user = userEvent.setup();
     renderWithQueryClient(<ProjectViewsShell projectId="project-1" />);
 
-    await screen.findByText('Views');
+    await screen.findByRole('heading', { level: 1, name: 'Views' });
 
     await user.click(screen.getByRole('button', { name: /Save view/i }));
     await user.type(screen.getByLabelText('View name'), 'Restricted view');

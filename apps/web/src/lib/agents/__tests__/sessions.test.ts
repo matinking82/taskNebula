@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * Linear Agent Protocol session-helper unit tests (P0-04).
+ * Linear Agent Protocol session-helper unit tests.
  *
  * Locks down:
  *   1. HMAC signing and verification, including the constant-time bad-secret
@@ -32,10 +32,7 @@ import {
 
 describe('signAgentPayload / verifyAgentSignature', () => {
   it('produces a deterministic hex HMAC-SHA256', () => {
-    const expected = crypto
-      .createHmac('sha256', 'k')
-      .update('hello')
-      .digest('hex');
+    const expected = crypto.createHmac('sha256', 'k').update('hello').digest('hex');
     expect(signAgentPayload('hello', 'k')).toBe(expected);
   });
 
@@ -58,9 +55,7 @@ describe('signAgentPayload / verifyAgentSignature', () => {
 
   it('rejects with the wrong secret', () => {
     const sig = signAgentPayload('payload', 'shh');
-    expect(verifyAgentSignature('payload', `sha256=${sig}`, 'other')).toBe(
-      false
-    );
+    expect(verifyAgentSignature('payload', `sha256=${sig}`, 'other')).toBe(false);
   });
 
   it('rejects when the header is missing or empty', () => {
@@ -155,13 +150,10 @@ describe('state machine — canTransition / nextSessionState', () => {
     ['pending', 'complete'],
     ['pending', 'awaitingInput'],
     ['stale', 'complete'],
-  ] as Array<[AgentSessionState, AgentSessionState]>)(
-    'rejects %s -> %s',
-    (from, to) => {
-      expect(canTransition(from, to)).toBe(false);
-      expect(nextSessionState(from, to)).toBeNull();
-    }
-  );
+  ] as Array<[AgentSessionState, AgentSessionState]>)('rejects %s -> %s', (from, to) => {
+    expect(canTransition(from, to)).toBe(false);
+    expect(nextSessionState(from, to)).toBeNull();
+  });
 
   it('marks complete and error as terminal', () => {
     expect(isTerminalState('complete')).toBe(true);

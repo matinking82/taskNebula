@@ -7,7 +7,7 @@ export interface OrganizationMember {
   email: string | null;
   image: string | null;
   status: string;
-  /** P0-04: virtual coding-agent users (Claude/Cursor/Devin/Copilot/...). */
+  /** Virtual coding-agent users (Claude/Cursor/Devin/Copilot/...). */
   isAgent?: boolean;
   /** Provider handle when `isAgent` is true (matches agent_session_provider). */
   agentProvider?:

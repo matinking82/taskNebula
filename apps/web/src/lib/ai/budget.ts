@@ -1,5 +1,5 @@
 /**
- * AI Cost Guard runtime (Roadmap P0-07)
+ * AI Cost Guard runtime.
  *
  * Wraps every outbound LLM call with a transactional budget check plus
  * an immutable audit row. Public surface:
@@ -33,12 +33,7 @@
 
 import crypto from 'node:crypto';
 import { sql } from 'drizzle-orm';
-import {
-  db,
-  llmCallAudit,
-  orgTokenBudgets,
-  type OrgTokenBudget,
-} from '@tasknebula/db';
+import { db, llmCallAudit, orgTokenBudgets, type OrgTokenBudget } from '@tasknebula/db';
 
 export type BudgetCheckResult =
   | { allowed: true }
@@ -100,13 +95,8 @@ const MODEL_PRICING: Array<{ match: RegExp; inputPer1k: number; outputPer1k: num
 
 const FALLBACK_PRICING = { inputPer1k: 0.01, outputPer1k: 0.03 };
 
-export function estimateCostUsd(
-  model: string,
-  inputTokens: number,
-  outputTokens: number
-): number {
-  const pricing =
-    MODEL_PRICING.find((row) => row.match.test(model)) ?? FALLBACK_PRICING;
+export function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = MODEL_PRICING.find((row) => row.match.test(model)) ?? FALLBACK_PRICING;
   const cost =
     (Math.max(0, inputTokens) / 1000) * pricing.inputPer1k +
     (Math.max(0, outputTokens) / 1000) * pricing.outputPer1k;
@@ -159,11 +149,7 @@ function computeRollover(
     previousResetsAt.getUTCMonth(),
     previousResetsAt.getUTCDate()
   );
-  const todayUtc = Date.UTC(
-    nowUtc.getUTCFullYear(),
-    nowUtc.getUTCMonth(),
-    nowUtc.getUTCDate()
-  );
+  const todayUtc = Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate());
 
   const dailyShouldRoll = todayUtc > prevDay;
 
@@ -211,14 +197,10 @@ function normalizeRow(row: RawBudgetRow): OrgTokenBudget {
     dailyUsedCost: row.daily_used_cost,
     monthlyUsedCost: row.monthly_used_cost,
     periodResetsAt:
-      row.period_resets_at instanceof Date
-        ? row.period_resets_at
-        : new Date(row.period_resets_at),
+      row.period_resets_at instanceof Date ? row.period_resets_at : new Date(row.period_resets_at),
     killSwitchEnabled: row.kill_switch_enabled,
-    createdAt:
-      row.created_at instanceof Date ? row.created_at : new Date(row.created_at),
-    updatedAt:
-      row.updated_at instanceof Date ? row.updated_at : new Date(row.updated_at),
+    createdAt: row.created_at instanceof Date ? row.created_at : new Date(row.created_at),
+    updatedAt: row.updated_at instanceof Date ? row.updated_at : new Date(row.updated_at),
   };
 }
 
@@ -240,10 +222,7 @@ async function loadOrCreateBudgetRow(
     return normalizeRow(rawRows[0]!);
   }
 
-  const [created] = await tx
-    .insert(orgTokenBudgets)
-    .values({ organizationId })
-    .returning();
+  const [created] = await tx.insert(orgTokenBudgets).values({ organizationId }).returning();
   if (!created) {
     throw new Error('Failed to create org_token_budgets row');
   }
@@ -319,20 +298,14 @@ export async function checkAndReserveTokens(
         message: `Monthly token budget reached (${row.monthlyTokenLimit}).`,
       } as const;
     }
-    if (
-      row.dailyCostUsdLimit !== null &&
-      nextDailyCost > toNumber(row.dailyCostUsdLimit)
-    ) {
+    if (row.dailyCostUsdLimit !== null && nextDailyCost > toNumber(row.dailyCostUsdLimit)) {
       return {
         allowed: false,
         reason: 'daily_cost_exceeded',
         message: `Daily cost budget reached ($${toNumber(row.dailyCostUsdLimit).toFixed(2)}).`,
       } as const;
     }
-    if (
-      row.monthlyCostUsdLimit !== null &&
-      nextMonthlyCost > toNumber(row.monthlyCostUsdLimit)
-    ) {
+    if (row.monthlyCostUsdLimit !== null && nextMonthlyCost > toNumber(row.monthlyCostUsdLimit)) {
       return {
         allowed: false,
         reason: 'monthly_cost_exceeded',
@@ -365,11 +338,9 @@ export async function checkAndReserveTokens(
  * of truth for the admin usage dashboard.
  */
 export async function commitUsage(input: CommitUsageInput): Promise<void> {
-  const totalTokens =
-    Math.max(0, input.inputTokens) + Math.max(0, input.outputTokens);
+  const totalTokens = Math.max(0, input.inputTokens) + Math.max(0, input.outputTokens);
   const costUsd =
-    input.costUsd ??
-    estimateCostUsd(input.model, input.inputTokens, input.outputTokens);
+    input.costUsd ?? estimateCostUsd(input.model, input.inputTokens, input.outputTokens);
 
   await db.transaction(async (tx) => {
     // Always append the audit row first — even on budget_exhausted the
@@ -520,11 +491,7 @@ export async function runWithBudget<T>(
     // Refund the full reservation first so commitUsage's bump leaves
     // the counter at exactly the actual usage rather than
     // (reservation + actual).
-    await refundReservation(
-      params.organizationId,
-      params.estimatedTokens,
-      params.model
-    );
+    await refundReservation(params.organizationId, params.estimatedTokens, params.model);
     await commitUsage({
       organizationId: params.organizationId,
       userId: params.userId,
@@ -544,11 +511,7 @@ export async function runWithBudget<T>(
     const latencyMs = Date.now() - startedAt;
     const message = err instanceof Error ? err.message : String(err);
     // Refund the full reservation since the call did not consume tokens.
-    await refundReservation(
-      params.organizationId,
-      params.estimatedTokens,
-      params.model
-    );
+    await refundReservation(params.organizationId, params.estimatedTokens, params.model);
     await commitUsage({
       organizationId: params.organizationId,
       userId: params.userId,
@@ -558,8 +521,7 @@ export async function runWithBudget<T>(
       inputTokens: 0,
       outputTokens: 0,
       latencyMs,
-      status:
-        /rate.?limit/i.test(message) ? 'rate_limited' : 'error',
+      status: /rate.?limit/i.test(message) ? 'rate_limited' : 'error',
       errorMessage: message.slice(0, 500),
       feature: params.feature,
     });

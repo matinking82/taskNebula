@@ -1,15 +1,33 @@
 /**
  * Metrics Endpoint
- * 
- * Returns application metrics in Prometheus format.
- * Can be scraped by monitoring systems.
+ *
+ * Returns application metrics in Prometheus format. The endpoint fails closed
+ * unless METRICS_TOKEN is configured and supplied as a Bearer token.
  */
 
-import { NextResponse } from 'next/server';
+import crypto from 'node:crypto';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+function isAuthorized(request: NextRequest): boolean {
+  const expected = process.env.METRICS_TOKEN;
+  const presented = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
+  if (!expected || expected.length < 16 || presented.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(presented), Buffer.from(expected));
+}
+
+export async function GET(request: NextRequest) {
+  if (!process.env.METRICS_TOKEN || process.env.METRICS_TOKEN.length < 16) {
+    return NextResponse.json({ error: 'Metrics endpoint is not configured.' }, { status: 503 });
+  }
+  if (!isAuthorized(request)) {
+    return new NextResponse('Unauthorized', {
+      status: 401,
+      headers: { 'WWW-Authenticate': 'Bearer' },
+    });
+  }
+
   const memoryUsage = process.memoryUsage();
   const uptime = process.uptime();
 
@@ -47,4 +65,3 @@ nodejs_version_info{version="${process.version}"} 1
     },
   });
 }
-

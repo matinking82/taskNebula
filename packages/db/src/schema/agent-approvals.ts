@@ -1,8 +1,18 @@
 import { createId } from '@paralleldrive/cuid2';
-import { index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { organizations } from './organizations';
 import { projects } from './projects';
 import { users } from './users';
+
+export type AgentApprovalRequestStatus =
+  | 'pending'
+  | 'executing'
+  | 'approved'
+  | 'rejected'
+  | 'expired'
+  | 'failed';
+
+export type AgentApprovalEffectStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 /**
  * Pending AI-agent writes that AGENTOWNERS requires a human to approve.
@@ -31,7 +41,7 @@ export const agentApprovalRequests = pgTable(
     proposedPayload: jsonb('proposed_payload').notNull().default('{}'),
     matchedRule: text('matched_rule'),
     decisionReason: text('decision_reason').notNull(),
-    status: text('status').notNull().default('pending'),
+    status: text('status').$type<AgentApprovalRequestStatus>().notNull().default('pending'),
     requestedAt: timestamp('requested_at').notNull().defaultNow(),
     expiresAt: timestamp('expires_at'),
     decidedBy: text('decided_by').references(() => users.id, { onDelete: 'set null' }),
@@ -52,5 +62,52 @@ export const agentApprovalRequests = pgTable(
   })
 );
 
+/**
+ * Transactional outbox for effects that cannot participate in the approval's
+ * database transaction (realtime fan-out, automation evaluation and outgoing
+ * webhooks). Workers use a lease so abandoned `processing` rows are visible and
+ * reclaimable. Delivery is intentionally at-least-once; consumers must remain
+ * idempotent because a worker can crash after dispatch and before acknowledgement.
+ */
+export const agentApprovalEffectOutbox = pgTable(
+  'agent_approval_effect_outbox',
+  {
+    id: text('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
+    approvalId: text('approval_id')
+      .notNull()
+      .references(() => agentApprovalRequests.id, { onDelete: 'cascade' }),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    effectType: text('effect_type').notNull(),
+    payload: jsonb('payload').notNull(),
+    status: text('status').$type<AgentApprovalEffectStatus>().notNull().default('pending'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    availableAt: timestamp('available_at').notNull().defaultNow(),
+    lockedAt: timestamp('locked_at'),
+    lockToken: text('lock_token'),
+    completedAt: timestamp('completed_at'),
+    lastError: text('last_error'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    approvalEffectIdx: uniqueIndex('agent_approval_effect_approval_type_idx').on(
+      table.approvalId,
+      table.effectType
+    ),
+    workspaceStatusIdx: index('agent_approval_effect_workspace_status_idx').on(
+      table.workspaceId,
+      table.status,
+      table.availableAt
+    ),
+    leaseIdx: index('agent_approval_effect_lease_idx').on(table.status, table.lockedAt),
+  })
+);
+
 export type AgentApprovalRequest = typeof agentApprovalRequests.$inferSelect;
 export type NewAgentApprovalRequest = typeof agentApprovalRequests.$inferInsert;
+export type AgentApprovalEffect = typeof agentApprovalEffectOutbox.$inferSelect;
+export type NewAgentApprovalEffect = typeof agentApprovalEffectOutbox.$inferInsert;

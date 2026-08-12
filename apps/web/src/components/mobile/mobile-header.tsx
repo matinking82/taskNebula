@@ -26,7 +26,7 @@ export function MobileHeader({ title, showSearch = false, onSearchClick }: Mobil
             <Button
               variant="ghost"
               size="icon"
-              className="ease-snap h-9 w-9 transition-all duration-150"
+              className="ease-snap h-9 w-9 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
               aria-label={t('openMenu')}
             >
               <Menu className="h-4 w-4" />
@@ -56,7 +56,7 @@ export function MobileHeader({ title, showSearch = false, onSearchClick }: Mobil
             <Button
               variant="ghost"
               size="icon"
-              className="ease-snap h-9 w-9 transition-all duration-150"
+              className="ease-snap h-9 w-9 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
               onClick={onSearchClick}
               aria-label={t('search')}
             >

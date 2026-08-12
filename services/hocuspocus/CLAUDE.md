@@ -2,20 +2,24 @@
 
 Standalone Hocuspocus (WebSocket) server backing collaborative editing (Tiptap + Yjs) in `apps/web`.
 Plain Node ESM (`src/server.mjs`) — no TypeScript build step. Root guide: `/CLAUDE.md`.
-Zero tests today — add coverage when you touch this service.
+Persistence helpers use the built-in Node test runner.
 
 ## Commands (run in services/hocuspocus)
 
 ```bash
 pnpm dev      # node --watch src/server.mjs
 pnpm start    # node src/server.mjs
+pnpm check    # syntax-check production modules
+pnpm test     # node --test src/*.test.mjs
 ```
 
 ## How it works
 
 - **Auth**: clients connect with a JWT minted by the web app at `/api/collab/token`; verified here with
   `AUTH_SECRET` (falls back to `NEXTAUTH_SECRET`) — the secret must match the web app's.
-- **Persistence**: Yjs document state persists to **Postgres** (`DATABASE_URL`).
+- **Persistence**: Yjs document state persists to **Postgres** (`DATABASE_URL`). The
+  database migration layer owns `collab_documents` (`0062`); this service only
+  performs a read-only schema probe at boot.
 - **Scale-out**: **Redis pub/sub** (`REDIS_URL`) syncs awareness/updates across multiple instances.
 
 ## Env vars

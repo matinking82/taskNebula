@@ -19,9 +19,8 @@
  *
  *   { error: { code: "VALIDATION_FAILED", message, details: ZodIssue[] } }
  *
- * The error envelope intentionally mirrors the shape proposed in roadmap
- * task #6 (unified API error envelope). If #6 ships a shared helper later,
- * this module can be migrated to call it without changing the public API.
+ * The error envelope is intentionally stable so route handlers can converge
+ * on one public validation contract without changing clients.
  *
  * Notes / design choices:
  * - Supports Next.js 15 Promise-based `params` (`{ params: Promise<...> }`).

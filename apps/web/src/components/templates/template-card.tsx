@@ -48,7 +48,7 @@ export function TemplateCard({ template, onUse, className }: TemplateCardProps) 
       onKeyDown={handleKeyDown}
       aria-label={t('use_template_aria', { name: template.name })}
       className={cn(
-        'border-border bg-card shadow-xs ease-smooth group relative flex h-full flex-col gap-3 rounded-lg border p-4 text-left transition-all duration-200',
+        'border-border bg-card shadow-xs ease-smooth group relative flex h-full flex-col gap-3 rounded-lg border p-4 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200',
         'hover:border-ring focus-visible:ring-ring focus-visible:ring-offset-background hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         'cursor-pointer',
         className

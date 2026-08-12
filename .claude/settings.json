@@ -17,14 +17,31 @@
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-      "Bash(docker compose:*)",
-      "Bash(docker-compose:*)"
+      "Bash(docker compose:*)"
     ],
-    "deny": ["Read(.env)", "Read(.env.*)", "Read(./**/.env)", "Read(./**/.env.*)"],
+    "deny": [
+      "Read(/.env)",
+      "Read(/**/.env)",
+      "Read(/.env.local)",
+      "Read(/**/.env.local)",
+      "Read(/.env.development)",
+      "Read(/**/.env.development)",
+      "Read(/.env.development.local)",
+      "Read(/**/.env.development.local)",
+      "Read(/.env.test)",
+      "Read(/**/.env.test)",
+      "Read(/.env.test.local)",
+      "Read(/**/.env.test.local)",
+      "Read(/.env.production)",
+      "Read(/**/.env.production)",
+      "Read(/.env.production.local)",
+      "Read(/**/.env.production.local)",
+      "Read(/.env.backup)",
+      "Read(/**/.env.backup)",
+      "Read(/.env.old)",
+      "Read(/**/.env.old)"
+    ],
     "ask": []
-  },
-  "env": {
-    "NODE_ENV": "development"
   },
   "hooks": {
     "PostToolUse": [

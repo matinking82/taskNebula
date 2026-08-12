@@ -9,8 +9,9 @@ jest.mock('@/lib/hooks/use-members', () => ({
   useOrganizationMembers: jest.fn(),
 }));
 
-const mockUseOrganizationMembers =
-  useOrganizationMembers as jest.MockedFunction<typeof useOrganizationMembers>;
+const mockUseOrganizationMembers = useOrganizationMembers as jest.MockedFunction<
+  typeof useOrganizationMembers
+>;
 
 beforeAll(() => {
   class RO {
@@ -75,11 +76,18 @@ describe('AssigneePicker', () => {
   it('renders the selected member name', () => {
     render(
       <Wrapper>
-        <AssigneePicker organizationId="org-1" value="user-2" onChange={jest.fn()} />
+        <AssigneePicker
+          organizationId="org-1"
+          value="user-2"
+          onChange={jest.fn()}
+          ariaLabel="Assignee"
+        />
       </Wrapper>
     );
 
-    expect(screen.getByRole('combobox')).toHaveTextContent('Bob Example');
+    expect(screen.getByRole('combobox', { name: 'Assignee Bob Example' })).toHaveTextContent(
+      'Bob Example'
+    );
   });
 
   it('emits the selected user id when a member is chosen', async () => {

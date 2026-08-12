@@ -14,8 +14,8 @@ pnpm type-check && pnpm lint
 
 ## Surface
 
-12 tools in `src/tools/`: create-issue, create-subtask, get-issue, update-issue, assign-issue,
-add-comment, transition-status, link-pr, search-issues, list-projects, list-my-assigned,
+11 tools in `src/tools/`: create-issue, create-subtask, get-issue, update-issue, assign-issue,
+add-comment, transition-status, search-issues, list-projects, list-my-assigned,
 get-my-workload. Plus resources (`src/resources.ts`) and prompts (`src/prompts.ts`), registered in
 `src/server.ts`. REST calls go through `src/client.ts`; auth resolution in `src/auth.ts`
 (`TASKNEBULA_API_URL` + `TASKNEBULA_API_KEY` env).
@@ -28,6 +28,5 @@ get-my-workload. Plus resources (`src/resources.ts`) and prompts (`src/prompts.t
   MCP package — the gap is server-side.
 - **Not published to npm**: use the source build instructions in `README.md`;
   publication is gated on end-to-end auth and install smoke tests.
-- Real API keys are prefixed `sk_live_`; some tool contracts drift from the
-  REST API (priority enums, `subtask` type not creatable server-side, `link_pr` shape) — verify against
-  `apps/web/src/app/api/issues/route.ts` before changing tool schemas.
+- Real API keys are prefixed `sk_live_`; verify every tool change against the
+  authoritative route validation in `apps/web/src/app/api`.

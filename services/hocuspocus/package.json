@@ -6,6 +6,8 @@
   "description": "Hocuspocus collaboration server for TaskNebula (Tiptap + Yjs).",
   "main": "src/server.mjs",
   "scripts": {
+    "check": "node --check src/server.mjs && node --check src/healthcheck.mjs && node --check src/persistence.mjs",
+    "test": "node --test src/*.test.mjs",
     "start": "node src/server.mjs",
     "dev": "node --watch src/server.mjs"
   },

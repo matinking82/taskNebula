@@ -118,8 +118,8 @@ function clipSnippet(value: string | null | undefined): string {
  * tsvector search over issues. We don't depend on a precomputed search
  * column on `issues` (one doesn't exist yet) — instead we build a
  * tsvector inline. This is slower than an index but acceptable for the
- * small per-project corpora we serve, and it lets us ship without
- * blocking on a separate migration in task #1.
+ * small per-project corpora we serve, and it remains available without an
+ * organization-safe embedder.
  */
 async function retrieveIssuesBm25(
   organizationId: string,
@@ -595,8 +595,8 @@ export async function runAsk(options: AskOptions): Promise<AskBundle> {
   if (scope === 'all' || scope === 'docs') {
     tasks.push(retrieveDocsBm25(options.organizationId, options.projectId ?? null, options.query));
   }
-  // Vector path is enabled only when an embedder is wired in. Today we
-  // don't synchronously embed in-request (task #1 owns that), so this
+  // Vector path is enabled only when an organization-safe embedder is wired
+  // in. Today we don't synchronously embed in-request, so this
   // returns [] until an embed function is supplied via env injection.
   tasks.push(
     retrieveVectorContent(options.organizationId, options.projectId ?? null, options.query)

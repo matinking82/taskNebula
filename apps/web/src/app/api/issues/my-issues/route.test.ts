@@ -42,7 +42,9 @@ jest.mock('@tasknebula/db', () => ({
     select: (...args: unknown[]) => dbSelectMock(...args),
   },
   issues: {
+    id: 'issues.id',
     assigneeId: 'issues.assigneeId',
+    reporterId: 'issues.reporterId',
     projectId: 'issues.projectId',
     updatedAt: 'issues.updatedAt',
   },
@@ -56,6 +58,10 @@ jest.mock('@tasknebula/db', () => ({
     teamId: 'projects.teamId',
     organizationId: 'projects.organizationId',
   },
+  watchers: {
+    issueId: 'watchers.issueId',
+    userId: 'watchers.userId',
+  },
 }));
 
 jest.mock('drizzle-orm', () => ({
@@ -63,6 +69,8 @@ jest.mock('drizzle-orm', () => ({
   desc: (value: unknown) => ({ type: 'desc', value }),
   eq: (left: unknown, right: unknown) => ({ type: 'eq', left, right }),
   inArray: (left: unknown, right: unknown) => ({ type: 'inArray', left, right }),
+  isNotNull: (value: unknown) => ({ type: 'isNotNull', value }),
+  or: (...args: unknown[]) => ({ type: 'or', args }),
 }));
 
 function whereBuilder(result: unknown) {
@@ -281,5 +289,45 @@ describe('GET /api/issues/my-issues', () => {
         },
       ],
     });
+  });
+
+  it('applies the documented status bucket and result limit', async () => {
+    authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    dbSelectMock
+      .mockReturnValueOnce(
+        orderBuilder([
+          {
+            id: 'issue-open',
+            key: 'API-1',
+            title: 'Open',
+            projectId: 'project-1',
+            statusId: 'status-open',
+            assigneeId: 'user-1',
+          },
+          {
+            id: 'issue-done',
+            key: 'API-2',
+            title: 'Done',
+            projectId: 'project-1',
+            statusId: 'status-done',
+            assigneeId: 'user-1',
+          },
+        ])
+      )
+      .mockReturnValueOnce(
+        whereBuilder([
+          { id: 'status-open', name: 'Todo', category: 'backlog', color: '#64748b' },
+          { id: 'status-done', name: 'Done', category: 'done', color: '#22c55e' },
+        ])
+      )
+      .mockReturnValueOnce(whereBuilder([{ id: 'project-1', key: 'API', name: 'API Platform' }]));
+
+    const response = await GET(
+      new NextRequestCtor('http://localhost:3002/api/issues/my-issues?status=open&limit=1')
+    );
+
+    const body = await response.json();
+    expect(body.issues).toHaveLength(1);
+    expect(body.issues[0].id).toBe('issue-open');
   });
 });

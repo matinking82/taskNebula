@@ -135,6 +135,7 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
   if (isLoading) {
     return (
       <div className="text-muted-foreground flex h-full items-center justify-center">
+        <h1 className="sr-only">{t('initiative_detail_kicker')}</h1>
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         {t('initiative_detail_loading')}
       </div>
@@ -144,6 +145,7 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
   if (detailError || !detail) {
     return (
       <div className="flex h-full items-center justify-center p-6">
+        <h1 className="sr-only">{t('initiative_detail_kicker')}</h1>
         <Alert className="max-w-lg">
           <AlertTitle>{t('toast_access_denied_title')}</AlertTitle>
           <AlertDescription>
@@ -190,7 +192,11 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3">
-                <Progress value={rollup?.percent ?? 0} className="h-3 flex-1" />
+                <Progress
+                  value={rollup?.percent ?? 0}
+                  className="h-3 flex-1"
+                  aria-label={t('initiative_detail_rollup')}
+                />
                 <div className="w-16 text-right font-mono text-sm tabular-nums">
                   {rollup?.percent ?? 0}%
                 </div>
@@ -291,12 +297,14 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1">
-                <label className="kicker text-[10px]">{t('initiative_detail_status')}</label>
+                <label htmlFor="initiative-update-status" className="kicker text-[10px]">
+                  {t('initiative_detail_status')}
+                </label>
                 <Select
                   value={status}
                   onValueChange={(v) => setStatus(v as 'green' | 'yellow' | 'red')}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="initiative-update-status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

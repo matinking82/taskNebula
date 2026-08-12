@@ -135,7 +135,7 @@ export function MyIssuesClient() {
   });
 
   if (isLoading) {
-    return <MyIssuesLoadingShell />;
+    return <MyIssuesLoadingShell title={tNav('my_issues')} />;
   }
 
   if (error) {
@@ -188,7 +188,7 @@ export function MyIssuesClient() {
                 type="button"
                 onClick={() => handleScopeChange(option.value)}
                 className={cn(
-                  'ease-snap shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150',
+                  'ease-snap shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                   scope === option.value
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'

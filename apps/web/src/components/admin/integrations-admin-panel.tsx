@@ -146,7 +146,7 @@ export function IntegrationsAdminPanel() {
     },
   });
 
-  const providers = data?.providers ?? [];
+  const providers = useMemo(() => data?.providers ?? [], [data?.providers]);
   const activeProvider = useMemo(
     () => providers.find((p) => p.provider === editing) ?? null,
     [providers, editing]

@@ -1,13 +1,13 @@
-import {
-  Skeleton,
-  SkeletonStats,
-  SkeletonKanbanColumn,
-} from '@/components/ui/skeleton';
+import { getTranslations } from 'next-intl/server';
+import { Skeleton, SkeletonStats, SkeletonKanbanColumn } from '@/components/ui/skeleton';
 
-export default function SprintDetailLoading() {
+export default async function SprintDetailLoading() {
+  const t = await getTranslations('pagesProjects');
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-border px-6 py-4 space-y-3">
+      <h1 className="sr-only">{t('loadingSprint')}</h1>
+      <div className="border-border shrink-0 space-y-3 border-b px-6 py-4">
         <Skeleton className="h-6 w-64" />
         <div className="flex items-center gap-3">
           <Skeleton className="h-4 w-40" />

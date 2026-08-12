@@ -1,8 +1,12 @@
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function ViewsLoading() {
+export default async function ViewsLoading() {
+  const t = await getTranslations('pagesProjects');
+
   return (
     <div className="bg-background flex h-full flex-col" aria-busy="true">
+      <h1 className="sr-only">{t('tabViews')}</h1>
       <div className="border-border shrink-0 space-y-2 border-b px-4 py-2">
         <div className="flex flex-wrap items-center gap-2">
           <Skeleton className="h-7 w-28 rounded-md" />

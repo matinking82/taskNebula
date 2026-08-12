@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * <TimeTrackingPanel issueId> — server-backed time tracking (task #10).
+ * <TimeTrackingPanel issueId> — server-backed time tracking.
  *
  * Pairs with the API endpoints:
  *   POST  /api/issues/[id]/timer/start
@@ -330,7 +330,7 @@ export function TimeTrackingPanel({
           >
             <div
               className={cn(
-                'ease-smooth h-full rounded-sm transition-all duration-200',
+                'ease-smooth h-full rounded-sm transition-[width,background-color] duration-200',
                 trio.over ? 'bg-accent-amber' : 'bg-primary'
               )}
               style={{ width: `${trio.percent}%` }}

@@ -132,9 +132,9 @@ it('hides docs and chat tabs while project permissions are loading', () => {
     </Wrapper>
   );
 
-  expect(screen.getByRole('tab', { name: /views/i })).toBeInTheDocument();
-  expect(screen.queryByRole('tab', { name: /docs/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole('tab', { name: /chat/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /views/i })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /docs/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /chat/i })).not.toBeInTheDocument();
 });
 
 it('hides docs, chat, and settings actions from read-only project viewers without those capabilities', () => {
@@ -152,11 +152,11 @@ it('hides docs, chat, and settings actions from read-only project viewers withou
     </Wrapper>
   );
 
-  expect(screen.getByRole('tab', { name: /views/i })).toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: /sprints/i })).toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: /modules/i })).toBeInTheDocument();
-  expect(screen.queryByRole('tab', { name: /docs/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole('tab', { name: /chat/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /views/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /sprints/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /modules/i })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /docs/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /chat/i })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /project settings/i })).not.toBeInTheDocument();
 });
 
@@ -179,6 +179,30 @@ it('shows docs and chat tabs only when their project permissions are present', (
     </Wrapper>
   );
 
-  expect(screen.getByRole('tab', { name: /docs/i })).toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: /chat/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /docs/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /chat/i })).toBeInTheDocument();
 });
+
+it.each(['/tr/projects/prj', '/tr/projects/prj/views'])(
+  'marks Views active for locale-prefixed project path %s',
+  (pathname) => {
+    mockUsePathname.mockReturnValue(pathname);
+    mockUseProjectPermissions.mockReturnValue({
+      permissions: projectPermissions({ canBrowseProject: true }),
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useProjectPermissions>);
+
+    render(
+      <Wrapper>
+        <ProjectLayoutClient projectId="prj" initialProject={initialProject}>
+          <h1>Views</h1>
+        </ProjectLayoutClient>
+      </Wrapper>
+    );
+
+    expect(screen.getByRole('link', { name: /views/i })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('heading', { name: 'Project One' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Views', level: 1 })).toBeInTheDocument();
+  }
+);

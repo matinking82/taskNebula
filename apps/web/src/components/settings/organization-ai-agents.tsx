@@ -98,7 +98,7 @@ const EMPTY_SETTINGS: WorkspaceAgentSettings = {
   },
   // Conservative product default for supported write-capable AI actions.
   aiOversight: 'review_required',
-  // P1-16 prompt-injection safety: default to warn.
+  // Prompt-injection safety defaults to warn.
   aiSafetyMode: 'warn',
 };
 

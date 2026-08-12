@@ -1,5 +1,5 @@
 /**
- * /api/issues/:issueId/time-entries — manual time entries + listing (task #10).
+ * /api/issues/:issueId/time-entries — manual time entries + listing.
  *
  * GET   → list entries for the issue (most recent first), all users.
  * POST  → log a manual entry. Accepts either:
@@ -16,31 +16,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { db, desc, eq, timeEntries } from '@tasknebula/db';
-import {
-  assertIssueAccess,
-  recomputeActualHours,
-} from '@/lib/time-tracking/server';
+import { assertIssueAccess, recomputeActualHours } from '@/lib/time-tracking/server';
 
 const ManualEntry = z
   .object({
-    durationSeconds: z.number().int().positive().max(24 * 3600 * 7).optional(),
+    durationSeconds: z
+      .number()
+      .int()
+      .positive()
+      .max(24 * 3600 * 7)
+      .optional(),
     startedAt: z.string().datetime().optional(),
     endedAt: z.string().datetime().optional(),
     description: z.string().max(2000).optional(),
     source: z.enum(['manual', 'github_inferred', 'integration']).optional(),
     integrationRef: z.string().max(500).optional(),
   })
-  .refine(
-    (v) =>
-      typeof v.durationSeconds === 'number' || (v.startedAt && v.endedAt),
-    {
-      message: 'Provide durationSeconds OR both startedAt and endedAt.',
-    },
-  );
+  .refine((v) => typeof v.durationSeconds === 'number' || (v.startedAt && v.endedAt), {
+    message: 'Provide durationSeconds OR both startedAt and endedAt.',
+  });
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ issueId: string }> },
+  { params }: { params: Promise<{ issueId: string }> }
 ) {
   const session = await auth();
   const { issueId } = await params;
@@ -61,7 +59,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ issueId: string }> },
+  { params }: { params: Promise<{ issueId: string }> }
 ) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -76,10 +74,7 @@ export async function POST(
     const raw = await request.json();
     body = ManualEntry.parse(raw);
   } catch (err: any) {
-    return NextResponse.json(
-      { error: 'Invalid body', detail: err?.message },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Invalid body', detail: err?.message }, { status: 400 });
   }
 
   // Reconcile start/end vs duration.
@@ -88,7 +83,9 @@ export async function POST(
   let endedAt: Date;
   if (typeof body.durationSeconds === 'number') {
     // Manual log: anchor to now unless the caller provided a start time.
-    startedAt = body.startedAt ? new Date(body.startedAt) : new Date(now.getTime() - body.durationSeconds * 1000);
+    startedAt = body.startedAt
+      ? new Date(body.startedAt)
+      : new Date(now.getTime() - body.durationSeconds * 1000);
     endedAt = new Date(startedAt.getTime() + body.durationSeconds * 1000);
   } else {
     startedAt = new Date(body.startedAt!);
@@ -99,10 +96,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid timestamps' }, { status: 400 });
   }
   if (endedAt.getTime() <= startedAt.getTime()) {
-    return NextResponse.json(
-      { error: 'endedAt must be after startedAt' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'endedAt must be after startedAt' }, { status: 400 });
   }
 
   const [created] = await db
@@ -120,8 +114,5 @@ export async function POST(
 
   const totalHours = await recomputeActualHours(issueId);
 
-  return NextResponse.json(
-    { entry: created, actualHours: totalHours },
-    { status: 201 },
-  );
+  return NextResponse.json({ entry: created, actualHours: totalHours }, { status: 201 });
 }

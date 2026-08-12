@@ -2,7 +2,7 @@ import { MetricStrip, type MetricStripItem } from '@/components/ui/metric-strip'
 import { PageFrame } from '@/components/ui/page-frame';
 import { Skeleton, SkeletonPageHeader } from '@/components/ui/skeleton';
 
-export function DashboardLoadingShell() {
+export function DashboardLoadingShell({ title }: { title: string }) {
   const metrics: MetricStripItem[] = Array.from({ length: 4 }, (_, index) => ({
     id: `metric-${index}`,
     label: <Skeleton className="h-3 w-16" />,
@@ -12,7 +12,7 @@ export function DashboardLoadingShell() {
   return (
     <PageFrame className="dashboard-carbon" contentClassName="animate-pulse">
       <div className="flex flex-col gap-4 py-1 sm:flex-row sm:items-end sm:justify-between">
-        <SkeletonPageHeader />
+        <SkeletonPageHeader title={title} />
         <Skeleton className="h-8 w-full sm:w-28" />
       </div>
 

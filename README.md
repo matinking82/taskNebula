@@ -9,7 +9,7 @@
 [![Platform](https://img.shields.io/badge/platform-linux%2Famd64-111827?style=for-the-badge&logo=linux)](#docker-image)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
-[![30 languages](https://img.shields.io/badge/i18n-30%20languages-8b5cf6?style=for-the-badge)](#ai-privacy-and-languages)
+[![30 locales](https://img.shields.io/badge/i18n-30%20locales-8b5cf6?style=for-the-badge)](#ai-privacy-and-languages)
 [![License MIT](https://img.shields.io/badge/License-MIT-16a34a?style=for-the-badge)](LICENSE)
 
 TaskNebula is an open-source issue tracker for teams that want Linear-style
@@ -51,7 +51,7 @@ Pick the path that matches where you are deploying.
 | **One-command Docker** | Fresh Linux VM or homelab server | `curl -fsSL https://raw.githubusercontent.com/neuraparse/tasknebula/main/scripts/quickstart.sh \| bash`                                   |
 | **Docker Desktop**     | Local Mac, Windows, or Linux PC  | `curl -fsSLo compose.yml https://raw.githubusercontent.com/neuraparse/tasknebula/main/docker-compose.desktop.yml && docker compose up -d` |
 | **Pinned production**  | Repeatable self-hosted releases  | `TASKNEBULA_IMAGE=neuraparse/tasknebula:<tag> docker compose up -d`                                                                       |
-| **Source build**       | Local development or patching    | `docker compose up -d --build`                                                                                                            |
+| **Source checkout**    | Local development or patching    | Follow [Development](#development); environment provisioning is required before Compose                                                   |
 
 After boot, open **http://localhost:3000** and finish the first-run admin
 wizard.
@@ -72,14 +72,14 @@ and self-update details, use [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Features
 
-| Area                   | Highlights                                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| **Project management** | Kanban, backlog, sprints, epics, subtasks, custom fields, issue links, attachments, imports   |
-| **Collaboration**      | Comments, reactions, docs, project chat, presence, realtime updates, collaborative editing    |
-| **AI assistance**      | Draft/issue assist, cited workspace Ask, native planner, agent activity, fail-closed previews |
-| **Admin & governance** | Multi-org roles, audit logs, registration controls, webhooks, API-key and policy scaffolding  |
-| **Analytics**          | Burndown, velocity, cycle time, throughput, project health, time-in-status, dashboard cards   |
-| **Self-hosting**       | Docker-first deploy, Postgres, Redis, health checks, optional LiveKit and cron sidecar        |
+| Area                   | Highlights                                                                                            |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Project management** | Kanban, backlog, sprints, epics, subtasks, custom fields, issue links, attachments, imports           |
+| **Collaboration**      | Comments, reactions, docs, project chat, presence, realtime updates, collaborative editing            |
+| **AI assistance**      | Draft/issue assist, cited workspace Ask, native planner, agent activity, fail-closed previews         |
+| **Admin & governance** | Multi-org roles, audit logs, registration controls, webhooks, API-key and policy scaffolding          |
+| **Analytics**          | Burndown, velocity, cycle time, throughput, project health, time-in-status, dashboard cards           |
+| **Self-hosting**       | Docker-first deploy, Postgres, Redis, health checks, durable approval reconciler, optional voice/cron |
 
 Importers currently cover **Jira**, **Linear**, **GitHub**, and **CSV**.
 
@@ -92,9 +92,10 @@ Importers currently cover **Jira**, **Linear**, **GitHub**, and **CSV**.
   external LLM.
 - **Self-hosted by default.** Your app, database, Redis, uploads, and optional
   voice server run in your own environment.
-- **30 languages included.** Browser/device auto-detection, persisted language
-  choice, native-name switching, and RTL support for Arabic and Hebrew are
-  built in.
+- **30 locale catalogs included.** Browser/device auto-detection, persisted
+  language choice, native-name switching, and RTL support for Arabic and Hebrew
+  are built in. Catalog/ICU parity is automated; linguistic review continues
+  for legacy copy.
 
 ---
 
@@ -107,16 +108,16 @@ they are ready.
 
 ## Docker Image
 
-| Item              | Value                                                                                |
-| ----------------- | ------------------------------------------------------------------------------------ |
-| Repository        | [`neuraparse/tasknebula`](https://hub.docker.com/r/neuraparse/tasknebula)            |
-| Recommended tag   | `latest` for demos; use a release tag for repeatable installs                        |
-| Platform          | `linux/amd64`                                                                        |
-| Runtime port      | `3000`                                                                               |
-| Health endpoint   | `GET /api/health`                                                                    |
-| Required services | PostgreSQL 16 + `pgvector`, Redis 7                                                  |
-| Optional services | LiveKit voice rooms, cron sidecar, SMTP, experimental OAuth, OpenAI / Anthropic keys |
-| Inspect digest    | `docker buildx imagetools inspect neuraparse/tasknebula:<tag>`                       |
+| Item              | Value                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| Repository        | [`neuraparse/tasknebula`](https://hub.docker.com/r/neuraparse/tasknebula)                        |
+| Recommended tag   | `latest` for demos; use a release tag for repeatable installs                                    |
+| Platform          | `linux/amd64`                                                                                    |
+| Runtime port      | `3000`                                                                                           |
+| Health endpoint   | `GET /api/health`                                                                                |
+| Required services | PostgreSQL 16 + `pgvector`, Redis 7                                                              |
+| Optional services | LiveKit voice profile, scheduled-product cron, SMTP, experimental OAuth, OpenAI / Anthropic keys |
+| Inspect digest    | `docker buildx imagetools inspect neuraparse/tasknebula:<tag>`                                   |
 
 ---
 
@@ -127,10 +128,14 @@ TaskNebula is designed around a small production surface:
 - `web`: Next.js standalone runtime
 - `postgres`: PostgreSQL 16 with pgvector
 - `redis`: cache, realtime fan-out, and background coordination
-- optional `livekit`: voice rooms
-- optional `cron`: scheduled standup, janitor, and version-check jobs
+- `approval-reconciler`: durable post-approval outbox delivery
+- optional `livekit` (`voice` profile): voice rooms
+- optional `cron` profile: standup, janitor, embeddings, rollover, and version checks
 
-Common commands:
+First generate an ignored `.env` with unique database, Redis, auth, and LiveKit
+credentials (`bash scripts/setup.sh` does this interactively). Compose refuses to
+start when required secrets are absent. Voice remains disabled unless the
+`voice` profile and its URLs are configured. Then use:
 
 ```bash
 docker compose up -d
@@ -163,20 +168,39 @@ repeatable deployment. Use `latest` only for quick demos.
 
 ## Development
 
+For an interactive fresh-clone setup, run `bash scripts/setup.sh`. It installs
+dependencies, provisions ignored environment files, generates local secrets,
+and can start PostgreSQL/Redis and apply migrations.
+
+The equivalent manual flow is:
+
 ```bash
-pnpm install
-docker compose up -d postgres redis
 cp .env.example .env
 cp apps/web/.env.example apps/web/.env.local
+# Populate AUTH_SECRET/NEXTAUTH_SECRET, POSTGRES_PASSWORD, REDIS_PASSWORD,
+# LIVEKIT_API_KEY, and LIVEKIT_API_SECRET with unique random values. The setup
+# script performs this wiring automatically and is the recommended path.
+# DATABASE_URL in apps/web/.env.local must use the same generated Postgres
+# credentials; setup.sh also performs this URL-safe wiring.
+pnpm install
+docker compose up -d --wait postgres redis
 pnpm db:migrate
-pnpm dev
+pnpm --filter @tasknebula/web dev
 ```
+
+For bundled voice, set `LIVEKIT_URL` and `NEXT_PUBLIC_LIVEKIT_URL`, then run
+`docker compose --profile voice up -d`. The base stack does not open LiveKit's
+host-network listeners.
+
+The root `pnpm dev` starts every workspace, including the optional Hocuspocus
+collaboration service; use its documented environment contract before choosing
+that command.
 
 Before pushing code, run:
 
 ```bash
 pnpm --filter @tasknebula/mcp-server build
-node scripts/i18n-check.mjs
+pnpm i18n:check
 pnpm hygiene:check
 pnpm ui:check
 pnpm docs:check

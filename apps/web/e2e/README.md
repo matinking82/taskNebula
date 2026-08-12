@@ -2,9 +2,9 @@
 
 End-to-end tests for the Next.js app in `apps/web`, driven by
 [Playwright](https://playwright.dev). The suite covers signup, first-run
-workspace setup, the issue lifecycle, the Kanban board, the Cmd+K command
-palette, the AI draft dialog, and the public design contract across Chromium,
-Firefox, and WebKit.
+workspace setup, authenticated app surfaces, mobile layout, the issue lifecycle,
+the Kanban board, the Cmd+K command palette, the AI draft dialog, and the public
+design contract across Chromium, Firefox, and WebKit.
 
 ## Layout
 
@@ -16,6 +16,8 @@ apps/web/
     fixtures/seed.ts          # deterministic seeder (idempotent)
     auth.setup.ts             # signs in once, persists storage state
     public-surfaces.spec.ts   # public route × viewport × light/dark contract
+    app-surfaces.spec.ts      # authenticated route smoke and interaction checks
+    mobile-layout.spec.ts     # 320/390px authenticated layout contract
     signup.spec.ts            # public — email/password registration
     workspace-setup.spec.ts   # public — first-run admin wizard
     issue-lifecycle.spec.ts   # authed — create → priority → assign → close
@@ -35,11 +37,12 @@ pnpm --filter @tasknebula/web exec playwright install --with-deps
 `--with-deps` installs Linux shared libraries needed by Chromium/Firefox/WebKit
 and may prompt for sudo. Drop the flag if you already have the host deps.
 
-You also need a Postgres reachable through `DATABASE_URL`. Locally we use the
-compose stack:
+Complete the [root development setup](../../../README.md#development) first so
+the ignored environment files and required Compose secrets exist. The E2E suite
+also needs PostgreSQL and Redis:
 
 ```bash
-docker compose up -d postgres redis
+docker compose up -d --wait postgres redis
 pnpm --filter @tasknebula/db db:migrate
 ```
 
@@ -84,7 +87,8 @@ storage state under the `chromium-public` project.
 
 ## Artifacts
 
-- `apps/web/test-results/` — per-test output (HTML report, traces, video).
+- `apps/web/test-results/` — per-test traces, screenshots, and video.
+- `apps/web/playwright-report/` — HTML report.
 - Traces and screenshots are captured _only on failure_ to keep the working
   directory small. Open the HTML report with
   `pnpm --filter @tasknebula/web exec playwright show-report`.
@@ -97,12 +101,11 @@ suite, and upload trace artifacts on failure.
 
 ## Known follow-ups
 
-- **AI mocking strategy.** `ai-draft.spec.ts` currently mocks the
-  `/api/ai/draft-issues` endpoint via `page.route(...)`. The intended
-  replacement is a server-side stub keyed off `PLAYWRIGHT_AI_STUB=1` (set in
-  the Playwright webServer config) so we exercise the real handler against a
-  fake provider.
-- **Sharding.** CI currently runs a single shard. For larger suites switch to
-  `--shard=N/M` and emit JUnit so GitHub annotations group correctly.
+- **AI provider coverage.** `ai-draft.spec.ts` deliberately mocks
+  `/api/ai/draft-issues` via `page.route(...)`; add a separate
+  controlled-environment route/provider test rather than a production runtime
+  flag.
+- **Sharding.** When E2E is added to CI, start with one shard. For larger suites
+  switch to `--shard=N/M` and emit JUnit so GitHub annotations group correctly.
 - **Visual regression.** Not in scope here; covered in the design-system QA
   task.

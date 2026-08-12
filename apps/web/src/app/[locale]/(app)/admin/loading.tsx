@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import {
   Skeleton,
   SkeletonPageHeader,
@@ -5,11 +6,13 @@ import {
   SkeletonTable,
 } from '@/components/ui/skeleton';
 
-export default function AdminLoading() {
+export default async function AdminLoading() {
+  const t = await getTranslations('pagesAdmin');
+
   return (
-    <div className="flex h-full flex-col overflow-y-auto custom-scrollbar">
+    <div className="custom-scrollbar flex h-full flex-col overflow-y-auto">
       <div className="space-y-6 px-6 py-6">
-        <SkeletonPageHeader />
+        <SkeletonPageHeader title={t('nav.overview')} />
         <SkeletonStats count={4} />
         <div className="flex items-center gap-2">
           {Array.from({ length: 4 }).map((_, i) => (

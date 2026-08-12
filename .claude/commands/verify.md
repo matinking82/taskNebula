@@ -1,12 +1,12 @@
 ---
 description: Run the complete TaskNebula local verification gate
-allowed-tools: Bash(pnpm --filter @tasknebula/mcp-server build:*), Bash(node scripts/i18n-check.mjs:*), Bash(pnpm hygiene:check:*), Bash(pnpm ui:check:*), Bash(pnpm docs:check:*), Bash(pnpm type-check:*), Bash(pnpm lint:*), Bash(pnpm test:*), Bash(pnpm --filter @tasknebula/web openapi:check:*), Bash(git diff --check:*)
+allowed-tools: Bash(pnpm --filter @tasknebula/mcp-server build:*), Bash(pnpm i18n:check:*), Bash(pnpm hygiene:check:*), Bash(pnpm ui:check:*), Bash(pnpm docs:check:*), Bash(pnpm type-check:*), Bash(pnpm lint:*), Bash(pnpm test:*), Bash(pnpm --filter @tasknebula/web openapi:check:*), Bash(git diff --check:*)
 ---
 
 Run every gate from the repository root and report each result independently:
 
 1. `pnpm --filter @tasknebula/mcp-server build`
-2. `node scripts/i18n-check.mjs`
+2. `pnpm i18n:check`
 3. `pnpm hygiene:check`
 4. `pnpm ui:check`
 5. `pnpm docs:check`

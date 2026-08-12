@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCreateIssue } from '@/lib/hooks/use-issues';
 import { useWorkflowStatuses } from '@/lib/hooks/use-workflow-statuses';
@@ -58,7 +58,10 @@ export function CreateIssueModal({
   );
 
   // Sorted statuses by position
-  const sortedStatuses = statuses ? [...statuses].sort((a, b) => a.position - b.position) : [];
+  const sortedStatuses = useMemo(
+    () => (statuses ? [...statuses].sort((a, b) => a.position - b.position) : []),
+    [statuses]
+  );
 
   // Default selectedStatusId to the first status by position when statuses load
   useEffect(() => {

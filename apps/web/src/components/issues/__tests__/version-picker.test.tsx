@@ -121,9 +121,16 @@ describe('VersionPicker', () => {
     const user = userEvent.setup();
     const onChange = jest.fn();
 
-    renderPicker(<VersionPicker projectId="project-1" value={[v1]} onChange={onChange} />);
+    renderPicker(
+      <VersionPicker
+        projectId="project-1"
+        value={[v1]}
+        onChange={onChange}
+        ariaLabel="Fix versions"
+      />
+    );
 
-    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('combobox', { name: 'Fix versions 1.0.0' }));
     await user.click(await screen.findByText('1.1.0'));
 
     expect(onChange).toHaveBeenCalledWith(['v1', 'v2']);

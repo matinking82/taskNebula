@@ -280,6 +280,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
           )}
           onClick={star.toggle}
           disabled={star.isMutating}
+          aria-label={star.isStarred ? t('starred') : t('star')}
           aria-pressed={star.isStarred}
         >
           <Star className={cn('h-3.5 w-3.5', star.isStarred && 'fill-current')} />
@@ -294,6 +295,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
           )}
           onClick={watch.toggle}
           disabled={watch.isMutating}
+          aria-label={watch.isWatching ? t('watching') : t('watch')}
           aria-pressed={watch.isWatching}
         >
           <Bell className={cn('h-3.5 w-3.5', watch.isWatching && 'fill-current')} />
@@ -304,6 +306,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
           size="sm"
           className="text-muted-foreground hover:text-foreground ease-snap gap-1.5 rounded-md transition-colors duration-150"
           onClick={handleCopyLink}
+          aria-label={copied ? t('copied') : t('copyLink')}
         >
           {copied ? (
             <>

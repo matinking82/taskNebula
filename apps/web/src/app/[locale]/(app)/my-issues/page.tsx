@@ -21,6 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function MyIssuesPage() {
   const session = await auth();
+  const tNav = await getTranslations('nav');
 
   if (!session?.user?.id) {
     redirect('/auth/signin');
@@ -31,7 +32,7 @@ export default async function MyIssuesPage() {
   }
 
   return (
-    <Suspense fallback={<MyIssuesLoadingShell />}>
+    <Suspense fallback={<MyIssuesLoadingShell title={tNav('my_issues')} />}>
       <MyIssuesClient />
     </Suspense>
   );

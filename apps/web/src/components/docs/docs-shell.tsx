@@ -597,7 +597,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                 updateQueryParams({ spaceId, pageId: null });
               }}
             >
-              <SelectTrigger className="h-8">
+              <SelectTrigger className="h-8" aria-label={t('shell.selectSpace')}>
                 <SelectValue placeholder={t('shell.selectSpace')} />
               </SelectTrigger>
               <SelectContent>
@@ -720,7 +720,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
           <div className="px-3 py-8 text-center">
             <p className="text-muted-foreground text-sm">{t('shell.noPagesYet')}</p>
             {canCreateInContext ? (
-              <p className="text-muted-foreground/70 mt-1 text-[11px]">{t('shell.noPagesHint')}</p>
+              <p className="text-muted-foreground mt-1 text-[11px]">{t('shell.noPagesHint')}</p>
             ) : null}
           </div>
         )}
@@ -832,6 +832,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
             <DetailRow label={t('shell.row.publicAccess')}>
               <div className="flex items-center gap-3">
                 <Switch
+                  aria-label={t('shell.row.publicAccess')}
                   checked={currentPage.share?.public?.enabled}
                   disabled={!currentPage.share?.canManagePublic || updateShare.isPending}
                   onCheckedChange={(checked) =>
@@ -1083,7 +1084,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                 {canEditCurrentPage && (
                   <div className="flex gap-2">
                     <Select value={issueToAttach} onValueChange={setIssueToAttach}>
-                      <SelectTrigger className="h-9 flex-1">
+                      <SelectTrigger className="h-9 flex-1" aria-label={t('shell.attachTask')}>
                         <SelectValue placeholder={t('shell.attachTask')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1212,6 +1213,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
   return (
     <>
       <div className="bg-background flex h-full min-h-0 flex-col overflow-hidden">
+        <h1 className="sr-only">{t('shell.docsTitle')}</h1>
         <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-2 lg:hidden">
           <div className="min-w-0 truncate text-sm font-medium">
             {currentPage?.title || activeSpace?.name || t('shell.docsTitle')}
@@ -1449,33 +1451,30 @@ function TreeNode({
   return (
     <div>
       <div
-        aria-selected={isActive || undefined}
         data-active={isActive || undefined}
         className="row-interactive group flex items-center gap-1 px-1.5 py-1 text-sm"
         style={{ paddingLeft: `${depth * 12 + 6}px` }}
       >
-        <button
-          type="button"
-          className={cn(
-            'text-muted-foreground hover:bg-accent/60 flex h-5 w-5 items-center justify-center rounded-sm transition-colors duration-150',
-            !hasChildren && 'opacity-0'
-          )}
-          onClick={() => setOpen((value) => !value)}
-          aria-label={hasChildren ? (open ? t('shell.collapse') : t('shell.expand')) : undefined}
-        >
-          {hasChildren ? (
-            open ? (
+        {hasChildren ? (
+          <button
+            type="button"
+            className="text-muted-foreground hover:bg-accent/60 flex h-5 w-5 items-center justify-center rounded-sm transition-colors duration-150"
+            onClick={() => setOpen((value) => !value)}
+            aria-label={open ? t('shell.collapse') : t('shell.expand')}
+          >
+            {open ? (
               <ChevronDown className="h-3.5 w-3.5" />
             ) : (
               <ChevronRight className="h-3.5 w-3.5" />
-            )
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5" />
-          )}
-        </button>
+            )}
+          </button>
+        ) : (
+          <span aria-hidden="true" className="h-5 w-5 shrink-0" />
+        )}
 
         <button
           type="button"
+          aria-current={isActive ? 'page' : undefined}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
           onClick={() => onSelect(node.id)}
         >
@@ -1635,7 +1634,12 @@ function CompactSwitchRow({
         <div className="text-sm font-medium">{label}</div>
         <div className="text-muted-foreground mt-1 text-xs">{hint}</div>
       </div>
-      <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
+      <Switch
+        aria-label={label}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onCheckedChange}
+      />
     </div>
   );
 }

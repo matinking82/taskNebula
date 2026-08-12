@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Triage suggestions panel for the issue detail page (P0-02).
+ * Triage suggestions panel for the issue detail page.
  *
  * Renders the most recent pending triage suggestion for an issue and
  * exposes Apply controls. Polls /api/issues/[id]/triage so suggestions

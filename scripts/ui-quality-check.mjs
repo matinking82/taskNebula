@@ -59,6 +59,13 @@ const RULES = [
     exemptions: ['/components/marketing/', '/components/landing/'],
   },
   {
+    id: 'broad-ui-transition',
+    description:
+      'Product motion must name the properties it animates; transition-all can animate layout unexpectedly.',
+    pattern: /\btransition-all\b/g,
+    exemptions: [],
+  },
+  {
     id: 'heavy-floating-shadow',
     description:
       'Product overlays use restrained elevation; shadow-xl/2xl is reserved for marketing artwork.',

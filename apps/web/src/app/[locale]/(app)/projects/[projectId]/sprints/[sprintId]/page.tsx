@@ -87,6 +87,7 @@ export default function SprintDetailPage({
   if (sprintLoading || issuesLoading || permissionsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
+        <h1 className="sr-only">{t('loadingSprint')}</h1>
         <div className="text-muted-foreground">{t('loadingSprint')}</div>
       </div>
     );
@@ -102,7 +103,7 @@ export default function SprintDetailPage({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
         <Lock className="text-muted-foreground h-12 w-12" />
-        <div className="text-lg font-medium">{t('accessDenied')}</div>
+        <h1 className="text-lg font-medium">{t('accessDenied')}</h1>
         <div className="text-muted-foreground">{t('noSprintPermission')}</div>
         <Button asChild variant="outline">
           <Link href="/projects">{t('backToProjects')}</Link>
@@ -114,7 +115,7 @@ export default function SprintDetailPage({
   if (!sprint) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-muted-foreground">{t('sprintNotFound')}</div>
+        <h1 className="text-muted-foreground">{t('sprintNotFound')}</h1>
       </div>
     );
   }

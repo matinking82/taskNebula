@@ -124,7 +124,11 @@ function InitiativeRow({ node, depth }: { node: InitiativeNode; depth: number })
         <StatusBadge status={node.status} />
 
         <div className="w-40 shrink-0">
-          <Progress value={rollup?.percent ?? 0} className="h-2" />
+          <Progress
+            value={rollup?.percent ?? 0}
+            className="h-2"
+            aria-label={`${node.name} — ${rollup?.percent ?? 0}%`}
+          />
         </div>
         <div className="text-muted-foreground w-12 shrink-0 text-right font-mono text-xs tabular-nums">
           {rollup ? `${rollup.percent}%` : '—'}

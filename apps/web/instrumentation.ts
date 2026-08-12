@@ -16,7 +16,7 @@
  * whenever a server-side error escapes a Route Handler / RSC. We dynamically
  * import @sentry/nextjs so the bundle stays slim when Sentry is not wired up.
  *
- * Roadmap reference: OBS-35 (Langfuse + OpenTelemetry).
+ * Durable trace/replay work is tracked in docs/ROADMAP_2026.md.
  */
 
 export async function register() {

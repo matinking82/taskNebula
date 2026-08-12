@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateIssueModal } from '@/components/issues/create-issue-modal';
 import { useDrafts, type Draft } from '@/lib/drafts/use-drafts';
 import { useProjects } from '@/lib/hooks/use-projects';
@@ -106,38 +105,64 @@ export function DraftsList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs
-          value={filter}
-          onValueChange={(v) => setFilter(v as DraftFilter)}
-          className="w-full sm:w-auto"
-        >
-          <TabsList>
-            <TabsTrigger value="all" className="gap-2">
-              {t('drafts.tabs.all')}
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                {counts.all}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="work_item" className="gap-2">
-              {t('drafts.tabs.work_item')}
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                {counts.work_item}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="page" className="gap-2">
-              {t('drafts.tabs.page')}
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                {counts.page}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="comment" className="gap-2">
-              {t('drafts.tabs.comment')}
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                {counts.comment}
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="bg-muted text-muted-foreground inline-flex h-9 w-full items-center justify-center rounded-md p-1 sm:w-auto">
+          <button
+            type="button"
+            aria-pressed={filter === 'all'}
+            onClick={() => setFilter('all')}
+            className={cn(
+              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
+              filter === 'all' && 'bg-background text-foreground shadow-sm'
+            )}
+          >
+            {t('drafts.tabs.all')}
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+              {counts.all}
+            </Badge>
+          </button>
+          <button
+            type="button"
+            aria-pressed={filter === 'work_item'}
+            onClick={() => setFilter('work_item')}
+            className={cn(
+              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
+              filter === 'work_item' && 'bg-background text-foreground shadow-sm'
+            )}
+          >
+            {t('drafts.tabs.work_item')}
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+              {counts.work_item}
+            </Badge>
+          </button>
+          <button
+            type="button"
+            aria-pressed={filter === 'page'}
+            onClick={() => setFilter('page')}
+            className={cn(
+              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
+              filter === 'page' && 'bg-background text-foreground shadow-sm'
+            )}
+          >
+            {t('drafts.tabs.page')}
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+              {counts.page}
+            </Badge>
+          </button>
+          <button
+            type="button"
+            aria-pressed={filter === 'comment'}
+            onClick={() => setFilter('comment')}
+            className={cn(
+              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
+              filter === 'comment' && 'bg-background text-foreground shadow-sm'
+            )}
+          >
+            {t('drafts.tabs.comment')}
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+              {counts.comment}
+            </Badge>
+          </button>
+        </div>
 
         <div className="flex items-center gap-2">
           <div className="relative">

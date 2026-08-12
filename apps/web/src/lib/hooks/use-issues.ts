@@ -17,7 +17,7 @@ export interface Issue {
   title: string;
   description: string | null;
   /** ProseMirror JSON snapshot mirroring the collaborative editor state.
-   *  Set by the collab editor (P1-09 follow-up). When present the read
+   *  Set by the collaborative editor. When present the read
    *  path renders this rich content; otherwise it falls back to `description`. */
   descriptionRich?: Record<string, unknown> | null;
   type: string;

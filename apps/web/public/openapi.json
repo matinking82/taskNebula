@@ -1474,6 +1474,9 @@
               "redis": {
                 "type": "string"
               },
+              "collaboration": {
+                "type": "string"
+              },
               "livekit": {
                 "type": "string"
               },
@@ -1485,6 +1488,7 @@
               "database",
               "memory",
               "redis",
+              "collaboration",
               "livekit",
               "smtp"
             ]
@@ -3645,7 +3649,7 @@
     "/api/health": {
       "get": {
         "summary": "Service health check",
-        "description": "Returns the health status of the application — database, memory, redis, livekit and smtp checks. Used by container orchestrators and monitoring.",
+        "description": "Returns the health status of the application — database, memory, Redis, collaboration, LiveKit, and SMTP checks. Used by container orchestrators and monitoring.",
         "tags": [
           "Health"
         ],

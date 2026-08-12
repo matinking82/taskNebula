@@ -29,14 +29,21 @@ Thank you for your interest in contributing to TaskNebula! This document provide
 3. **Setup environment variables**
 
    ```bash
+   cp .env.example .env
    cp apps/web/.env.example apps/web/.env.local
-   cp packages/db/.env.example packages/db/.env
    ```
 
-4. **Start PostgreSQL** (using Docker)
+   The recommended `bash scripts/setup.sh` path generates unique auth,
+   PostgreSQL, Redis, LiveKit, and cron/reconciler credentials, locks the ignored
+   environment files to mode `0600`, and wires a URL-safe web `DATABASE_URL`.
+   For a manual setup, generate the same values with `openssl rand`, keep them
+   outside git, and ensure root `.env` and `apps/web/.env.local` use matching
+   database/auth credentials.
+
+4. **Start PostgreSQL and Redis** (using Docker Compose v2)
 
    ```bash
-   docker-compose up -d postgres
+   docker compose up -d --wait postgres redis
    ```
 
 5. **Run database migrations**
@@ -47,10 +54,14 @@ Thank you for your interest in contributing to TaskNebula! This document provide
    pnpm db:migrate
    ```
 
-6. **Start development server**
+6. **Start the web development server**
+
    ```bash
-   pnpm dev
+   pnpm --filter @tasknebula/web dev
    ```
+
+   Root `pnpm dev` also starts the optional Hocuspocus workspace and therefore
+   requires its environment contract; see `services/hocuspocus/README.md`.
 
 ## 📁 Project Structure
 
@@ -184,7 +195,7 @@ pnpm --filter @tasknebula/web test:coverage
 5. **Create a Pull Request**
    - Provide a clear description of the changes
    - Reference any related issues
-   - Ensure CI passes — `.github/workflows/ci.yml` runs `pnpm type-check`, `pnpm lint`, and `pnpm test` on every push/PR to `main`; run the same commands locally first
+   - Ensure CI passes — it builds the MCP package and runs i18n, repository hygiene, UI/documentation contracts, OpenAPI drift, type-check, lint, and unit tests; use the complete command list in `README.md` locally first
 
 ### PR Checklist
 

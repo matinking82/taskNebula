@@ -3,13 +3,22 @@ import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
   title: ReactNode;
+  headingLevel?: 1 | 2;
   description?: ReactNode;
   kicker?: ReactNode;
   actions?: ReactNode;
   className?: string;
 }
 
-export function PageHeader({ title, description, kicker, actions, className }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  headingLevel = 1,
+  description,
+  kicker,
+  actions,
+  className,
+}: PageHeaderProps) {
+  const Heading = headingLevel === 2 ? 'h2' : 'h1';
   return (
     <header
       className={cn(
@@ -19,9 +28,9 @@ export function PageHeader({ title, description, kicker, actions, className }: P
     >
       <div className="min-w-0 space-y-1">
         {kicker ? <div className="kicker">{kicker}</div> : null}
-        <h1 className="text-foreground text-balance text-2xl font-medium leading-tight sm:text-[28px]">
+        <Heading className="text-foreground text-balance text-2xl font-medium leading-tight sm:text-[28px]">
           {title}
-        </h1>
+        </Heading>
         {description ? (
           <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">{description}</p>
         ) : null}

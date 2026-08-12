@@ -105,7 +105,10 @@ export function TeamspaceManager({ organizationId, canManage }: TeamspaceManager
   const { currentTeamId, setCurrentTeam } = useOrganization();
   const { data: teamspaces = [], isLoading } = useTeamspaces(organizationId);
   const { data: orgMembersData } = useOrganizationMembers(canManage ? organizationId : null);
-  const organizationMembers = orgMembersData?.members ?? [];
+  const organizationMembers = useMemo(
+    () => orgMembersData?.members ?? [],
+    [orgMembersData?.members]
+  );
 
   const createMutation = useCreateTeamspace(organizationId);
   const updateMutation = useUpdateTeamspace(organizationId);
@@ -627,7 +630,7 @@ export function TeamspaceManager({ organizationId, canManage }: TeamspaceManager
                 <div
                   key={teamspace.id}
                   className={cn(
-                    'animate-fade-up surface-card ease-smooth rounded-lg p-6 transition-all duration-200',
+                    'animate-fade-up surface-card ease-smooth rounded-lg p-6 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-200',
                     isActive && 'border-primary/20 bg-primary/5'
                   )}
                 >

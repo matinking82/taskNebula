@@ -30,7 +30,7 @@ const toastVariants = cva(
     'bg-popover text-popover-foreground shadow-md',
     "before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-[var(--toast-stripe)] before:content-['']",
     // motion
-    'transition-all duration-200 ease-snap',
+    'transition-[opacity,transform] duration-200 ease-snap',
     'data-[swipe=cancel]:translate-x-0',
     'data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)]',
     'data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]',
@@ -126,7 +126,7 @@ const ToastClose = React.forwardRef<
     <ToastPrimitives.Close
       ref={ref}
       className={cn(
-        'text-muted-foreground absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-all duration-150',
+        'text-muted-foreground absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-[color,background-color,opacity] duration-150',
         'hover:bg-muted/60 hover:text-foreground',
         'focus-visible:ring-accent-indigo focus-visible:ring-offset-background focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
         'group-hover:opacity-100',

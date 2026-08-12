@@ -237,6 +237,9 @@ export function ProjectSettingsContent({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {!isDialog && activeTabMeta ? (
+          <h2 className="sr-only">{t(activeTabMeta.labelKey)}</h2>
+        ) : null}
         {isDialog && activeTabMeta && ActiveTabIcon ? (
           <div className="border-border/70 bg-background/80 hidden shrink-0 items-center gap-2 border-b px-6 py-3 md:flex">
             <ActiveTabIcon className="text-muted-foreground h-4 w-4" />

@@ -2,10 +2,14 @@ import { getTranslations } from 'next-intl/server';
 import { Skeleton, SkeletonKanbanColumn } from '@/components/ui/skeleton';
 
 export default async function BoardLoading() {
-  const t = await getTranslations('userSecurity');
+  const [t, tProjects] = await Promise.all([
+    getTranslations('userSecurity'),
+    getTranslations('pagesProjects'),
+  ]);
 
   return (
     <div className="flex h-full flex-col">
+      <h1 className="sr-only">{tProjects('tabBoard')}</h1>
       <div className="border-border shrink-0 border-b px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

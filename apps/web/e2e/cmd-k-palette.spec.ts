@@ -19,6 +19,7 @@ test.describe('cmd+k command palette', () => {
           '',
           'data: {"type":"done","usage":{"model":"playwright-stub","inputTokens":0,"outputTokens":0,"costUsd":0,"latencyMs":0,"reranked":false,"promptHash":""}}',
           '',
+          '',
         ].join('\n'),
       });
     });

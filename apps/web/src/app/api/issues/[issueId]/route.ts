@@ -11,6 +11,7 @@ import {
   workflowStatuses,
   workflows,
   projects,
+  sprints,
   projectMembers,
   organizationMembers,
   users,
@@ -180,18 +181,18 @@ async function checkIssuePermission(
 const updateIssueSchema = z.object({
   title: z.string().min(1).max(500).optional(),
   description: z.string().optional(),
-  // ProseMirror JSON snapshot from the collaborative editor
-  // (P1-09 follow-up). Persisted into `issues.description_rich` so the
+  // ProseMirror JSON snapshot from the collaborative editor. Persisted into
+  // `issues.description_rich` so the
   // non-collab read path can rebuild lists / bold / links / code blocks.
   descriptionRich: z.record(z.any()).nullable().optional(),
   status: z.string().optional(), // Status category (backlog, in_progress, etc.)
-  statusId: z.string().optional(),
+  statusId: z.string().min(1).optional(),
   priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).optional(),
-  assigneeId: z.string().nullable().optional(),
+  assigneeId: z.string().min(1).nullable().optional(),
   labels: z.array(z.string()).optional(),
-  sprintId: z.string().nullable().optional(),
-  epicId: z.string().nullable().optional(),
-  parentId: z.string().nullable().optional(),
+  sprintId: z.string().min(1).nullable().optional(),
+  epicId: z.string().min(1).nullable().optional(),
+  parentId: z.string().min(1).nullable().optional(),
   estimate: z.number().nullable().optional(),
   // Agile story points (issues.story_points). Non-negative integer or null.
   storyPoints: z.number().int().nonnegative().nullable().optional(),
@@ -298,6 +299,136 @@ export const PATCH = withValidation({
     const agentPolicy = readAgentPolicyMarker(validatedData.agentPolicy);
     const issueInput = stripAgentPolicyMarker(validatedData);
 
+    const [currentProject] = await db
+      .select({
+        id: projects.id,
+        organizationId: projects.organizationId,
+        defaultWorkflowId: projects.defaultWorkflowId,
+      })
+      .from(projects)
+      .where(eq(projects.id, currentIssue.projectId))
+      .limit(1);
+
+    if (!currentProject || currentProject.organizationId !== currentIssue.organizationId) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    if (issueInput.parentId) {
+      if (issueInput.parentId === issueId) {
+        return NextResponse.json({ error: 'Issue cannot be its own parent' }, { status: 400 });
+      }
+      const [parentIssue] = await db
+        .select({
+          id: issues.id,
+          projectId: issues.projectId,
+          organizationId: issues.organizationId,
+        })
+        .from(issues)
+        .where(eq(issues.id, issueInput.parentId))
+        .limit(1);
+      if (
+        !parentIssue ||
+        parentIssue.projectId !== currentIssue.projectId ||
+        parentIssue.organizationId !== currentIssue.organizationId
+      ) {
+        return NextResponse.json(
+          { error: 'Parent issue must belong to the same project' },
+          { status: 400 }
+        );
+      }
+    }
+    if (issueInput.epicId) {
+      if (issueInput.epicId === issueId) {
+        return NextResponse.json({ error: 'invalid_epic' }, { status: 400 });
+      }
+      const [epicIssue] = await db
+        .select({
+          id: issues.id,
+          projectId: issues.projectId,
+          organizationId: issues.organizationId,
+          type: issues.type,
+        })
+        .from(issues)
+        .where(eq(issues.id, issueInput.epicId))
+        .limit(1);
+      if (
+        !epicIssue ||
+        epicIssue.type !== 'epic' ||
+        epicIssue.projectId !== currentIssue.projectId ||
+        epicIssue.organizationId !== currentIssue.organizationId
+      ) {
+        return NextResponse.json({ error: 'invalid_epic' }, { status: 400 });
+      }
+    }
+
+    if (issueInput.sprintId) {
+      const [sprint] = await db
+        .select({ id: sprints.id })
+        .from(sprints)
+        .where(
+          and(eq(sprints.id, issueInput.sprintId), eq(sprints.projectId, currentIssue.projectId))
+        )
+        .limit(1);
+      if (!sprint) {
+        return NextResponse.json({ error: 'invalid_sprint' }, { status: 400 });
+      }
+    }
+
+    if (issueInput.assigneeId) {
+      const [assigneeMembership] = await db
+        .select({ userId: organizationMembers.userId })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.userId, issueInput.assigneeId),
+            eq(organizationMembers.organizationId, currentIssue.organizationId),
+            eq(organizationMembers.status, 'active')
+          )
+        )
+        .limit(1);
+      if (!assigneeMembership) {
+        return NextResponse.json({ error: 'invalid_assignee' }, { status: 400 });
+      }
+    }
+
+    if (issueInput.statusId && issueInput.statusId !== currentIssue.statusId) {
+      let workflowId = currentProject.defaultWorkflowId;
+      if (!workflowId) {
+        const [defaultWorkflow] = await db
+          .select({ id: workflows.id })
+          .from(workflows)
+          .where(
+            and(
+              eq(workflows.organizationId, currentIssue.organizationId),
+              eq(workflows.isDefault, true)
+            )
+          )
+          .limit(1);
+        workflowId = defaultWorkflow?.id ?? null;
+      }
+
+      if (!workflowId) {
+        return NextResponse.json({ error: 'No workflow found' }, { status: 500 });
+      }
+
+      const [targetStatus] = await db
+        .select({ id: workflowStatuses.id })
+        .from(workflowStatuses)
+        .where(
+          and(
+            eq(workflowStatuses.id, issueInput.statusId),
+            eq(workflowStatuses.workflowId, workflowId)
+          )
+        )
+        .limit(1);
+      if (!targetStatus) {
+        return NextResponse.json(
+          { error: 'Status does not belong to the project workflow' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Determine required permissions based on what's being changed
     const permissionChecks: IssueAction[] = [];
 
@@ -305,9 +436,14 @@ export const PATCH = withValidation({
     if (
       issueInput.title ||
       issueInput.description !== undefined ||
+      issueInput.descriptionRich !== undefined ||
       issueInput.priority ||
       issueInput.labels ||
+      issueInput.epicId !== undefined ||
+      issueInput.parentId !== undefined ||
       issueInput.estimate !== undefined ||
+      issueInput.estimateHours !== undefined ||
+      issueInput.estimateSource !== undefined ||
       issueInput.dueDate !== undefined ||
       issueInput.resolution !== undefined ||
       issueInput.flagged !== undefined ||

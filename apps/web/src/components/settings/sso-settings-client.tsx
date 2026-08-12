@@ -260,10 +260,13 @@ function SamlSection({ organizationId }: { organizationId: string }) {
       <div className="border-border flex items-center justify-between gap-4 border-t pt-4">
         <div className="flex items-center gap-3">
           <Switch
+            id="sso-enabled"
             checked={form.enabled}
             onCheckedChange={(checked) => setForm({ ...form, enabled: checked })}
           />
-          <span className="text-muted-foreground text-sm">{t('sso.enable_label')}</span>
+          <Label htmlFor="sso-enabled" className="text-muted-foreground text-sm">
+            {t('sso.enable_label')}
+          </Label>
         </div>
         <Button onClick={() => save.mutate()} disabled={save.isPending}>
           {t('sso.save_config')}

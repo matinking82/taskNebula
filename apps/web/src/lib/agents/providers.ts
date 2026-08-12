@@ -73,7 +73,7 @@ type ProviderParams = {
   modelConfigId?: string | null;
   modelConfigName?: string | null;
   modelTuning?: AgentModelConfigSettings | null;
-  // Passed by engine.ts for audit/budget attribution (P0-07 cost guard).
+  // Passed by engine.ts for audit/budget attribution.
   userId?: string | null;
   signal?: AbortSignal;
   /** Test/internal override; production defaults to a finite two minutes. */
@@ -719,14 +719,14 @@ async function generateAnthropicPlan(params: ProviderParams): Promise<AgentProvi
   );
   const rawText = textBlock?.text ?? '';
 
-  // Record cache metrics for audit logging. The audit table from task #7 is
-  // optional — if it's not present we just drop the numbers. We still emit
+  // Record cache metrics for audit logging. The hook is optional — if it is
+  // unavailable we drop the numbers. We still emit
   // a structured log line so a dashboard/aggregator can scrape it.
   try {
     const usage = extractAnthropicCacheUsage(payload);
     if (usage.cacheReadTokens > 0 || usage.cacheCreationTokens > 0) {
-      // Lazy require so this stays optional. The function is a no-op if the
-      // module hasn't been added yet (task #7 hook).
+      // Lazy import keeps audit attribution optional. The function is a no-op
+      // when its backing context is unavailable.
       const auditMod = await import('../ai/audit-hook').catch(() => null);
       if (auditMod && typeof auditMod.recordPromptCacheUsage === 'function') {
         auditMod.recordPromptCacheUsage({

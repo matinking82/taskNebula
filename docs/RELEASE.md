@@ -46,9 +46,10 @@ In `CHANGELOG.md`, move items from `[Unreleased]` into a new
 
 ## 4. Verify locally
 
-Run the complete `/verify` command. At minimum it covers the MCP build, i18n,
-repository hygiene, UI contract, type-check, lint, tests, OpenAPI drift, and
-`git diff --check`.
+Run the complete verification workflow (`/verify` in Claude Code, or the
+canonical command list in `README.md`). It covers the MCP build, i18n,
+repository hygiene, UI and documentation contracts, type-check, lint, tests,
+OpenAPI drift, and `git diff --check`.
 
 ## 5. Commit, tag, push (GitHub authorization required)
 

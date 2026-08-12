@@ -9,7 +9,7 @@ RUN apt-get update && \
 
 RUN chmod 700 /var/lib/postgresql/data || true
 
-# Custom entrypoint: fixes scram-sha-256 → md5 on every start
+# Custom entrypoint: refreshes the configured role password as SCRAM on every start
 COPY docker-entrypoint-override.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint-override.sh
 ENTRYPOINT ["docker-entrypoint-override.sh"]

@@ -1,7 +1,7 @@
 # syntax=docker.io/docker/dockerfile:1
 
 # =============================================================================
-# Next.js 15 Production Dockerfile - 2025 Best Practices
+# Next.js 15 production Dockerfile
 # Based on: https://github.com/vercel/next.js/tree/canary/examples/with-docker
 # =============================================================================
 

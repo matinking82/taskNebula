@@ -44,7 +44,7 @@ export function PresenceAvatars({ issueId }: PresenceAvatarsProps) {
                   <span className="relative -ml-1.5 inline-flex first:ml-0">
                     <Avatar
                       className={cn(
-                        'ring-background ease-snap h-6 w-6 ring-2 transition-all duration-150',
+                        'ring-background ease-snap h-6 w-6 ring-2 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                         isActive || isSpeaking ? 'ring-accent-emerald/70' : 'ring-background'
                       )}
                     >

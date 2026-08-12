@@ -64,8 +64,8 @@ describe('DraftsList', () => {
     render(<DraftsList />);
 
     expect(screen.getByText('Investigate flaky CI job')).toBeInTheDocument();
-    // Filter tabs should show the live count (all=1, work_item=1)
-    expect(screen.getByRole('tab', { name: /All/i })).toBeInTheDocument();
+    // Filter buttons expose the active state and live count (all=1, work_item=1).
+    expect(screen.getByRole('button', { name: /All/i })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows the empty state when there are no drafts', () => {

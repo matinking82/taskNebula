@@ -1,9 +1,13 @@
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageFrame } from '@/components/ui/page-frame';
 
-export default function SprintsLoading() {
+export default async function SprintsLoading() {
+  const t = await getTranslations('pagesProjects');
+
   return (
     <PageFrame contentClassName="space-y-5">
+      <h1 className="sr-only">{t('sprintsTitle')}</h1>
       <div
         className="flex flex-col gap-4 py-1 sm:flex-row sm:items-end sm:justify-between"
         aria-busy="true"

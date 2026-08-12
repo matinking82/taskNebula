@@ -1,5 +1,5 @@
 /**
- * POST /api/issues/:issueId/timer/stop (task #10).
+ * POST /api/issues/:issueId/timer/stop.
  *
  * Stops the caller's currently running timer on this issue. If no timer is
  * running (or it's for a different issue), 404 is returned. Once the row is
@@ -21,7 +21,7 @@ const StopBody = z
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ issueId: string }> },
+  { params }: { params: Promise<{ issueId: string }> }
 ) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -50,16 +50,13 @@ export async function POST(
       and(
         eq(timeEntries.userId, userId!),
         eq(timeEntries.issueId, issueId),
-        isNull(timeEntries.endedAt),
-      ),
+        isNull(timeEntries.endedAt)
+      )
     )
     .limit(1);
 
   if (!running) {
-    return NextResponse.json(
-      { error: 'No running timer for this issue' },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: 'No running timer for this issue' }, { status: 404 });
   }
 
   const [updated] = await db

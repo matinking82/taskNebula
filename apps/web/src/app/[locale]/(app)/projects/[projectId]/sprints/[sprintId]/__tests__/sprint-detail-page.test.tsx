@@ -165,7 +165,7 @@ describe('SprintDetailPage', () => {
     );
 
     // Sprint name, goal, and active status badge all render.
-    // Two nodes (page h1 + stats h3) both render the name; target the h1.
+    // Each project route owns its page h1; the shared project layout is a breadcrumb shell.
     expect(
       await screen.findByRole('heading', { name: 'Sprint Alpha', level: 1 })
     ).toBeInTheDocument();

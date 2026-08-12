@@ -38,7 +38,9 @@ function serializeDebugValue(value: unknown, depth = 0): unknown {
 
   if (value && typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>).slice(0, 40);
-    return Object.fromEntries(entries.map(([key, entry]) => [key, serializeDebugValue(entry, depth + 1)]));
+    return Object.fromEntries(
+      entries.map(([key, entry]) => [key, serializeDebugValue(entry, depth + 1)])
+    );
   }
 
   return value;
@@ -73,7 +75,7 @@ function isServerDebugEnabled() {
     return false;
   }
 
-  return process.env.CHAT_DEBUG !== '0';
+  return process.env.CHAT_DEBUG === '1';
 }
 
 export function chatClientDebug(scope: string, payload?: Record<string, unknown>) {

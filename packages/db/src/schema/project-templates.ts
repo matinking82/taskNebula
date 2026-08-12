@@ -5,13 +5,15 @@ import { workflows } from './workflows';
 import { permissionSchemes } from './permission-schemes';
 
 /**
- * Project Templates - Reusable project configurations
- * #1 most requested Jira feature - save entire project setup
+ * Project templates — reusable project configurations.
  */
 export const projectTemplates = pgTable('project_templates', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  organizationId: text('organization_id')
-    .references(() => organizations.id, { onDelete: 'cascade' }),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  organizationId: text('organization_id').references(() => organizations.id, {
+    onDelete: 'cascade',
+  }),
 
   // Template metadata
   name: text('name').notNull(),
@@ -154,7 +156,9 @@ export const projectTemplates = pgTable('project_templates', {
  * Template Usage Tracking - Track template installations
  */
 export const templateUsages = pgTable('template_usages', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   templateId: text('template_id')
     .notNull()
     .references(() => projectTemplates.id, { onDelete: 'cascade' }),
@@ -177,7 +181,9 @@ export const templateUsages = pgTable('template_usages', {
  * Template Reviews - User reviews for templates
  */
 export const templateReviews = pgTable('template_reviews', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   templateId: text('template_id')
     .notNull()
     .references(() => projectTemplates.id, { onDelete: 'cascade' }),
@@ -200,7 +206,9 @@ export const templateReviews = pgTable('template_reviews', {
  * Template Categories - Predefined template categories
  */
 export const templateCategories = pgTable('template_categories', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull().unique(),
   description: text('description'),
   icon: text('icon'),

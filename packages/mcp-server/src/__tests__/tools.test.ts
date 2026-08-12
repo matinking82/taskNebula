@@ -15,7 +15,6 @@ import {
   transitionStatusTool,
   assignIssueTool,
   addCommentTool,
-  linkPrTool,
   listProjectsTool,
   createSubtaskTool,
   getMyWorkloadTool,
@@ -80,10 +79,10 @@ function mockClient(response: unknown = { ok: true }): {
 }
 
 describe('tool registry', () => {
-  it('exports exactly 12 tools with unique names', () => {
-    expect(allTools).toHaveLength(12);
+  it('exports exactly 11 tools with unique names', () => {
+    expect(allTools).toHaveLength(11);
     const names = new Set(allTools.map((t) => t.name));
-    expect(names.size).toBe(12);
+    expect(names.size).toBe(11);
     expect([...names].sort()).toEqual(
       [
         'add_comment',
@@ -92,7 +91,6 @@ describe('tool registry', () => {
         'create_subtask',
         'get_issue',
         'get_my_workload',
-        'link_pr',
         'list_my_assigned',
         'list_projects',
         'search_issues',
@@ -295,25 +293,6 @@ describe('add_comment', () => {
   });
 });
 
-describe('link_pr', () => {
-  it('validates url', () => {
-    expect(() => linkPrTool.inputSchema.parse({ issueId: 'i', url: 'not-a-url' })).toThrow();
-  });
-  it('POSTs to /links with provider', async () => {
-    const { client, calls } = mockClient({ id: 'l1' });
-    await linkPrTool.handler(
-      linkPrTool.inputSchema.parse({
-        issueId: 'i1',
-        url: 'https://github.com/o/r/pull/1',
-      }),
-      { client }
-    );
-    expect(calls[0]!.url).toMatch(/\/api\/issues\/i1\/links$/);
-    const body = JSON.parse(String(calls[0]!.init.body));
-    expect(body).toMatchObject({ type: 'pull_request', provider: 'github' });
-  });
-});
-
 describe('list_projects', () => {
   it('defaults includeArchived=false', () => {
     const v = listProjectsTool.inputSchema.parse({});
@@ -330,7 +309,7 @@ describe('create_subtask', () => {
   it('requires parentIssueId and title', () => {
     expect(() => createSubtaskTool.inputSchema.parse({ title: 'x' })).toThrow();
   });
-  it('forces type=subtask and forwards parentIssueId', async () => {
+  it('creates a parent-linked task using the REST API contract', async () => {
     const { client, calls } = mockClient({ id: 'i2' });
     await createSubtaskTool.handler(
       { parentIssueId: 'i1', projectId: 'p1', title: 'Sub' },
@@ -338,8 +317,8 @@ describe('create_subtask', () => {
     );
     const body = JSON.parse(String(calls[0]!.init.body));
     expect(body).toMatchObject({
-      type: 'subtask',
-      parentIssueId: 'i1',
+      type: 'task',
+      parentId: 'i1',
       projectId: 'p1',
       title: 'Sub',
       agentPolicy: {

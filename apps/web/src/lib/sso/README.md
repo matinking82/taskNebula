@@ -1,7 +1,7 @@
 # SAML 2.0 SSO + SCIM 2.0 — TaskNebula
 
-This directory is the server-side core of TaskNebula's enterprise SSO stack
-(Roadmap task #17). It exposes:
+This directory is the server-side core of TaskNebula's enterprise SSO stack.
+It exposes:
 
 - `saml.ts` — SP metadata, AuthnRequest builder, response verifier. Wraps
   `samlify` so the rest of the app never imports it directly.

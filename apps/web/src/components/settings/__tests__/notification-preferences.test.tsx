@@ -31,6 +31,8 @@ type Preferences = {
   emailOnIssueCreated: boolean;
   emailOnSprintStarted: boolean;
   emailOnSprintCompleted: boolean;
+  emailOnProjectCreated: boolean;
+  emailOnProjectArchived: boolean;
   inAppOnAssigned: boolean;
   inAppOnMentioned: boolean;
   inAppOnCommented: boolean;
@@ -38,6 +40,8 @@ type Preferences = {
   inAppOnIssueCreated: boolean;
   inAppOnSprintStarted: boolean;
   inAppOnSprintCompleted: boolean;
+  inAppOnProjectCreated: boolean;
+  inAppOnProjectArchived: boolean;
   doNotDisturb: boolean;
   doNotDisturbStart: string | null;
   doNotDisturbEnd: string | null;
@@ -54,6 +58,8 @@ const DEFAULTS: Omit<Preferences, 'organizationId'> = {
   emailOnIssueCreated: false,
   emailOnSprintStarted: false,
   emailOnSprintCompleted: false,
+  emailOnProjectCreated: false,
+  emailOnProjectArchived: false,
   inAppOnAssigned: true,
   inAppOnMentioned: true,
   inAppOnCommented: true,
@@ -61,6 +67,8 @@ const DEFAULTS: Omit<Preferences, 'organizationId'> = {
   inAppOnIssueCreated: true,
   inAppOnSprintStarted: true,
   inAppOnSprintCompleted: true,
+  inAppOnProjectCreated: true,
+  inAppOnProjectArchived: true,
   doNotDisturb: false,
   doNotDisturbStart: null,
   doNotDisturbEnd: null,
@@ -85,9 +93,7 @@ function renderWithProviders(ui: React.ReactElement) {
       mutations: { retry: false },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 type FetchSpy = jest.SpiedFunction<typeof fetch>;
@@ -99,16 +105,12 @@ function countPosts(spy: FetchSpy): number {
   }).length;
 }
 
-function findPostCall(
-  spy: FetchSpy
-): [RequestInfo | URL, RequestInit | undefined] | undefined {
+function findPostCall(spy: FetchSpy): [RequestInfo | URL, RequestInit | undefined] | undefined {
   const call = spy.mock.calls.find((c) => {
     const init = c[1] as RequestInit | undefined;
     return (init?.method || 'GET').toUpperCase() === 'POST';
   });
-  return call as
-    | [RequestInfo | URL, RequestInit | undefined]
-    | undefined;
+  return call as [RequestInfo | URL, RequestInit | undefined] | undefined;
 }
 
 function installFetchMock(
@@ -119,17 +121,12 @@ function installFetchMock(
   spy.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
     const method = (init?.method || 'GET').toUpperCase();
     if (method === 'GET') {
-      return Promise.resolve(
-        buildJsonResponse({ preferences: initialPreferences })
-      );
+      return Promise.resolve(buildJsonResponse({ preferences: initialPreferences }));
     }
     // POST
     if (options.postShouldReject) {
       return Promise.resolve(
-        buildJsonResponse(
-          { error: 'Internal server error' },
-          { status: options.postStatus ?? 500 }
-        )
+        buildJsonResponse({ error: 'Internal server error' }, { status: options.postStatus ?? 500 })
       );
     }
     const body = init?.body ? JSON.parse(String(init.body)) : {};
@@ -182,15 +179,11 @@ afterEach(() => {
 describe('NotificationPreferences', () => {
   it('shows a loading placeholder while the initial GET is pending', async () => {
     // Make fetch never resolve in this test.
-    jest
-      .spyOn(global, 'fetch')
-      .mockImplementation(() => new Promise(() => {}));
+    jest.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
 
     renderWithProviders(<NotificationPreferences />);
 
-    expect(
-      screen.getByText(/Loading notification settings/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Loading notification settings/i)).toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 
@@ -398,9 +391,7 @@ describe('NotificationPreferences', () => {
       return inputs;
     });
 
-    const values = Array.from(timeInputs).map(
-      (el) => (el as HTMLInputElement).value
-    );
+    const values = Array.from(timeInputs).map((el) => (el as HTMLInputElement).value);
     expect(values).toEqual(['22:00', '08:00']);
   });
 

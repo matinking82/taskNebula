@@ -57,6 +57,7 @@ services:
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       NEXT_PUBLIC_APP_NAME: TaskNebula
       REDIS_URL: redis://:tasknebula-desktop-redis@redis:6379
+      CRON_SECRET: tasknebula-desktop-local-only-cron-secret-change-before-production
       SKIP_SEED: 'true'
       SEED_DEMO_DATA: 'false'
       NODE_ENV: production
@@ -80,6 +81,29 @@ services:
       timeout: 10s
       start_period: 90s
       retries: 5
+
+  # Keep durable post-approval notifications moving even if the request-local
+  # fast path is interrupted by a container restart.
+  approval-reconciler:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      CRON_SECRET: tasknebula-desktop-local-only-cron-secret-change-before-production
+      WEB_BASE_URL: http://web:3000
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -eu
+        while true; do
+          wget -qO /dev/null \
+            --header="x-cron-secret: $$CRON_SECRET" \
+            --post-data='' \
+            "$$WEB_BASE_URL/api/cron/agent-approval-effects" || true
+          sleep 60
+        done
 
 volumes:
   postgres_data:

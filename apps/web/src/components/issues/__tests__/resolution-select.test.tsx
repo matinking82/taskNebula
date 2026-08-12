@@ -17,9 +17,9 @@ beforeAll(() => {
 
 describe('ResolutionSelect', () => {
   it('shows an Unresolved trigger when no resolution is set', () => {
-    render(<ResolutionSelect value={null} onChange={jest.fn()} />);
+    render(<ResolutionSelect value={null} onChange={jest.fn()} ariaLabel="Resolution" />);
 
-    expect(screen.getByText('Unresolved')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Resolution Unresolved' })).toBeInTheDocument();
   });
 
   it('sets a resolution from the dropdown', async () => {
@@ -36,10 +36,16 @@ describe('ResolutionSelect', () => {
 
   it('renders a read-only chip when a resolution is set', () => {
     render(
-      <ResolutionSelect value="fixed" resolvedAt="2026-06-01T00:00:00Z" onChange={jest.fn()} />
+      <ResolutionSelect
+        value="fixed"
+        resolvedAt="2026-06-01T00:00:00Z"
+        onChange={jest.fn()}
+        ariaLabel="Resolution"
+      />
     );
 
     expect(screen.getByText('Fixed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resolution Fixed' })).toBeInTheDocument();
     // No "Unresolved" trigger in the resolved state.
     expect(screen.queryByText('Unresolved')).not.toBeInTheDocument();
   });
@@ -50,7 +56,7 @@ describe('ResolutionSelect', () => {
 
     render(<ResolutionSelect value="done" onChange={onChange} />);
 
-    await user.click(screen.getByRole('button', { name: 'Set resolution' }));
+    await user.click(screen.getByRole('button', { name: 'Resolution Done' }));
     await user.click(await screen.findByText('Clear resolution'));
 
     expect(onChange).toHaveBeenCalledWith(null);

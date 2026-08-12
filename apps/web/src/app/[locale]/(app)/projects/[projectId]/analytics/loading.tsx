@@ -1,9 +1,13 @@
+import { getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageFrame } from '@/components/ui/page-frame';
 
-export default function AnalyticsLoading() {
+export default async function AnalyticsLoading() {
+  const t = await getTranslations('pagesProjectTabs');
+
   return (
     <PageFrame contentClassName="space-y-6">
+      <h1 className="sr-only">{t('analytics.title')}</h1>
       <div
         className="flex flex-col gap-4 py-1 sm:flex-row sm:items-end sm:justify-between"
         aria-busy="true"

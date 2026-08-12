@@ -56,7 +56,7 @@ export default async function PublicDocumentPage({
   }
 
   return (
-    <main className="bg-background min-h-dvh">
+    <main className="bg-background min-h-dvh overflow-x-hidden">
       <article className="animate-blur-in mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="surface-card space-y-6 rounded-lg p-6 sm:p-10">
           {/* Document header — quiet, no card chrome */}
@@ -74,7 +74,7 @@ export default async function PublicDocumentPage({
               )}
             </div>
 
-            <h1 className="text-foreground text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="text-foreground text-balance break-words text-3xl font-semibold tracking-tight sm:text-4xl">
               {page.title}
             </h1>
 
@@ -108,9 +108,11 @@ export default async function PublicDocumentPage({
                       href={attachment.publicUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="border-border ease-snap hover:bg-accent focus-visible:ring-ring block rounded-md border px-3 py-2 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                      className="border-border ease-snap hover:bg-accent focus-visible:ring-ring block rounded-md border px-3 py-2 text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                     >
-                      <div className="text-foreground font-medium">{attachment.fileName}</div>
+                      <div className="text-foreground break-all font-medium">
+                        {attachment.fileName}
+                      </div>
                       <div className="text-muted-foreground mt-0.5 text-xs">
                         {attachment.mimeType}
                       </div>
@@ -127,7 +129,7 @@ export default async function PublicDocumentPage({
             <Button asChild variant="outline" size="sm" className="rounded-md">
               <Link href="/">
                 TaskNebula
-                <ExternalLink className="ml-1.5 h-4 w-4" aria-hidden="true" />
+                <ExternalLink className="ms-1.5 h-4 w-4" aria-hidden="true" />
               </Link>
             </Button>
           </footer>

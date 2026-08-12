@@ -109,7 +109,12 @@ jest.mock('@tasknebula/db', () => ({
     organizationId: 'workflows.organizationId',
     isDefault: 'workflows.isDefault',
   },
-  projects: { id: 'projects.id', organizationId: 'projects.organizationId' },
+  projects: {
+    id: 'projects.id',
+    organizationId: 'projects.organizationId',
+    defaultWorkflowId: 'projects.defaultWorkflowId',
+  },
+  sprints: { id: 'sprints.id', projectId: 'sprints.projectId' },
   projectMembers: {
     userId: 'projectMembers.userId',
     projectId: 'projectMembers.projectId',
@@ -118,6 +123,7 @@ jest.mock('@tasknebula/db', () => ({
     userId: 'organizationMembers.userId',
     organizationId: 'organizationMembers.organizationId',
     role: 'organizationMembers.role',
+    status: 'organizationMembers.status',
   },
   users: { id: 'users.id', isSuperAdmin: 'users.isSuperAdmin' },
   ROLE_DEFAULT_PERMISSIONS: {
@@ -182,12 +188,16 @@ describe('PATCH /api/issues/[issueId] — estimate & rich description persistenc
 
   beforeEach(() => {
     jest.clearAllMocks();
+    dbSelectMock.mockReset();
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
     getIssueByIdMock.mockResolvedValue(SAMPLE_ISSUE);
-    // First db.select call inside checkIssuePermission looks up super admin
-    // flag. Returning isSuperAdmin: true short-circuits the rest of the
-    // permission path — we don't care about authz in this audit-fix suite.
-    dbSelectMock.mockReturnValue(chainable([{ isSuperAdmin: true }]));
+    dbSelectMock
+      .mockReturnValueOnce(
+        chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
+      )
+      // The following select inside checkIssuePermission looks up the super
+      // admin flag. It short-circuits the rest of authz for this persistence suite.
+      .mockReturnValue(chainable([{ isSuperAdmin: true }]));
     updateIssueMock.mockImplementation((_id: string, data: Record<string, unknown>) =>
       Promise.resolve({ ...SAMPLE_ISSUE, ...data })
     );
@@ -262,5 +272,100 @@ describe('PATCH /api/issues/[issueId] — estimate & rich description persistenc
       'issue-1',
       expect.objectContaining({ descriptionRich: doc })
     );
+  });
+
+  it('rejects a parent issue from a different project', async () => {
+    dbSelectMock
+      .mockReset()
+      .mockReturnValueOnce(
+        chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
+      )
+      .mockReturnValueOnce(
+        chainable([{ id: 'issue-2', projectId: 'project-2', organizationId: 'org-1' }])
+      );
+
+    const response = await PATCH(makePatch({ parentId: 'issue-2' }) as never, {
+      params: Promise.resolve({ issueId: 'issue-1' }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Parent issue must belong to the same project',
+    });
+    expect(updateIssueMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a direct status id from a different workflow', async () => {
+    dbSelectMock
+      .mockReset()
+      .mockReturnValueOnce(
+        chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
+      )
+      .mockReturnValueOnce(chainable([]));
+
+    const response = await PATCH(makePatch({ statusId: 'foreign-status' }) as never, {
+      params: Promise.resolve({ issueId: 'issue-1' }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Status does not belong to the project workflow',
+    });
+    expect(updateIssueMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a sprint from another project', async () => {
+    dbSelectMock
+      .mockReset()
+      .mockReturnValueOnce(
+        chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
+      )
+      .mockReturnValueOnce(chainable([]));
+
+    const response = await PATCH(makePatch({ sprintId: 'foreign-sprint' }) as never, {
+      params: Promise.resolve({ issueId: 'issue-1' }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_sprint' });
+    expect(updateIssueMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-epic relationship', async () => {
+    dbSelectMock
+      .mockReset()
+      .mockReturnValueOnce(
+        chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
+      )
+      .mockReturnValueOnce(
+        chainable([
+          { id: 'issue-2', projectId: 'project-1', organizationId: 'org-1', type: 'task' },
+        ])
+      );
+
+    const response = await PATCH(makePatch({ epicId: 'issue-2' }) as never, {
+      params: Promise.resolve({ issueId: 'issue-1' }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_epic' });
+    expect(updateIssueMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an assignee outside the active workspace membership', async () => {
+    dbSelectMock
+      .mockReset()
+      .mockReturnValueOnce(
+        chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
+      )
+      .mockReturnValueOnce(chainable([]));
+
+    const response = await PATCH(makePatch({ assigneeId: 'foreign-user' }) as never, {
+      params: Promise.resolve({ issueId: 'issue-1' }),
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_assignee' });
+    expect(updateIssueMock).not.toHaveBeenCalled();
   });
 });

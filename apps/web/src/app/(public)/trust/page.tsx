@@ -1,7 +1,8 @@
 /**
  * Public Trust Center page.
  *
- * Statically rendered, public (no auth) — anyone can link to /trust.
+ * Public (no auth) — anyone can link to /trust. Rendering remains
+ * request-aware because the root layout resolves the visitor's locale.
  * All content lives in `apps/web/src/config/trust-center.ts` and
  * `apps/web/src/config/sub-processors.ts` so non-engineers can keep it fresh
  * via a single PR.
@@ -32,11 +33,6 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t('trustMetaDescription'),
   };
 }
-
-// `force-static` is the default for a server component without dynamic data,
-// but we make it explicit so reviewers know this page should never depend on
-// per-request state.
-export const dynamic = 'force-static';
 
 export default async function TrustCenterPage() {
   const t = await getTranslations('publicPages');

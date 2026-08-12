@@ -152,7 +152,7 @@ obeys semantic color, focus, i18n, responsive, and evidence requirements.
 All new user-facing text, accessible names, placeholders, toasts, and errors
 use `next-intl`. Examples in documentation describe structure rather than
 copy-pastable English JSX. Add each key with a real translation to all 30
-catalogs, preserve ICU placeholders, and run `node scripts/i18n-check.mjs`.
+catalogs, preserve ICU placeholders, and run `pnpm i18n:check`.
 
 Static lint catches only part of this rule; review configuration objects and
 props manually.
@@ -180,7 +180,7 @@ Run from the repository root:
 
 ```bash
 pnpm ui:check
-node scripts/i18n-check.mjs
+pnpm i18n:check
 pnpm --filter @tasknebula/web type-check
 pnpm --filter @tasknebula/web lint
 pnpm --filter @tasknebula/web test

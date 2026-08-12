@@ -29,8 +29,10 @@ export default async function DashboardPage() {
     return <WorkspaceRequiredNotice />;
   }
 
+  const tDashboard = await getTranslations('dashboard');
+
   return (
-    <Suspense fallback={<DashboardLoadingShell />}>
+    <Suspense fallback={<DashboardLoadingShell title={tDashboard('kicker')} />}>
       <DashboardClient />
     </Suspense>
   );

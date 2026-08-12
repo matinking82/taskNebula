@@ -52,7 +52,7 @@ export function MobileIssueList({ issues, onRefresh, onDelete, onComplete }: Mob
           >
             <Link
               href={`/issues/${issue.id}`}
-              className="ease-snap hover:bg-accent/50 flex items-stretch transition-all duration-150"
+              className="ease-snap hover:bg-accent/50 flex items-stretch transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
             >
               {/* Left priority indicator bar */}
               <div

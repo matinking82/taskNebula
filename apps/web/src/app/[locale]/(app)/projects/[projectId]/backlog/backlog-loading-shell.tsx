@@ -1,8 +1,13 @@
 import { Skeleton, SkeletonList } from '@/components/ui/skeleton';
 
-export function BacklogLoadingShell() {
+export function BacklogLoadingShell({ title }: { title: string }) {
   return (
-    <div className="custom-scrollbar flex h-full flex-col overflow-y-auto">
+    <div
+      className="custom-scrollbar flex h-full flex-col overflow-y-auto"
+      tabIndex={0}
+      aria-label={title}
+    >
+      <h1 className="sr-only">{title}</h1>
       <div className="space-y-4 px-6 py-6">
         <div className="flex items-center justify-between">
           <Skeleton className="h-6 w-40" />

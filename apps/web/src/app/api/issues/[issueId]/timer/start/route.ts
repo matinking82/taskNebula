@@ -1,5 +1,5 @@
 /**
- * POST /api/issues/:issueId/timer/start (task #10).
+ * POST /api/issues/:issueId/timer/start.
  *
  * Starts a running timer for the calling user on the given issue. The
  * "only one running timer per user" invariant is enforced by the partial
@@ -15,7 +15,7 @@ import { assertIssueAccess } from '@/lib/time-tracking/server';
 
 export async function POST(
   _request: NextRequest,
-  { params }: { params: Promise<{ issueId: string }> },
+  { params }: { params: Promise<{ issueId: string }> }
 ) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -44,7 +44,7 @@ export async function POST(
         error: 'Timer already running',
         running: existing,
       },
-      { status: 409 },
+      { status: 409 }
     );
   }
 
@@ -63,10 +63,7 @@ export async function POST(
     // 23505 = unique_violation on the partial index. Race window between the
     // pre-check above and the insert.
     if (err?.code === '23505') {
-      return NextResponse.json(
-        { error: 'Timer already running' },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: 'Timer already running' }, { status: 409 });
     }
     console.error('timer/start failed', err);
     return NextResponse.json({ error: 'Failed to start timer' }, { status: 500 });

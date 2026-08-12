@@ -404,37 +404,6 @@ export function DocumentEditor({
     editor,
   ]);
 
-  useEffect(() => {
-    if (!editor || !canEdit || !isDirty || isSaving) {
-      return;
-    }
-
-    const nextTitle = title.trim();
-    if (!nextTitle) {
-      return;
-    }
-
-    const contentJson = editor.getJSON() as Record<string, any>;
-    const snapshot = serializeDocumentSnapshot(nextTitle, iconRef.current, contentJson);
-
-    if (snapshot === lastServerSnapshotRef.current) {
-      setIsDirty(false);
-      setSaveState('saved');
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      void persistDocument({
-        contentJson,
-        expectedRevision: currentRevisionRef.current,
-        snapshot,
-        title: nextTitle,
-      });
-    }, AUTOSAVE_DELAY);
-
-    return () => window.clearTimeout(timeout);
-  }, [autosaveVersion, canEdit, editor, isDirty, isSaving, title]);
-
   const filteredPages = allPages.filter((candidate) => {
     if (candidate.id === page.id) {
       return false;
@@ -651,57 +620,91 @@ export function DocumentEditor({
     }
   }
 
-  async function persistDocument({
-    title,
-    contentJson,
-    expectedRevision,
-    snapshot,
-  }: {
-    title: string;
-    contentJson: Record<string, any>;
-    expectedRevision: number;
-    snapshot: string;
-  }) {
-    if (saveInFlightRef.current) {
+  const persistDocument = useCallback(
+    async ({
+      title,
+      contentJson,
+      expectedRevision,
+      snapshot,
+    }: {
+      title: string;
+      contentJson: Record<string, any>;
+      expectedRevision: number;
+      snapshot: string;
+    }) => {
+      if (saveInFlightRef.current) {
+        return;
+      }
+
+      saveInFlightRef.current = true;
+      lastAutosaveSnapshotRef.current = snapshot;
+      setIsSaving(true);
+      setSaveState('saving');
+
+      try {
+        const updatedPage = await onSave({
+          title,
+          contentJson,
+          icon: iconRef.current,
+          expectedRevision,
+        });
+
+        currentRevisionRef.current = updatedPage.currentRevision;
+        lastServerSnapshotRef.current = snapshot;
+        setLastSavedAt(new Date(updatedPage.updatedAt));
+
+        const latestSnapshot = editor
+          ? serializeDocumentSnapshot(titleRef.current, iconRef.current, editor.getJSON())
+          : snapshot;
+
+        if (latestSnapshot === snapshot) {
+          setIsDirty(false);
+          setSaveState('saved');
+        } else {
+          setIsDirty(true);
+          setSaveState('dirty');
+        }
+      } catch {
+        setIsDirty(true);
+        setSaveState('error');
+      } finally {
+        saveInFlightRef.current = false;
+        setIsSaving(false);
+      }
+    },
+    [editor, onSave]
+  );
+
+  useEffect(() => {
+    if (!editor || !canEdit || !isDirty || isSaving) {
       return;
     }
 
-    saveInFlightRef.current = true;
-    lastAutosaveSnapshotRef.current = snapshot;
-    setIsSaving(true);
-    setSaveState('saving');
-
-    try {
-      const updatedPage = await onSave({
-        title,
-        contentJson,
-        icon: iconRef.current,
-        expectedRevision,
-      });
-
-      currentRevisionRef.current = updatedPage.currentRevision;
-      lastServerSnapshotRef.current = snapshot;
-      setLastSavedAt(new Date(updatedPage.updatedAt));
-
-      const latestSnapshot = editor
-        ? serializeDocumentSnapshot(titleRef.current, iconRef.current, editor.getJSON())
-        : snapshot;
-
-      if (latestSnapshot === snapshot) {
-        setIsDirty(false);
-        setSaveState('saved');
-      } else {
-        setIsDirty(true);
-        setSaveState('dirty');
-      }
-    } catch {
-      setIsDirty(true);
-      setSaveState('error');
-    } finally {
-      saveInFlightRef.current = false;
-      setIsSaving(false);
+    const nextTitle = title.trim();
+    if (!nextTitle) {
+      return;
     }
-  }
+
+    const contentJson = editor.getJSON() as Record<string, any>;
+    const snapshot = serializeDocumentSnapshot(nextTitle, iconRef.current, contentJson);
+
+    if (snapshot === lastServerSnapshotRef.current) {
+      setIsDirty(false);
+      setSaveState('saved');
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void persistDocument({
+        contentJson,
+        expectedRevision: currentRevisionRef.current,
+        snapshot,
+        title: nextTitle,
+      });
+    }, AUTOSAVE_DELAY);
+
+    return () => window.clearTimeout(timeout);
+  }, [autosaveVersion, canEdit, editor, isDirty, isSaving, persistDocument, title]);
 
   async function retrySaveNow() {
     if (!editor || !canEdit || !title.trim()) {
@@ -1348,7 +1351,7 @@ export function DocumentEditor({
               <div
                 aria-live="polite"
                 className={cn(
-                  'ease-snap inline-flex items-center gap-1.5 transition-all duration-150',
+                  'ease-snap inline-flex items-center gap-1.5 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                   statusMeta.chipClassName
                 )}
               >
@@ -1541,9 +1544,9 @@ export function DocumentEditor({
                 placeholder={t('editor.untitledPage')}
               />
             ) : (
-              <h1 className="text-foreground text-balance text-3xl font-semibold tracking-tight">
+              <h2 className="text-foreground text-balance text-3xl font-semibold tracking-tight">
                 {page.title}
-              </h1>
+              </h2>
             )}
           </div>
 
@@ -1735,32 +1738,6 @@ function serializeDocumentSnapshot(
     title: title.trim(),
     icon: icon || null,
     contentJson,
-  });
-}
-
-function isDocumentVisuallyEmpty(contentJson: Record<string, any>) {
-  const content = Array.isArray(contentJson?.content) ? contentJson.content : [];
-  if (content.length === 0) {
-    return true;
-  }
-
-  return content.every((node) => {
-    if (!node || typeof node !== 'object') {
-      return true;
-    }
-
-    if (node.type !== 'paragraph') {
-      return false;
-    }
-
-    const childContent = Array.isArray(node.content) ? node.content : [];
-    if (childContent.length === 0) {
-      return true;
-    }
-
-    return childContent.every(
-      (child: any) => typeof child?.text === 'string' && !child.text.trim()
-    );
   });
 }
 

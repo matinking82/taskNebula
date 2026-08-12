@@ -1,8 +1,9 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-export function RoadmapLoadingShell() {
+export function RoadmapLoadingShell({ title }: { title: string }) {
   return (
     <div className="custom-scrollbar flex h-full flex-col overflow-y-auto">
+      <h1 className="sr-only">{title}</h1>
       <div className="space-y-6 px-6 py-6">
         <div className="flex items-center justify-between">
           <Skeleton className="h-6 w-40" />

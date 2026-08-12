@@ -1,5 +1,5 @@
 /**
- * POST /api/issues/:issueId/ai-estimate (task #10).
+ * POST /api/issues/:issueId/ai-estimate.
  *
  * Returns a suggested estimate (median + p25/p75 hours) drawn from similar
  * closed issues' actual hours, with a rationale string for the UI. Falls back
@@ -17,7 +17,7 @@ import { assertIssueAccess } from '@/lib/time-tracking/server';
 
 export async function POST(
   _request: NextRequest,
-  { params }: { params: Promise<{ issueId: string }> },
+  { params }: { params: Promise<{ issueId: string }> }
 ) {
   const session = await auth();
   const { issueId } = await params;
@@ -34,9 +34,6 @@ export async function POST(
     return NextResponse.json(result);
   } catch (err) {
     console.error('ai-estimate failed', err);
-    return NextResponse.json(
-      { error: 'Failed to compute estimate' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Failed to compute estimate' }, { status: 500 });
   }
 }

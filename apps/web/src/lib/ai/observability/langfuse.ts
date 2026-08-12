@@ -1,5 +1,5 @@
 /**
- * Langfuse LLM observability shim (OBS-35).
+ * Langfuse LLM observability shim.
  *
  * One job: take a finished LLM call and ship it to Langfuse with the right
  * metadata + token math so the operator gets per-feature cost & latency
@@ -62,9 +62,7 @@ type LangfuseClient = {
 let cachedClient: LangfuseClient | null | undefined;
 
 function isEnabled(): boolean {
-  return Boolean(
-    process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY
-  );
+  return Boolean(process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY);
 }
 
 async function getClient(): Promise<LangfuseClient | null> {
@@ -131,11 +129,7 @@ export async function traceLlmCall(input: TraceLlmCallInput): Promise<void> {
         otelSpanId: spanId,
         ...(input.metadata ?? {}),
       },
-      tags: [
-        `feature:${input.feature}`,
-        `provider:${input.provider}`,
-        `model:${input.model}`,
-      ],
+      tags: [`feature:${input.feature}`, `provider:${input.provider}`, `model:${input.model}`],
     });
 
     tr.generation({

@@ -214,7 +214,7 @@ function OmnibarTabs({ active, onChange, tabs }: OmnibarTabsProps) {
             aria-selected={isActive}
             onClick={() => onChange(tab.key)}
             className={cn(
-              'ease-snap group inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-150',
+              'ease-snap group inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
               isActive
                 ? 'bg-accent text-foreground ring-border ring-1'
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -436,11 +436,15 @@ export function CommandPalette({
         return;
       }
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('tasknebula:ask-ai', { detail: { prompt } }));
+        window.dispatchEvent(
+          new CustomEvent('tasknebula:ask-ai', {
+            detail: { prompt, organizationId: currentOrganizationId },
+          })
+        );
       }
       close();
     },
-    [close, hasWorkspaceAccess]
+    [close, currentOrganizationId, hasWorkspaceAccess]
   );
 
   const removeChip = React.useCallback((facet: Facet) => {
@@ -494,6 +498,7 @@ export function CommandPalette({
   // sentence-ish input (more than a single word OR ends with `?`).
   const showAskCta =
     hasWorkspaceAccess &&
+    Boolean(currentOrganizationId) &&
     askPrompt.length > 0 &&
     (askPrompt.includes(' ') || askPrompt.endsWith('?') || tab === 'ask');
 

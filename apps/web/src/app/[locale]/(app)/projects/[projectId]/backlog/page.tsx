@@ -104,7 +104,7 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
   };
 
   if (issuesLoading || sprintsLoading) {
-    return <BacklogLoadingShell />;
+    return <BacklogLoadingShell title={t('backlogTitle')} />;
   }
 
   return (
@@ -184,6 +184,7 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
             <div className="border-border bg-surface text-muted-foreground sticky top-0 z-10 flex items-center gap-3 border-b px-6 py-2 text-[11px] font-medium uppercase tracking-wider">
               <div className="flex w-8 justify-center">
                 <Checkbox
+                  aria-label={t('allIssues')}
                   checked={
                     selectedIssues.length === backlogIssues.length && backlogIssues.length > 0
                   }
@@ -223,6 +224,7 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
                 >
                   <div className="flex w-8 justify-center">
                     <Checkbox
+                      aria-label={`${issue.key} — ${issue.title}`}
                       checked={selectedIssues.includes(issue.id)}
                       onCheckedChange={() => toggleIssueSelection(issue.id)}
                     />
@@ -272,7 +274,10 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
 
                   <div className="w-44">
                     <Select onValueChange={(sprintId) => handleAssignToSprint(issue.id, sprintId)}>
-                      <SelectTrigger className="h-7 border-dashed text-xs">
+                      <SelectTrigger
+                        className="h-7 border-dashed text-xs"
+                        aria-label={`${t('columnSprint')}: ${issue.key}`}
+                      >
                         <SelectValue placeholder={t('addToSprint')} />
                       </SelectTrigger>
                       <SelectContent>

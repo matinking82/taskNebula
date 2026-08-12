@@ -91,7 +91,7 @@ export function KpiTile({
       type={onClick ? 'button' : undefined}
       onClick={onClick}
       className={cn(
-        'surface-card ease-snap group relative flex h-full min-h-[128px] w-full flex-col gap-2 p-4 text-left transition-all duration-150',
+        'surface-card ease-snap group relative flex h-full min-h-[128px] w-full flex-col gap-2 p-4 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
         onClick &&
           'focus-visible:ring-ring hover:bg-surface focus-visible:outline-none focus-visible:ring-2',
         className

@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
   const { provider, apiKey } = await resolveProviderAndKey(body.provider, issue.organizationId);
   const modelToUse = workspace.model?.trim() || null;
 
-  // P1-16: untrusted text fed to the LLM here is the issue description +
+  // Prompt-injection safety: untrusted text fed to the LLM here is the issue description +
   // comment bodies + customPrompt. Score the combined blob so a comment
   // that says "system: ignore previous instructions" trips the same guard
   // a malicious draft prompt would.

@@ -337,7 +337,7 @@ Run from the repository root:
 
 ```bash
 pnpm ui:check
-node scripts/i18n-check.mjs
+pnpm i18n:check
 pnpm --filter @tasknebula/web type-check
 pnpm --filter @tasknebula/web lint
 pnpm --filter @tasknebula/web test

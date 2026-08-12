@@ -1,31 +1,14 @@
 import { cn } from '@/lib/utils';
 
-export function Skeleton({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn('shimmer rounded-md bg-muted/40', className)}
-      {...props}
-    />
-  );
+export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('shimmer bg-muted/40 rounded-md', className)} {...props} />;
 }
 
-export function SkeletonText({
-  lines = 3,
-  className,
-}: {
-  lines?: number;
-  className?: string;
-}) {
+export function SkeletonText({ lines = 3, className }: { lines?: number; className?: string }) {
   return (
     <div className={cn('space-y-2', className)}>
       {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton
-          key={i}
-          className={cn('h-4', i === lines - 1 ? 'w-3/5' : 'w-full')}
-        />
+        <Skeleton key={i} className={cn('h-4', i === lines - 1 ? 'w-3/5' : 'w-full')} />
       ))}
     </div>
   );
@@ -43,12 +26,7 @@ export function SkeletonCard({
   showAvatar?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        'rounded-lg border border-border bg-card p-4 space-y-3',
-        className
-      )}
-    >
+    <div className={cn('border-border bg-card space-y-3 rounded-lg border p-4', className)}>
       {showAvatar && (
         <div className="flex items-center gap-3">
           <SkeletonAvatar />
@@ -65,45 +43,22 @@ export function SkeletonCard({
   );
 }
 
-export function SkeletonRow({
-  columns = 4,
-  className,
-}: {
-  columns?: number;
-  className?: string;
-}) {
+export function SkeletonRow({ columns = 4, className }: { columns?: number; className?: string }) {
   return (
-    <div
-      className={cn(
-        'flex items-center gap-4 border-b border-border px-4 py-3',
-        className
-      )}
-    >
+    <div className={cn('border-border flex items-center gap-4 border-b px-4 py-3', className)}>
       {Array.from({ length: columns }).map((_, i) => (
-        <Skeleton
-          key={i}
-          className={cn('h-4', i === 0 ? 'w-1/3' : 'flex-1')}
-        />
+        <Skeleton key={i} className={cn('h-4', i === 0 ? 'w-1/3' : 'flex-1')} />
       ))}
     </div>
   );
 }
 
-export function SkeletonTable({
-  rows = 6,
-  columns = 4,
-}: {
-  rows?: number;
-  columns?: number;
-}) {
+export function SkeletonTable({ rows = 6, columns = 4 }: { rows?: number; columns?: number }) {
   return (
-    <div className="rounded-lg border border-border bg-card">
-      <div className="flex items-center gap-4 border-b border-border bg-muted/20 px-4 py-3">
+    <div className="border-border bg-card rounded-lg border">
+      <div className="border-border bg-muted/20 flex items-center gap-4 border-b px-4 py-3">
         {Array.from({ length: columns }).map((_, i) => (
-          <Skeleton
-            key={i}
-            className={cn('h-3', i === 0 ? 'w-1/4' : 'flex-1')}
-          />
+          <Skeleton key={i} className={cn('h-3', i === 0 ? 'w-1/4' : 'flex-1')} />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
@@ -113,19 +68,13 @@ export function SkeletonTable({
   );
 }
 
-export function SkeletonList({
-  items = 5,
-  className,
-}: {
-  items?: number;
-  className?: string;
-}) {
+export function SkeletonList({ items = 5, className }: { items?: number; className?: string }) {
   return (
     <div className={cn('space-y-2', className)}>
       {Array.from({ length: items }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3"
+          className="border-border bg-card flex items-center gap-3 rounded-md border px-4 py-3"
         >
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 flex-1" />
@@ -137,20 +86,12 @@ export function SkeletonList({
   );
 }
 
-export function SkeletonKanbanColumn({
-  cards = 3,
-  title,
-}: {
-  cards?: number;
-  title?: string;
-}) {
+export function SkeletonKanbanColumn({ cards = 3, title }: { cards?: number; title?: string }) {
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col rounded-lg bg-muted/20 p-3">
+    <div className="bg-muted/20 flex h-full w-72 shrink-0 flex-col rounded-lg p-3">
       <div className="mb-3 flex items-center justify-between">
         {title ? (
-          <span className="text-xs font-medium text-muted-foreground uppercase">
-            {title}
-          </span>
+          <span className="text-muted-foreground text-xs font-medium uppercase">{title}</span>
         ) : (
           <Skeleton className="h-3 w-20" />
         )}
@@ -158,10 +99,7 @@ export function SkeletonKanbanColumn({
       </div>
       <div className="space-y-2">
         {Array.from({ length: cards }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-md border border-border bg-card p-3 space-y-2"
-          >
+          <div key={i} className="border-border bg-card space-y-2 rounded-md border p-3">
             <Skeleton className="h-3 w-16" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-3/4" />
@@ -178,12 +116,15 @@ export function SkeletonKanbanColumn({
 
 export function SkeletonPageHeader({
   showDescription = true,
+  title,
 }: {
   showDescription?: boolean;
+  title: string;
 }) {
   return (
     <div className="space-y-2">
-      <Skeleton className="h-7 w-56" />
+      <h1 className="sr-only">{title}</h1>
+      <Skeleton className="h-7 w-56" aria-hidden="true" />
       {showDescription && <Skeleton className="h-4 w-80" />}
     </div>
   );
@@ -193,10 +134,7 @@ export function SkeletonStats({ count = 4 }: { count?: number }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-lg border border-border bg-card p-4 space-y-2"
-        >
+        <div key={i} className="border-border bg-card space-y-2 rounded-lg border p-4">
           <Skeleton className="h-3 w-20" />
           <Skeleton className="h-8 w-16" />
           <Skeleton className="h-3 w-28" />

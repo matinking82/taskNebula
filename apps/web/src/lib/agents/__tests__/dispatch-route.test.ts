@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * dispatch-agent route flow test (P0-04).
+ * dispatch-agent route flow test.
  *
  * Exercises POST /api/issues/[issueId]/dispatch-agent against a mocked
  * `@tasknebula/db`, mocked `auth`, and mocked global `fetch`. Asserts:
@@ -149,12 +149,19 @@ jest.mock('@/auth', () => ({
 
 const mockResolveLocalAgentRunner = jest.fn();
 const mockRunLocalAgentSession = jest.fn();
+const mockValidateAgentProviderEndpoint = jest.fn();
+const mockPostAgentProviderEndpoint = jest.fn();
 
 jest.mock('@/lib/agents/local-runner', () => ({
   isLocalAgentEndpoint: (endpointUrl: string | null | undefined) =>
     Boolean(endpointUrl?.startsWith('local://')),
   resolveLocalAgentRunner: (...args: unknown[]) => mockResolveLocalAgentRunner(...args),
   runLocalAgentSession: (...args: unknown[]) => mockRunLocalAgentSession(...args),
+}));
+
+jest.mock('@/lib/agents/provider-endpoint', () => ({
+  validateAgentProviderEndpoint: (...args: unknown[]) => mockValidateAgentProviderEndpoint(...args),
+  postAgentProviderEndpoint: (...args: unknown[]) => mockPostAgentProviderEndpoint(...args),
 }));
 
 // --------------------------------------------------------------------------
@@ -215,6 +222,11 @@ beforeEach(() => {
   mockResolveLocalAgentRunner.mockReturnValue(null);
   mockRunLocalAgentSession.mockReset();
   mockRunLocalAgentSession.mockResolvedValue(undefined);
+  mockValidateAgentProviderEndpoint.mockReset();
+  mockValidateAgentProviderEndpoint.mockImplementation((value: string) =>
+    Promise.resolve(new URL(value))
+  );
+  mockPostAgentProviderEndpoint.mockReset();
 });
 
 afterAll(() => {
@@ -269,10 +281,9 @@ describe('POST /api/issues/[id]/dispatch-agent', () => {
     const hmacSecret = 'workspace-hmac';
     seedHappyPath({ hmacSecret });
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    mockPostAgentProviderEndpoint.mockResolvedValueOnce({
       ok: true,
       status: 202,
-      text: () => Promise.resolve('accepted'),
     });
 
     const res = await dispatchHandler(
@@ -286,11 +297,14 @@ describe('POST /api/issues/[id]/dispatch-agent', () => {
     expect(body.callbackUrl).toBe('https://tasknebula.test/api/webhooks/agent-session/cursor');
 
     // The provider URL was hit exactly once with a signed body.
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(mockPostAgentProviderEndpoint).toHaveBeenCalledTimes(1);
+    const [url, init] = mockPostAgentProviderEndpoint.mock.calls[0] as [
+      string,
+      { headers: Record<string, string>; body: string },
+    ];
     expect(url).toBe('https://cursor.example/agents/run');
-    const headers = (init as RequestInit).headers as Record<string, string>;
-    const rawBody = (init as RequestInit).body as string;
+    const headers = init.headers;
+    const rawBody = init.body;
     const expectedSig = signAgentPayload(rawBody, hmacSecret);
     expect(headers['X-TaskNebula-Signature']).toBe(`sha256=${expectedSig}`);
     expect(headers['X-TaskNebula-Event']).toBe('agent.session.dispatch');
@@ -332,10 +346,9 @@ describe('POST /api/issues/[id]/dispatch-agent', () => {
       user: { id: 'user_caller' },
     });
     seedHappyPath({ hmacSecret: 's' });
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    mockPostAgentProviderEndpoint.mockResolvedValueOnce({
       ok: false,
       status: 503,
-      text: () => Promise.resolve('overloaded'),
     });
 
     const res = await dispatchHandler(buildRequest({ provider: 'cursor' }) as never, {
@@ -348,6 +361,20 @@ describe('POST /api/issues/[id]/dispatch-agent', () => {
 
     const flip = fake.updated.find((u) => u.table === 'agent_sessions');
     expect(flip?.set).toMatchObject({ state: 'error' });
+  });
+
+  it('rejects an unsafe remote endpoint before creating a session', async () => {
+    (authMock as unknown as jest.Mock).mockResolvedValue({ user: { id: 'user_caller' } });
+    seedHappyPath({ hmacSecret: 'unused' });
+    mockValidateAgentProviderEndpoint.mockRejectedValue(new Error('private address'));
+
+    const response = await dispatchHandler(buildRequest({ provider: 'cursor' }) as never, {
+      params: Promise.resolve({ issueId: 'issue_1' }),
+    });
+
+    expect(response.status).toBe(422);
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(fake.inserted.find((row) => row.table === 'agent_sessions')).toBeUndefined();
   });
 
   it('dispatches directly to a configured local Codex runner without webhook fetch', async () => {

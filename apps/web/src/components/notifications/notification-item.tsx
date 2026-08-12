@@ -383,7 +383,7 @@ export const NotificationItem = forwardRef<HTMLDivElement, NotificationItemProps
         data-selected={selected ? 'true' : undefined}
         data-unread={isUnread ? 'true' : undefined}
         className={cn(
-          'ease-snap group relative flex items-start gap-3 px-4 py-3 transition-all duration-150',
+          'ease-snap group relative flex items-start gap-3 px-4 py-3 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
           'hover:bg-accent/50',
           selected && 'bg-accent/70',
           isUnread && 'bg-primary/[0.04]',

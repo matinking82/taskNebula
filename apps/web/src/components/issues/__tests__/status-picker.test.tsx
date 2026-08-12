@@ -47,11 +47,13 @@ describe('StatusPicker', () => {
   it('renders the selected status name once loaded', async () => {
     mockFetchOk();
     render(
-      <StatusPicker projectId="project-1" value="status-2" onChange={jest.fn()} />
+      <StatusPicker projectId="project-1" value="status-2" onChange={jest.fn()} ariaLabel="State" />
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('combobox')).toHaveTextContent('In Progress');
+      expect(screen.getByRole('combobox', { name: 'State In Progress' })).toHaveTextContent(
+        'In Progress'
+      );
     });
   });
 
@@ -60,9 +62,7 @@ describe('StatusPicker', () => {
     const onChange = jest.fn();
     const user = userEvent.setup();
 
-    render(
-      <StatusPicker projectId="project-1" value="status-1" onChange={onChange} />
-    );
+    render(<StatusPicker projectId="project-1" value="status-1" onChange={onChange} />);
 
     await waitFor(() => {
       expect(screen.getByRole('combobox')).not.toBeDisabled();

@@ -1,12 +1,11 @@
 /**
- * Duplicate-issue detector (TaskNebula Roadmap P0-02 companion).
+ * Duplicate-issue detector used by triage intelligence.
  *
  * Given an issue ID, returns ranked candidate duplicates using pgvector
  * cosine similarity over the `content_embeddings` table.
  *
- * The embeddings table is wired up in roadmap task #1. If it's missing
- * (because task #1 has not yet shipped a deploy of the migration, or in
- * a stripped-down test database), the function falls back to a cheap
+ * If the embeddings table is missing in a partially migrated deployment or a
+ * stripped-down test database, the function falls back to a cheap
  * title-overlap text-similarity scan so the API surface still works.
  *
  * Thresholds:
@@ -16,14 +15,7 @@
  * built-in cosine *distance* operator returns 0 for identical vectors).
  */
 
-import {
-  db,
-  desc,
-  eq,
-  issues,
-  ne,
-  sql,
-} from '@tasknebula/db';
+import { db, desc, eq, issues, ne, sql } from '@tasknebula/db';
 
 export interface DuplicateCandidate {
   issueId: string;
@@ -58,7 +50,7 @@ export function textSimilarity(a: string, b: string): number {
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, ' ')
         .split(/\s+/)
-        .filter((t) => t.length > 2),
+        .filter((t) => t.length > 2)
     );
   const aTokens = tokenise(a);
   const bTokens = tokenise(b);
@@ -80,7 +72,7 @@ async function findDuplicatesByEmbedding(
   issueId: string,
   organizationId: string,
   limit: number,
-  potentialThreshold: number,
+  potentialThreshold: number
 ): Promise<DuplicateCandidate[]> {
   // Cosine distance via pgvector's `<=>` operator. `1 - distance` →
   // cosine similarity. We join issues→content_embeddings twice: once to
@@ -122,10 +114,10 @@ async function findDuplicatesByEmbedding(
 
   return list
     .filter((r): r is RawEmbeddingRow & { issue_id: string; issue_key: string; title: string } =>
-      Boolean(r.issue_id && r.issue_key && r.title !== null),
+      Boolean(r.issue_id && r.issue_key && r.title !== null)
     )
     .map((r) => {
-      const sim = typeof r.similarity === 'string' ? parseFloat(r.similarity) : r.similarity ?? 0;
+      const sim = typeof r.similarity === 'string' ? parseFloat(r.similarity) : (r.similarity ?? 0);
       return {
         issueId: r.issue_id,
         issueKey: r.issue_key,
@@ -141,7 +133,7 @@ async function findDuplicatesByText(
   issueId: string,
   organizationId: string,
   limit: number,
-  thresholds: { potential: number; high: number },
+  thresholds: { potential: number; high: number }
 ): Promise<DuplicateCandidate[]> {
   // Pull source issue title + description, then scan recent issues in the
   // same org and rank by title token-set similarity. Capped to recent
@@ -185,7 +177,7 @@ async function findDuplicatesByText(
 
 export async function findDuplicates(
   issueId: string,
-  options: DuplicateDetectOptions = {},
+  options: DuplicateDetectOptions = {}
 ): Promise<DuplicateCandidate[]> {
   const limit = options.limit ?? 10;
   const thresholds = options.thresholds ?? DEFAULT_THRESHOLDS;
@@ -202,7 +194,7 @@ export async function findDuplicates(
       issueId,
       source.organizationId,
       limit,
-      thresholds.potential,
+      thresholds.potential
     );
     if (viaEmbeddings.length > 0) {
       return viaEmbeddings;
@@ -213,8 +205,8 @@ export async function findDuplicates(
     // without a sentinel, so try the text fallback as a low-cost safety net.
     return findDuplicatesByText(issueId, source.organizationId, limit, thresholds);
   } catch (err) {
-    // pgvector / content_embeddings table is not deployed yet (task #1
-    // hasn't migrated this env). Don't crash — degrade gracefully.
+    // pgvector / content_embeddings is unavailable in this environment.
+    // Don't crash — degrade gracefully.
     console.warn('[triage.duplicate-detect] embedding path failed, using text fallback:', err);
     return findDuplicatesByText(issueId, source.organizationId, limit, thresholds);
   }

@@ -12,8 +12,8 @@
  *       older deployments, `NEXTAUTH_SECRET`).
  *
  * Persistence: Yjs document state is mirrored into Postgres so that
- *              docs survive restarts. We store the binary state in a
- *              dedicated `collab_documents` table (auto-provisioned).
+ *              docs survive restarts. The database migration layer owns
+ *              the dedicated `collab_documents` table.
  *
  * Scale-out: Redis pub-sub keeps multiple Hocuspocus instances in sync.
  */
@@ -23,6 +23,7 @@ import { Logger } from '@hocuspocus/extension-logger';
 import { Redis } from '@hocuspocus/extension-redis';
 import { jwtVerify } from 'jose';
 import pg from 'pg';
+import { assertCollabDocumentsSchema, createDocumentPersistence } from './persistence.mjs';
 
 const PORT = Number.parseInt(process.env.HOCUSPOCUS_PORT || '1234', 10);
 const SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
@@ -41,32 +42,45 @@ if (!DATABASE_URL) {
 
 const verifyKey = new TextEncoder().encode(SECRET);
 
-// --- Postgres connection + schema bootstrap -------------------------------
+// --- Postgres connection + migration-owned persistence --------------------
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 
-await pool.query(`
-  CREATE TABLE IF NOT EXISTS collab_documents (
-    name TEXT PRIMARY KEY,
-    data BYTEA NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+try {
+  await assertCollabDocumentsSchema(pool);
+} catch (error) {
+  console.error(
+    '[hocuspocus] Refusing to start: collab_documents is unavailable. Run database migrations first.',
+    error?.message || error
   );
-`);
-
-async function fetchDocument({ documentName }) {
-  const result = await pool.query('SELECT data FROM collab_documents WHERE name = $1 LIMIT 1', [
-    documentName,
-  ]);
-  if (result.rows.length === 0) return null;
-  return result.rows[0].data;
+  await pool.end().catch(() => undefined);
+  process.exit(1);
 }
 
-async function storeDocument({ documentName, state }) {
-  await pool.query(
-    `INSERT INTO collab_documents (name, data, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
-    [documentName, Buffer.from(state)]
-  );
+const { fetchDocument, storeDocument } = createDocumentPersistence(pool);
+
+async function handleHealthRequest({ request, response }) {
+  const pathname = new URL(request.url || '/', 'http://localhost').pathname;
+  if (pathname !== '/healthz') return;
+
+  let status = 200;
+  let body = { status: 'ready' };
+
+  try {
+    await assertCollabDocumentsSchema(pool);
+  } catch {
+    status = 503;
+    body = { status: 'unavailable' };
+  }
+
+  response.writeHead(status, {
+    'Cache-Control': 'no-store',
+    'Content-Type': 'application/json; charset=utf-8',
+  });
+  response.end(JSON.stringify(body));
+
+  // Hocuspocus writes a default response after onRequest hooks resolve.
+  // A falsy rejection signals that this hook has fully handled the request.
+  throw null;
 }
 
 /**
@@ -171,6 +185,7 @@ const server = new Hocuspocus({
   port: PORT,
   address: '0.0.0.0',
   extensions,
+  onRequest: handleHealthRequest,
   async onAuthenticate({ token, documentName }) {
     if (!token) {
       throw new Error('Missing collaboration token');

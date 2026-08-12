@@ -4,9 +4,9 @@ import { withAgentPolicy } from './agent-policy.js';
 
 export const updateIssueInput = z.object({
   issueId: z.string().min(1),
-  title: z.string().min(1).max(255).optional(),
+  title: z.string().min(1).max(500).optional(),
   description: z.string().optional(),
-  priority: z.enum(['lowest', 'low', 'medium', 'high', 'highest']).optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).optional(),
   labels: z.array(z.string()).optional(),
   dueDate: z.string().datetime().nullable().optional(),
   estimateHours: z.number().nonnegative().optional(),

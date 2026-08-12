@@ -23,7 +23,8 @@ At minimum the Compose stack requires:
 - `AUTH_SECRET`: strong random session/collaboration signing secret;
 - Postgres database/user/password values;
 - `REDIS_PASSWORD`;
-- production-safe LiveKit credentials when the bundled voice service is used.
+- `CRON_SECRET` for the default approval-effect reconciler;
+- production-safe LiveKit credentials and URLs when the `voice` profile is used.
 
 Generate secrets outside the repository, for example:
 
@@ -42,9 +43,11 @@ database dumps, or live URLs.
 
 ## Docker Compose
 
-The root Compose stack runs Postgres, Redis, LiveKit, and the web image. It
-pulls `neuraparse/tasknebula:latest` by default; set `TASKNEBULA_IMAGE` to an
-immutable version or local tag for reproducible deployment.
+The root Compose stack runs Postgres, Redis, the web image, and a small
+approval-effect reconciler. It pulls `neuraparse/tasknebula:latest` by default;
+set `TASKNEBULA_IMAGE` to an immutable version or local tag for reproducible
+deployment. The separate `voice` and scheduled-product `cron` profiles are
+opt-in.
 
 ```bash
 cp .env.example .env
@@ -73,14 +76,22 @@ a release to a persistent installation.
 Enable the collab overlay and provide a browser-reachable WebSocket URL:
 
 ```bash
+docker compose -f docker-compose.yml -f docker-compose.collab.yml build web hocuspocus
 docker compose -f docker-compose.yml -f docker-compose.collab.yml up -d
 ```
 
 Set `NEXT_PUBLIC_COLLAB_ENABLED=true` and
 `NEXT_PUBLIC_HOCUSPOCUS_URL=wss://collab.example.com`. Because these public
-values participate in the Next.js client build, rebuild the web image when
-they change. Hocuspocus must share the auth secret and database; Redis is
-required for multiple Hocuspocus instances.
+values participate in the Next.js client build, so the explicit build step is
+required when they change; runtime environment values cannot retrofit an
+already-built web image. Hocuspocus must share the auth secret and database;
+Redis is required for multiple Hocuspocus instances. Its container healthcheck
+verifies both the collaboration port and Postgres readiness.
+
+The overlay also sets `HOCUSPOCUS_INTERNAL_URL` for the web health endpoint.
+For a non-Compose deployment, point that server-only variable at the
+Hocuspocus `/healthz` endpoint so `/api/health` can report collaboration
+degradation without exposing the internal URL.
 
 ### Voice
 
@@ -88,6 +99,27 @@ LiveKit/WebRTC needs more than a healthy HTTP container. Configure a
 browser-reachable `NEXT_PUBLIC_LIVEKIT_URL`, strong API key/secret, advertised
 node IP, UDP/TCP ranges, TLS, and TURN behavior for the target network. Verify
 from a second device/network before calling voice production-ready.
+
+```bash
+docker compose --profile voice up -d livekit
+```
+
+The profile uses host networking. Its healthcheck follows `LIVEKIT_PORT`, but
+`LIVEKIT_URL` and `NEXT_PUBLIC_LIVEKIT_URL` must also name that chosen port and
+remain reachable from the server and browser respectively.
+
+### Approval and scheduled workers
+
+The base Compose lifecycle includes `approval-reconciler`; it calls the durable
+approval outbox every minute so a failed response fast-path cannot strand a
+committed effect. Non-Compose deployments must schedule
+`POST /api/cron/agent-approval-effects` with `CRON_SECRET` at least once per
+minute. The separate `cron` profile enables standup, janitor, embeddings,
+version-check, and cycle-rollover schedules:
+
+```bash
+docker compose --profile cron up -d cron
+```
 
 ## Source deployment
 
@@ -149,7 +181,8 @@ source.
 
 - Health: `GET /api/health`
 - Readiness: `GET /api/ready`
-- Metrics: `GET /api/metrics` (protect exposure at the network/auth boundary)
+- Metrics: authenticated `GET /api/metrics` with
+  `Authorization: Bearer $METRICS_TOKEN`; unset tokens fail closed
 - Structured application logs: web process/container output
 - Detailed signals: [`OBSERVABILITY.md`](OBSERVABILITY.md)
 

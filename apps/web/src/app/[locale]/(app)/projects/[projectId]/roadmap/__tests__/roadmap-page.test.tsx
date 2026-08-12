@@ -1,17 +1,9 @@
-import { Suspense } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import RoadmapPage from '../page';
 
 async function renderPage(projectId: string) {
-  let result: ReturnType<typeof render> | undefined;
-  await act(async () => {
-    result = render(
-      <Suspense fallback={<div>fallback</div>}>
-        <RoadmapPage params={Promise.resolve({ projectId })} />
-      </Suspense>,
-    );
-  });
-  return result!;
+  const page = await RoadmapPage({ params: Promise.resolve({ projectId }) });
+  return render(page);
 }
 
 jest.mock('next/navigation', () => ({
@@ -43,7 +35,7 @@ describe('RoadmapPage (smoke)', () => {
     });
     expect(await screen.findByText(/no initiatives yet/i)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/issues?projectId=p1&type=epic'),
+      expect.stringContaining('/api/issues?projectId=p1&type=epic')
     );
   });
 

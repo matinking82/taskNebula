@@ -1,11 +1,10 @@
 /**
  * Optional audit hook for AI provider calls.
  *
- * Task #7 was scoped to add a `cached_tokens` column to an LLM audit table.
- * If/when that lands, the implementation of `recordPromptCacheUsage` can
- * insert into the table directly. Until then, this hook only emits a
- * structured console log so a metrics scraper (Datadog/Loki) can
- * tally cache hit rates without a DB migration.
+ * The primary budget path persists `cached_tokens` in `llm_call_audit`.
+ * Agent-provider calls do not have that budget context, so this secondary
+ * hook emits a structured console log that a metrics scraper (Datadog/Loki)
+ * can use to tally cache hit rates.
  *
  * Callers MUST treat this hook as optional and never throw out of it.
  */
@@ -38,11 +37,10 @@ export function recordPromptCacheUsage(record: PromptCacheUsageRecord): void {
       outputTokens: Number.isFinite(record.outputTokens) ? record.outputTokens : 0,
       cachedTokens: Number.isFinite(record.cachedTokens) ? record.cachedTokens : 0,
       cacheCreationTokens: Number.isFinite(record.cacheCreationTokens ?? 0)
-        ? record.cacheCreationTokens ?? 0
+        ? (record.cacheCreationTokens ?? 0)
         : 0,
     };
-    // Structured log line — pickable by a Loki/Datadog parser. When task #7
-    // ships the audit table, replace with an INSERT.
+    // Structured fallback log line, suitable for a Loki/Datadog parser.
     // eslint-disable-next-line no-console
     console.info('[ai.cache.usage]', JSON.stringify(safe));
   } catch {

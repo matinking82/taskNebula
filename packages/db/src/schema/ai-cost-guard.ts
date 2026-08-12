@@ -1,8 +1,7 @@
 /**
  * AI Cost Guard schema
  *
- * Two tables that back the per-org AI cost / token budget guardrail
- * shipped with TaskNebula Roadmap task P0-07:
+ * Two tables that back the per-org AI cost / token budget guardrail:
  *
  *   1. `org_token_budgets`
  *      One row per organization. Holds the configured daily / monthly
@@ -43,7 +42,9 @@ import { users } from './users';
 export const orgTokenBudgets = pgTable(
   'org_token_budgets',
   {
-    id: text('id').$defaultFn(() => createId()).primaryKey(),
+    id: text('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
     organizationId: text('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
@@ -58,9 +59,7 @@ export const orgTokenBudgets = pgTable(
     // daily, 1st-of-month UTC for monthly).
     dailyUsedTokens: integer('daily_used_tokens').notNull().default(0),
     monthlyUsedTokens: integer('monthly_used_tokens').notNull().default(0),
-    dailyUsedCost: numeric('daily_used_cost', { precision: 12, scale: 4 })
-      .notNull()
-      .default('0'),
+    dailyUsedCost: numeric('daily_used_cost', { precision: 12, scale: 4 }).notNull().default('0'),
     monthlyUsedCost: numeric('monthly_used_cost', { precision: 12, scale: 4 })
       .notNull()
       .default('0'),
@@ -69,20 +68,14 @@ export const orgTokenBudgets = pgTable(
     // switch toggle or a forgotten cron does not silently keep counters
     // stale forever; `checkAndReserveTokens` rolls the period if this
     // timestamp is in the past before doing any math.
-    periodResetsAt: timestamp('period_resets_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    periodResetsAt: timestamp('period_resets_at', { withTimezone: true }).notNull().defaultNow(),
 
     // Emergency stop. When true, every call is rejected with
     // `budget_kill_switch` regardless of remaining budget.
     killSwitchEnabled: boolean('kill_switch_enabled').notNull().default(false),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     organizationUniqueIdx: uniqueIndex('org_token_budgets_organization_idx').on(
@@ -94,7 +87,9 @@ export const orgTokenBudgets = pgTable(
 export const llmCallAudit = pgTable(
   'llm_call_audit',
   {
-    id: text('id').$defaultFn(() => createId()).primaryKey(),
+    id: text('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
     organizationId: text('organization_id')
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
@@ -114,9 +109,7 @@ export const llmCallAudit = pgTable(
     inputTokens: integer('input_tokens').notNull().default(0),
     outputTokens: integer('output_tokens').notNull().default(0),
     cachedTokens: integer('cached_tokens').notNull().default(0),
-    costUsd: numeric('cost_usd', { precision: 12, scale: 6 })
-      .notNull()
-      .default('0'),
+    costUsd: numeric('cost_usd', { precision: 12, scale: 6 }).notNull().default('0'),
 
     latencyMs: integer('latency_ms'),
 
@@ -128,14 +121,10 @@ export const llmCallAudit = pgTable(
     // draft, assist, triage, ask, ...
     feature: text('feature').notNull(),
 
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    organizationIdx: index('llm_call_audit_organization_idx').on(
-      table.organizationId
-    ),
+    organizationIdx: index('llm_call_audit_organization_idx').on(table.organizationId),
     createdAtIdx: index('llm_call_audit_created_at_idx').on(table.createdAt),
     orgCreatedAtIdx: index('llm_call_audit_org_created_at_idx').on(
       table.organizationId,

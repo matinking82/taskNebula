@@ -11,13 +11,13 @@ pnpm build             # next build
 pnpm test              # Jest
 pnpm tests:e2e         # playwright test (plural "tests:"); tests:e2e:ui for UI mode
 pnpm type-check        # tsc --noEmit
-pnpm lint              # next lint
+pnpm lint              # ESLint CLI over src/
 pnpm openapi:gen       # regenerate public/openapi.json (openapi:check verifies no drift)
 ```
 
 ## Layout
 
-- `src/app/(marketing)/` public · `src/app/(app)/` authenticated · `src/app/api/` REST · `[locale]/` next-intl i18n.
+- `src/app/page.tsx` landing · `src/app/(public)/` public evidence/intake · `src/app/[locale]/(app)/` authenticated · `src/app/{auth,join,setup,offline,share}/` non-app flows · `src/app/api/` REST.
 - `src/components/` — `ui/` (shadcn/Radix), `layout/`, `kanban/`, `issues/`, `forms/`, `ai/`, `dashboard/`, …
 - `src/lib/` — domain logic; `src/lib/auth/` holds the canonical guards.
 - State: TanStack Query (server), Zustand (UI), React Hook Form + Zod (forms). Aliases: `@/*`, `@/components/*`, `@/lib/*`, `@/app/*`.

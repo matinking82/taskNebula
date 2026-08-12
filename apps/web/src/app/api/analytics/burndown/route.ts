@@ -7,7 +7,7 @@ import { canReadProject } from '@/lib/auth/access-control';
 
 // GET /api/analytics/burndown?sprintId=xxx[&unit=points|hours]
 //
-// task #10: when `unit=hours` (or when the caller doesn't pass `unit` but the
+// When `unit=hours` (or when the caller doesn't pass `unit` but the
 // sprint has *any* issue with a non-null `actual_hours`), we additionally
 // surface hour-denominated totals alongside the existing story-point numbers.
 // The default response shape is unchanged so existing chart code keeps working.
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const totalPoints = sprintIssues.reduce((sum, issue) => sum + (issue.estimate || 0), 0);
     const totalIssues = sprintIssues.length;
 
-    // Hour-based totals (task #10). Only meaningful when the team has populated
+    // Hour-based totals. Only meaningful when the team has populated
     // estimate_hours / actual_hours. We always compute these — the response
     // includes them only when there's signal, so old clients don't see noise.
     const totalEstimateHours = sprintIssues.reduce(

@@ -25,7 +25,8 @@ Monorepo managed with **pnpm + Turborepo**. Node **>=22**, pnpm **>=9**, TypeScr
 Run from repo root unless noted. Build/lint/type-check/test fan out across workspaces via Turbo.
 
 ```bash
-pnpm dev              # start all workspaces in dev
+pnpm --filter @tasknebula/web dev  # default local web development
+pnpm dev              # all workspaces; requires the Hocuspocus env contract
 pnpm build            # build all (runs openapi:gen first)
 pnpm lint             # ESLint across monorepo
 pnpm type-check       # tsc --noEmit across all packages
@@ -50,7 +51,10 @@ pnpm openapi:gen      # regenerate public/openapi.json
 > `openapi:gen` does **not** exist as a root script — from the repo root use
 > `pnpm --filter @tasknebula/web openapi:gen`.
 
-**Before committing** run `pnpm type-check` and `pnpm lint`. Husky `pre-commit` runs lint-staged (ESLint + Prettier); `commit-msg` runs commitlint.
+**Before committing**, run focused checks for the changed surface. Before a
+push or publication, run the complete gate documented in `README.md` (Claude
+Code users may invoke `/verify`). Husky `pre-commit` runs lint-staged (ESLint +
+Prettier); `commit-msg` runs commitlint.
 
 ## Conventions
 
@@ -61,11 +65,11 @@ pnpm openapi:gen      # regenerate public/openapi.json
 - **Product design**: `apps/web/DESIGN.md` defines page archetypes, hierarchy, anti-slop acceptance criteria, and the evidence loop. `apps/web/DESIGN_SYSTEM.md` is the token/component contract (square-ish radii: `rounded-sm`=2px pills, `rounded-md`=4px default, `rounded-lg`=6px cards; semantic `accent-*` colors; spring motion 150–200ms; first-class dark mode). See `.claude/rules/frontend.md`.
 - **Open-source hygiene**: operator domains, host ports, deployment topology, screenshots, dumps, and temporary notes stay in ignored local files or `/tmp`, never tracked source. Prefer updating a canonical document over adding a one-off report. Run `pnpm hygiene:check`. See `.claude/rules/repository-hygiene.md`.
 - **Local-only mobile workspace**: the root `mobile/` directory may exist in operator checkouts, but it is intentionally excluded from the public repository. Never add or force-add it, stage/commit/push any descendant, copy its source into tracked artifacts, or add it to public workspace manifests, lockfiles, CI, or release steps. Work inside it only when the user explicitly requests local mobile work; its own workspace and lockfile remain local. `AGENTS.md` makes this rule apply to Codex and other AGENTS-compatible assistants.
-- **i18n is MANDATORY — zero new hardcoded user-facing strings.** The app ships **30 languages** with device/browser auto-detection. EVERY user-facing string (JSX text **and** props like `placeholder`/`aria-label`/`title`/`alt`/`label`/`description`, plus `toast`/error messages) MUST go through `next-intl` — `useTranslations('ns')` in client components, `await getTranslations('ns')` in async server components. Add the English key and a real translation to all 30 locale catalogs; keep key/ICU parity with `node scripts/i18n-check.mjs`. ESLint and `ui:check` catch only part of this policy, so reviewers must inspect props and non-JSX call sites too. **All future work — by any assistant — must follow this.** See `.claude/rules/frontend.md` and `.cursor/rules/i18n.mdc`.
+- **i18n is MANDATORY — zero new hardcoded user-facing strings.** The repository contains **30 locale catalogs** with device/browser auto-detection; catalog/ICU parity is enforced while legacy linguistic review continues. EVERY new user-facing string (JSX text **and** props like `placeholder`/`aria-label`/`title`/`alt`/`label`/`description`, plus `toast`/error messages) MUST go through `next-intl` — `useTranslations('ns')` in client components, `await getTranslations('ns')` in async server components. Add the English key and a real translation to all 30 locale catalogs; keep parser tests, key/ICU parity, and catalog contracts green with `pnpm i18n:check`. ESLint and `ui:check` catch only part of this policy, so reviewers must inspect props and non-JSX call sites too. **All future work — by any assistant — must follow this.** See `.claude/rules/frontend.md` and `.cursor/rules/i18n.mdc`.
 
 ## apps/web structure
 
-- `src/app/(marketing)/` — public pages · `src/app/(app)/` — authenticated routes · `src/app/api/` — REST endpoints · `[locale]/` — next-intl i18n.
+- `src/app/page.tsx` is the landing page; `src/app/(public)/` contains public evidence/intake routes; `src/app/[locale]/(app)/` contains authenticated routes; `src/app/auth/`, `join/`, `setup/`, `offline/`, and `share/` are non-app flows; `src/app/api/` contains REST endpoints.
 - `src/components/` — `ui/` (shadcn/Radix base), `layout/`, `kanban/`, `issues/`, `forms/`, `ai/`, `dashboard/`, etc.
 - State: TanStack Query (server), Zustand (UI), React Hook Form + Zod (forms).
 - Auth: NextAuth v5 (beta). Realtime: Tiptap + Yjs via `@hocuspocus/provider`.
@@ -88,7 +92,7 @@ pnpm openapi:gen      # regenerate public/openapi.json
   GitHub or registry publication, and publication approval for one destination
   does not imply approval for another. Use Conventional Commit messages (see
   Conventions).
-- CI (`.github/workflows/ci.yml`) runs type-check, lint, and tests on every push/PR to `main` — but it is minimal and pushes go straight to `main`, so **still verify locally before every push**: `pnpm type-check && pnpm lint && pnpm test` (or `/verify`). This repo is **open-source** — never commit secrets (see `.gitignore` hardening; `.env`, certs, keys, local files are ignored).
+- CI (`.github/workflows/ci.yml`) builds the MCP package and runs i18n parity, repository hygiene, UI and documentation contracts, OpenAPI drift, type-check, lint, and unit tests on every push/PR to `main`. Browser E2E remains a proportional local/release gate. Run the complete local gate before every push (`/verify` in Claude Code; otherwise use the command list in `README.md`). This repo is **open-source** — never commit secrets (see `.gitignore` hardening; `.env`, certs, keys, local files are ignored).
 - External contributors still use branches + PRs (`.github/PULL_REQUEST_TEMPLATE.md`); the direct-to-main rule is for the maintainer's own Claude-assisted work.
 
 ## Releases & Docker images
@@ -115,8 +119,11 @@ snapshot and `docs/ROADMAP_2026.md` contains future work.
   foundation, not yet the durable worker used by every agent path. Read
   `docs/AGENT_RUNTIME.md` before changing claims or orchestration.
 - **Human oversight fails closed**: approval-gated project-agent mutations stay
-  in preview. The durable approval/apply worker remains roadmap work; never
-  bypass the preview guard to make the UI look live.
+  in preview because that engine is not yet wired to the queue. Covered
+  agent-marked issue/comment REST writes persist approval requests and apply the
+  database mutation, audit, terminal state, and durable outbox atomically;
+  external delivery is at-least-once. Never bypass either guard to make the UI
+  look live.
 - **Workflow transitions are stored but not consistently enforced**. Status
   changes, bulk operations, automation, and agent webhooks must eventually use
   one transition service.

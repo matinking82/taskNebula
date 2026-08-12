@@ -7,7 +7,7 @@ registerRoute({
   path: '/api/health',
   summary: 'Service health check',
   description:
-    'Returns the health status of the application — database, memory, redis, livekit and smtp checks. Used by container orchestrators and monitoring.',
+    'Returns the health status of the application — database, memory, Redis, collaboration, LiveKit, and SMTP checks. Used by container orchestrators and monitoring.',
   tags: [TAGS.Health],
   security: [],
   responses: {

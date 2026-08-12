@@ -176,9 +176,10 @@ export function AppearanceSettings() {
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [serverHydrated, setServerHydrated] = useState(false);
-  const [selectedColorMode, setSelectedColorMode] = useState<ColorMode>(
-    () => getStoredColorMode() ?? 'system'
-  );
+  // The server and first client render must agree. Browser storage is applied
+  // after mount below; reading localStorage in the initializer causes
+  // aria-pressed hydration mismatches on the settings route.
+  const [selectedColorMode, setSelectedColorMode] = useState<ColorMode>('system');
 
   // Fetch server settings — only runs when a session exists, so the landing
   // page / other unauthenticated surfaces never hit the authed API.
@@ -430,7 +431,7 @@ export function AppearanceSettings() {
           className={cn(
             'flex items-center justify-end gap-1.5 text-xs transition-opacity duration-200',
             syncStatus === 'idle'
-              ? 'text-muted-foreground/70'
+              ? 'text-muted-foreground'
               : syncStatus === 'error'
                 ? 'text-destructive'
                 : 'text-muted-foreground'
@@ -488,7 +489,7 @@ export function AppearanceSettings() {
                   aria-pressed={isActive}
                   onClick={() => handleColorModeChange(mode.value)}
                   className={cn(
-                    'ease-snap flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm transition-all duration-150',
+                    'ease-snap flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                     'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                     isActive
                       ? 'border-primary bg-primary/10 text-primary font-medium'
@@ -545,7 +546,7 @@ export function AppearanceSettings() {
                     data-theme={themeKey}
                     onClick={() => setColorTheme(themeKey)}
                     className={cn(
-                      'border-border ease-snap relative h-10 w-10 rounded-md border transition-all duration-150',
+                      'border-border ease-snap relative h-10 w-10 rounded-md border transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                       'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                       isActive && 'ring-ring ring-offset-background ring-2 ring-offset-2'
                     )}
@@ -591,7 +592,7 @@ export function AppearanceSettings() {
                   aria-pressed={isActive}
                   onClick={() => setVisualStyle(style.value)}
                   className={cn(
-                    'ease-snap flex items-center justify-center rounded-md border px-3 py-2.5 text-sm transition-all duration-150',
+                    'ease-snap flex items-center justify-center rounded-md border px-3 py-2.5 text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                     'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                     isActive
                       ? 'border-primary bg-primary/10 text-primary font-medium'
@@ -635,7 +636,7 @@ export function AppearanceSettings() {
                   aria-pressed={isActive}
                   onClick={() => setInterfaceFont(font.value)}
                   className={cn(
-                    'ease-snap flex min-h-[112px] flex-col items-start justify-between rounded-md border p-4 text-left transition-all duration-150',
+                    'ease-snap flex min-h-[112px] flex-col items-start justify-between rounded-md border p-4 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                     'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                     isActive
                       ? 'border-primary bg-primary/10 text-primary'
@@ -647,7 +648,12 @@ export function AppearanceSettings() {
                       <span className="text-foreground block text-sm font-semibold">
                         {t(font.labelKey)}
                       </span>
-                      <span className="text-muted-foreground mt-1 block text-xs leading-5">
+                      <span
+                        className={cn(
+                          'mt-1 block text-xs leading-5',
+                          isActive ? 'text-foreground' : 'text-muted-foreground'
+                        )}
+                      >
                         {t(font.descKey)}
                       </span>
                     </span>

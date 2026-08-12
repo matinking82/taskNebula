@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,6 +38,8 @@ interface VersionPickerProps {
   disabled?: boolean;
   /** Trigger placeholder when nothing is selected. */
   placeholder?: string;
+  /** Accessible name for the trigger (for example, fix or affects versions). */
+  ariaLabel?: string;
 }
 
 const STATUS_DOT_CLASS: Record<ProjectVersion['status'], string> = {
@@ -62,6 +64,7 @@ export function VersionPicker({
   onChange,
   disabled = false,
   placeholder,
+  ariaLabel,
 }: VersionPickerProps) {
   const t = useTranslations('issueSidebar.versions');
   const queryClient = useQueryClient();
@@ -69,6 +72,8 @@ export function VersionPicker({
   const [search, setSearch] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
   const { data: projectVersions, isLoading } = useProjectVersions(projectId);
   const createVersion = useCreateProjectVersion();
 
@@ -175,9 +180,13 @@ export function VersionPicker({
             variant="ghost"
             role="combobox"
             aria-expanded={open}
+            aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
             className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
             disabled={disabled || isLoading}
           >
+            <span id={triggerLabelId} className="sr-only">
+              {ariaLabel ?? t('fixLabel')}
+            </span>
             {value.length > 0 ? (
               <span className="flex min-w-0 items-center gap-1.5">
                 <span
@@ -187,10 +196,12 @@ export function VersionPicker({
                     STATUS_DOT_CLASS[value[0]!.status]
                   )}
                 />
-                <span className="truncate">{value.map((v) => v.name).join(', ')}</span>
+                <span id={triggerValueId} className="truncate">
+                  {value.map((v) => v.name).join(', ')}
+                </span>
               </span>
             ) : (
-              <span className="text-muted-foreground min-w-0 flex-1 truncate">
+              <span id={triggerValueId} className="text-muted-foreground min-w-0 flex-1 truncate">
                 {placeholder ?? t('none')}
               </span>
             )}

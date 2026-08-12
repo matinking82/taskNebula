@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 
+: "${LIVEKIT_API_KEY:?LIVEKIT_API_KEY must be set}"
+: "${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET must be set}"
+
 detect_node_ip() {
   if [ -n "${LIVEKIT_NODE_IP:-}" ]; then
     printf '%s' "$LIVEKIT_NODE_IP"
@@ -49,14 +52,14 @@ WEBHOOK_BLOCK=""
 if [ -n "${LIVEKIT_WEBHOOK_URL:-}" ]; then
   WEBHOOK_BLOCK="$(cat <<EOF
 webhook:
-  api_key: ${LIVEKIT_API_KEY:-tasknebula-dev}
+  api_key: ${LIVEKIT_API_KEY}
   urls:
     - "${LIVEKIT_WEBHOOK_URL}"
 EOF
 )"
 fi
 
-# Prometheus exporter (OBS-35). When LIVEKIT_PROMETHEUS_PORT is set to a
+# Prometheus exporter. When LIVEKIT_PROMETHEUS_PORT is set to a
 # non-zero port, LiveKit exposes /metrics on that port. Default 0 keeps
 # the exporter off so existing deployments don't gain an unexpected listener.
 PROMETHEUS_BLOCK=""
@@ -89,7 +92,7 @@ turn:
   enabled: true
   udp_port: ${LIVEKIT_TURN_UDP_PORT:-3478}
 keys:
-  ${LIVEKIT_API_KEY:-tasknebula-dev}: ${LIVEKIT_API_SECRET:-tasknebula-livekit-secret-local-2026}
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
 ${WEBHOOK_BLOCK}
 ${PROMETHEUS_BLOCK}
 EOF

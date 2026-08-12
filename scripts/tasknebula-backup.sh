@@ -18,7 +18,7 @@ WEB_CONTAINER="${WEB_CONTAINER:-tasknebula-web}"
 UPLOADS_VOLUME="${UPLOADS_VOLUME:-tasknebula_uploads_data}"
 DB="${POSTGRES_DB:-tasknebula}"
 USER="${POSTGRES_USER:-postgres}"
-PASSWORD="${POSTGRES_PASSWORD:-postgres}"
+PASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the selected environment file}"
 
 TS="$(date -u +%Y%m%d-%H%M%SZ)"
 OUT_DIR="$BACKUP_DIR/tasknebula-$TS"

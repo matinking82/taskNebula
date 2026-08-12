@@ -22,7 +22,9 @@ function ErrorContent() {
     <div className="animate-fade-up space-y-7">
       <div className="panel-danger text-destructive flex items-center gap-3 px-4 py-3">
         <AlertCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <p className="min-w-0 break-words font-mono text-xs">{t('error.chip', { error })}</p>
+        <p className="text-foreground min-w-0 break-words font-mono text-xs">
+          {t('error.chip', { error })}
+        </p>
       </div>
 
       <AuthIntro title={t('error.title')} description={errorMessage} />

@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * /api/webhooks/agent-session/[provider] receiver tests (P0-04).
+ * /api/webhooks/agent-session/[provider] receiver tests.
  *
  * Covers the inbound side of the Linear Agent Protocol bridge:
  *   - 401 when the HMAC header is missing or invalid
@@ -33,33 +33,68 @@ const fake: FakeState = {
     users: [],
     workflows: [],
     workflow_statuses: [],
+    agent_session_webhook_deliveries: [],
   },
 };
+let failCommentInsert = false;
 
 jest.mock('@tasknebula/db', () => {
   const table = (name: string) => ({ __name: name });
+
+  function selectRows(t: { __name: string }) {
+    const rows = fake.rows[t.__name] ?? [];
+    const chain = {
+      where: (_c: unknown) => chain,
+      orderBy: (..._args: unknown[]) => chain,
+      limit: (count: number) => {
+        const limited = rows.slice(0, count);
+        const limitedChain = Promise.resolve(limited) as Promise<Row[]> & {
+          for: (...args: unknown[]) => Promise<Row[]>;
+        };
+        limitedChain.for = (..._args: unknown[]) => Promise.resolve(limited);
+        return limitedChain;
+      },
+      for: (..._args: unknown[]) => Promise.resolve(rows),
+      then: (resolve: (value: Row[]) => unknown) => Promise.resolve(rows).then(resolve),
+    };
+    return chain;
+  }
 
   const db = {
     select() {
       return {
         from(t: { __name: string }) {
-          return {
-            where(_c: unknown) {
-              const rows = fake.rows[t.__name] ?? [];
-              return {
-                limit: (_n: number) => Promise.resolve(rows.slice(0, _n)),
-                then: (resolve: (rows: Row[]) => unknown) => Promise.resolve(rows).then(resolve),
-              };
-            },
-          };
+          return selectRows(t);
         },
       };
     },
     insert(t: { __name: string }) {
       return {
         values(values: Row) {
-          fake.inserted.push({ table: t.__name, ...values });
-          return Promise.resolve([{ ...values, id: 'comment_1' }]);
+          if (t.__name === 'issue_comments' && failCommentInsert) {
+            throw new Error('comment insert failed');
+          }
+          const duplicate =
+            t.__name === 'agent_session_webhook_deliveries' &&
+            fake.rows.agent_session_webhook_deliveries.some(
+              (row) =>
+                row.workspaceId === values.workspaceId &&
+                row.sessionId === values.sessionId &&
+                row.fingerprint === values.fingerprint
+            );
+          if (!duplicate) {
+            fake.inserted.push({ table: t.__name, ...values });
+            (fake.rows[t.__name] ??= []).push({ ...values });
+          }
+
+          const operation = {
+            onConflictDoNothing: () => operation,
+            returning: (_selection?: unknown) =>
+              Promise.resolve(duplicate ? [] : [{ ...values, id: values.id ?? 'inserted_1' }]),
+            then: (resolve: (value: Row[]) => unknown) =>
+              Promise.resolve(duplicate ? [] : [{ ...values }]).then(resolve),
+          };
+          return operation;
         },
       };
     },
@@ -67,9 +102,36 @@ jest.mock('@tasknebula/db', () => {
       return {
         set(values: Row) {
           fake.updated.push({ table: t.__name, set: values });
-          return { where: (_c: unknown) => Promise.resolve() };
+          return {
+            where: (_c: unknown) => {
+              const rows = fake.rows[t.__name] ?? [];
+              const target = rows[0];
+              if (target) Object.assign(target, values);
+              const result = target ? [{ ...target }] : [];
+              const operation = Promise.resolve(result) as Promise<Row[]> & {
+                returning: () => Promise<Row[]>;
+              };
+              operation.returning = () => Promise.resolve(result);
+              return operation;
+            },
+          };
         },
       };
+    },
+    async transaction<T>(callback: (tx: typeof db) => Promise<T>) {
+      const snapshot = {
+        rows: structuredClone(fake.rows),
+        insertedLength: fake.inserted.length,
+        updatedLength: fake.updated.length,
+      };
+      try {
+        return await callback(db);
+      } catch (error) {
+        fake.rows = snapshot.rows;
+        fake.inserted.length = snapshot.insertedLength;
+        fake.updated.length = snapshot.updatedLength;
+        throw error;
+      }
     },
   };
 
@@ -95,6 +157,7 @@ jest.mock('@tasknebula/db', () => {
     agentProviders: table('agent_providers'),
     issues: table('issues'),
     issueComments: table('issue_comments'),
+    agentSessionWebhookDeliveries: table('agent_session_webhook_deliveries'),
     workflows: table('workflows'),
     workflowStatuses: table('workflow_statuses'),
     users: table('users'),
@@ -162,6 +225,8 @@ function seed(
   fake.rows.users = [];
   fake.rows.workflows = [];
   fake.rows.workflow_statuses = [];
+  fake.rows.agent_session_webhook_deliveries = [];
+  failCommentInsert = false;
 }
 
 describe('POST /api/webhooks/agent-session/[provider]', () => {
@@ -243,6 +308,82 @@ describe('POST /api/webhooks/agent-session/[provider]', () => {
     // Comment posted on the linked issue.
     const comment = fake.inserted.find((i) => i.table === 'issue_comments');
     expect(comment?.content).toBe('Cursor started: Cloning repo');
+  });
+
+  it('concurrently deduplicates an identical same-state delivery before side effects', async () => {
+    seed({ sessionState: 'active', signedSecret: 'top-secret' });
+    const body = { state: 'active', sessionId: 'sess_1', message: 'Cloning repo' };
+    const raw = JSON.stringify(body);
+    const sig = signAgentPayload(raw, 'top-secret');
+    const request = () =>
+      reqWith(body, {
+        'x-tasknebula-session-id': 'sess_1',
+        'x-tasknebula-signature': `sha256=${sig}`,
+      }) as never;
+
+    const [first, second] = await Promise.all([
+      receiveHandler(request(), { params: Promise.resolve({ provider: 'cursor' }) }),
+      receiveHandler(request(), { params: Promise.resolve({ provider: 'cursor' }) }),
+    ]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    const responses = await Promise.all([first.json(), second.json()]);
+    expect(responses.filter((response) => response.duplicate)).toHaveLength(1);
+    expect(fake.inserted.filter((row) => row.table === 'issue_comments')).toHaveLength(1);
+    expect(
+      fake.inserted.filter((row) => row.table === 'agent_session_webhook_deliveries')
+    ).toHaveLength(1);
+  });
+
+  it('rolls back the receipt and session CAS when a database side effect fails', async () => {
+    seed({ sessionState: 'pending', signedSecret: 'top-secret' });
+    const body = { state: 'active', sessionId: 'sess_1', message: 'Retry safely' };
+    const raw = JSON.stringify(body);
+    const sig = signAgentPayload(raw, 'top-secret');
+    const request = () =>
+      reqWith(body, {
+        'x-tasknebula-session-id': 'sess_1',
+        'x-tasknebula-signature': `sha256=${sig}`,
+      }) as never;
+
+    failCommentInsert = true;
+    const failed = await receiveHandler(request(), {
+      params: Promise.resolve({ provider: 'cursor' }),
+    });
+
+    expect(failed.status).toBe(500);
+    expect(fake.rows.agent_sessions[0]?.state).toBe('pending');
+    expect(fake.rows.agent_session_webhook_deliveries).toHaveLength(0);
+
+    failCommentInsert = false;
+    const retried = await receiveHandler(request(), {
+      params: Promise.resolve({ provider: 'cursor' }),
+    });
+
+    expect(retried.status).toBe(200);
+    expect(fake.rows.agent_sessions[0]?.state).toBe('active');
+    expect(fake.inserted.filter((row) => row.table === 'issue_comments')).toHaveLength(1);
+  });
+
+  it('treats same-state terminal callbacks as idempotent', async () => {
+    seed({ sessionState: 'complete', signedSecret: 'top-secret' });
+    const body = { state: 'complete', sessionId: 'sess_1', message: 'Done again' };
+    const raw = JSON.stringify(body);
+    const sig = signAgentPayload(raw, 'top-secret');
+
+    const response = await receiveHandler(
+      reqWith(body, {
+        'x-tasknebula-session-id': 'sess_1',
+        'x-tasknebula-signature': `sha256=${sig}`,
+      }) as never,
+      { params: Promise.resolve({ provider: 'cursor' }) }
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ dropped: true, duplicate: true });
+    expect(fake.inserted.find((row) => row.table === 'issue_comments')).toBeUndefined();
+    expect(fake.updated.find((row) => row.table === 'agent_sessions')).toBeUndefined();
   });
 
   it('drops an invalid transition (complete -> active) with 200 and no mutation', async () => {

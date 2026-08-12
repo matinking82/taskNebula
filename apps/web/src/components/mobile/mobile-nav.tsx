@@ -59,7 +59,7 @@ export function MobileNav({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
               href={item.href}
               data-active={isActive ? 'true' : undefined}
               className={cn(
-                'ease-snap relative flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 text-[10px] font-medium transition-all duration-150',
+                'ease-snap relative flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 text-[10px] font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               )}
               aria-current={isActive ? 'page' : undefined}

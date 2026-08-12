@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ChevronsUpDown, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ interface AssigneePickerProps {
   value: string | null;
   onChange: (userId: string | null) => void;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
 export function AssigneePicker({
@@ -29,9 +30,13 @@ export function AssigneePicker({
   value,
   onChange,
   disabled = false,
+  ariaLabel,
 }: AssigneePickerProps) {
   const t = useTranslations('issueMisc');
+  const tRows = useTranslations('issueSidebar.rows');
   const [open, setOpen] = useState(false);
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
   const { data, isLoading } = useOrganizationMembers(organizationId);
 
   const members = data?.members || [];
@@ -45,9 +50,13 @@ export function AssigneePicker({
           variant="ghost"
           role="combobox"
           aria-expanded={open}
+          aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
           className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
           disabled={disabled || isLoading}
         >
+          <span id={triggerLabelId} className="sr-only">
+            {ariaLabel ?? tRows('assignee')}
+          </span>
           {selectedMember ? (
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Avatar className="h-5 w-5">
@@ -59,12 +68,16 @@ export function AssigneePicker({
                   {selectedMember.name?.[0] || selectedMember.email?.[0] || '?'}
                 </AvatarFallback>
               </Avatar>
-              <span className="truncate">{selectedMember.name || selectedMember.email}</span>
+              <span id={triggerValueId} className="truncate">
+                {selectedMember.name || selectedMember.email}
+              </span>
             </div>
           ) : (
             <div className="text-muted-foreground flex min-w-0 flex-1 items-center gap-2">
               <User className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('unassigned')}</span>
+              <span id={triggerValueId} className="truncate">
+                {t('unassigned')}
+              </span>
             </div>
           )}
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-40" />

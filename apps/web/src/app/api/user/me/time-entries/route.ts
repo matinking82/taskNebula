@@ -1,9 +1,9 @@
 /**
- * GET /api/users/me/time-entries?from=&to= (task #10).
+ * GET /api/users/me/time-entries?from=&to=.
  *
  * Lists the caller's own time entries in a date range (default: last 7 days).
  * Used by the personal "what did I do this week" panel and as the data source
- * for future Toggl/Harvest sync (task #15).
+ * for a future Toggl/Harvest sync.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -35,10 +35,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'to must be >= from' }, { status: 400 });
   }
   if (to.getTime() - from.getTime() > MAX_RANGE_MS) {
-    return NextResponse.json(
-      { error: 'Range too wide (max 90 days)' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Range too wide (max 90 days)' }, { status: 400 });
   }
 
   const rows = await db
@@ -61,16 +58,13 @@ export async function GET(request: NextRequest) {
       and(
         eq(timeEntries.userId, userId),
         gte(timeEntries.startedAt, from),
-        lte(timeEntries.startedAt, to),
-      ),
+        lte(timeEntries.startedAt, to)
+      )
     )
     .orderBy(desc(timeEntries.startedAt))
     .limit(500);
 
-  const totalSeconds = rows.reduce(
-    (acc, r) => acc + (r.durationSeconds ?? 0),
-    0,
-  );
+  const totalSeconds = rows.reduce((acc, r) => acc + (r.durationSeconds ?? 0), 0);
 
   return NextResponse.json({
     from: from.toISOString(),

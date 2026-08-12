@@ -108,7 +108,7 @@ export function ModuleCard({ module }: ModuleCardProps) {
       <div className="mt-3 flex items-center gap-3">
         <div className="bg-primary/10 h-1.5 flex-1 overflow-hidden rounded-sm">
           <div
-            className="bg-primary ease-snap h-full rounded-sm transition-all duration-150"
+            className="bg-primary ease-snap h-full rounded-sm transition-[width] duration-150"
             style={{ width: `${progress}%` }}
           />
         </div>

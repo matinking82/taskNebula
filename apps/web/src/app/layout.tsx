@@ -7,6 +7,7 @@ import './globals.css';
 import '@livekit/components-styles';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/toaster';
+import { auth } from '@/auth';
 import {
   LOCALE_COOKIE,
   defaultLocale,
@@ -87,6 +88,7 @@ export default async function RootLayout({
   const locale = await resolveLocale();
   const dir = getDirection(locale);
   const messages = await loadMessages(locale);
+  const session = await auth();
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
@@ -149,7 +151,7 @@ export default async function RootLayout({
         */}
         <DirectionProvider dir={dir}>
           <NextIntlClientProvider locale={locale} messages={messages}>
-            <Providers>{children}</Providers>
+            <Providers session={session}>{children}</Providers>
             <Toaster />
           </NextIntlClientProvider>
         </DirectionProvider>

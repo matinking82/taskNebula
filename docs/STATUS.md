@@ -13,12 +13,12 @@ The values below are a dated inventory, not agent instructions:
 
 | Surface                                    | 2026-08-12 tree |
 | ------------------------------------------ | --------------: |
-| Next.js API `route.ts` files               |             280 |
-| Drizzle `pgTable` definitions              |             115 |
-| Schema files excluding the re-export index |              54 |
-| Journaled SQL migrations                   |              61 |
-| Web Jest test files                        |             277 |
-| Playwright spec files                      |               8 |
+| Next.js API `route.ts` files               |             281 |
+| Drizzle `pgTable` definitions              |             118 |
+| Schema files excluding the re-export index |              55 |
+| Journaled SQL migrations                   |              63 |
+| Web Jest test files                        |             285 |
+| Playwright spec files                      |               9 |
 | Locale catalogs                            |              30 |
 
 ## Working product areas
@@ -40,8 +40,9 @@ The values below are a dated inventory, not agent instructions:
   a typed bounded graph/research topology has focused tests.
 - Enterprise scaffolding: SAML/SCIM, audit/SIEM, trust and AI transparency
   surfaces, permission/security scheme configuration.
-- CI: MCP build, i18n parity, public-repository hygiene, UI contract,
-  type-check, lint, and tests run on pushes and pull requests to `main`.
+- CI: MCP build, i18n parity, public-repository hygiene, UI and documentation
+  contracts, OpenAPI drift, type-check, lint, and tests run on pushes and pull
+  requests to `main`; browser E2E remains a local/release gate.
 
 ## Important limitations
 
@@ -53,10 +54,11 @@ The values below are a dated inventory, not agent instructions:
    and post-actions are persisted but are not consistently enforced by one service across issue
    PATCH, board drag, bulk operations, automations, and agent webhooks.
 3. Project-agent approval is containment, not a complete queue: guarded runs
-   now make zero writes, but proposed effects are not yet persisted and resumed
-   through an atomic exactly-once approval/apply worker.
-4. Existing generic approval endpoints and webhook/session state paths still
-   need compare-and-swap/idempotency hardening.
+   now make zero writes, but proposed project-engine effects are not yet
+   persisted and resumed through the issue-write approval worker.
+4. Covered issue-write approvals now apply database effects atomically and use
+   a durable at-least-once outbox; external realtime/automation consumers still
+   need idempotency for end-to-end exactly-once behavior.
 
 ### Agent and research maturity
 
@@ -86,6 +88,9 @@ definition of a production engine.
   all consumers.
 - Notifications, pagination/virtualization, mounted analytics, import depth,
   and full external-provider/device smoke coverage remain uneven.
+- All 30 locale catalogs have key and ICU-contract parity, but linguistic QA is
+  incomplete: the quality signal still finds legacy English-copy candidates in
+  non-English catalogs.
 - The pgvector Ask leg is intentionally dormant until an organization-safe
   embedder is supplied; lexical retrieval remains the active path.
 - Database and Hocuspocus integration coverage is much thinner than web unit
@@ -98,7 +103,7 @@ parallel agent or workflow surface:
 
 1. atomic workflow-transition service;
 2. durable agent run/step/checkpoint/event/effect storage and leased worker;
-3. exactly-once approval/apply and idempotent bulk effects;
+3. expand atomic approval/apply coverage and make external/bulk effects idempotent;
 4. tenant/auth hardening and cross-organization negative tests;
 5. source/claim provenance plus replayable research progress;
 6. budget, timeout, cancellation, trace, and recovery coverage on every AI path.

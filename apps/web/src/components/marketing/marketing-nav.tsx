@@ -67,7 +67,7 @@ export function MarketingNav() {
           </Link>
           <Link
             href="/auth/signup"
-            className={`ease-snap group inline-flex h-[34px] items-center gap-1.5 rounded-md bg-[var(--landing-accent-blue)] px-3 text-[13px] font-[450] text-white transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--landing-accent-blue-hover)] ${focusRingClass}`}
+            className={`ease-snap group inline-flex h-[34px] items-center gap-1.5 rounded-md bg-[var(--landing-accent-blue-solid)] px-3 text-[13px] font-[450] text-white transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--landing-accent-blue-solid-hover)] ${focusRingClass}`}
           >
             {t('startFree')}
             <ArrowRight

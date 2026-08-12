@@ -52,10 +52,10 @@ describe('createMcpHttpHandler', () => {
     expect(body.result.serverInfo.name).toBe('@tasknebula/mcp-server');
   });
 
-  it('lists 12 tools', async () => {
+  it('lists 11 tools', async () => {
     const res = await handler(jsonReq({ jsonrpc: '2.0', id: 2, method: 'tools/list' }));
     const body = await res.json();
-    expect(body.result.tools).toHaveLength(12);
+    expect(body.result.tools).toHaveLength(11);
   });
 
   it('returns Method not found for unknown method', async () => {

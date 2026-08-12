@@ -1,5 +1,5 @@
 /**
- * PII redaction (P1-16).
+ * PII redaction.
  *
  * Replaces high-confidence PII spans (emails, phone numbers, credit cards,
  * SSNs, Turkish TC kimlik, API keys) with stable, hash-derived placeholders

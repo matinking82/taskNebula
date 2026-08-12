@@ -121,7 +121,7 @@ function NotificationRow({
   return (
     <div
       className={cn(
-        'row-interactive group/row ease-snap relative flex items-start gap-3 px-4 py-3 pr-3 transition-all duration-150',
+        'row-interactive group/row ease-snap relative flex items-start gap-3 px-4 py-3 pr-3 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
         !notification.isRead && 'bg-primary/[0.04]'
       )}
     >
@@ -155,7 +155,7 @@ function NotificationRow({
               e.stopPropagation();
               onMarkRead(notification.id);
             }}
-            className="text-muted-foreground ease-snap hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex h-5 items-center gap-1 rounded-sm px-1.5 text-[10px] font-medium opacity-0 transition-all duration-150 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 group-hover/row:opacity-100"
+            className="text-muted-foreground ease-snap hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex h-5 items-center gap-1 rounded-sm px-1.5 text-[10px] font-medium opacity-0 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 group-hover/row:opacity-100"
           >
             <Check className="h-3 w-3" />
             {t('row.mark_read')}
@@ -284,7 +284,7 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="ease-snap focus-visible:ring-ring relative text-current transition-all duration-150 focus-visible:ring-2"
+          className="ease-snap focus-visible:ring-ring relative text-current transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:ring-2"
           aria-label={
             hasUnread
               ? t('bell.trigger_aria_unread', { count: unreadCount })
@@ -331,7 +331,7 @@ export function NotificationBell() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-foreground ease-snap h-7 px-2 text-xs transition-all duration-150"
+              className="text-muted-foreground hover:text-foreground ease-snap h-7 px-2 text-xs transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
               onClick={handleMarkAllAsRead}
               disabled={markAllAsRead.isPending || !hasUnread}
               aria-label={t('bell.mark_all_read')}
@@ -343,7 +343,7 @@ export function NotificationBell() {
               asChild
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-foreground ease-snap h-7 w-7 transition-all duration-150"
+              className="text-muted-foreground hover:text-foreground ease-snap h-7 w-7 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
             >
               <Link
                 href="/settings?tab=notifications"
@@ -379,7 +379,7 @@ export function NotificationBell() {
                 data-active={active ? 'true' : undefined}
                 onClick={() => setTab(tabItem.key)}
                 className={cn(
-                  'ease-snap focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2',
+                  'ease-snap focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2',
                   active
                     ? 'bg-primary/10 text-primary ring-primary/20 ring-1'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'

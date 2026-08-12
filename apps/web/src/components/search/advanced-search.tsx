@@ -161,7 +161,7 @@ export function AdvancedSearch({ onSearch, onSaveFilter }: AdvancedSearchProps) 
               <span>{c.value}</span>
               <button
                 onClick={() => updateCondition(c.id, { value: '' })}
-                className="ease-snap hover:text-foreground focus-visible:ring-ring ml-0.5 rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2"
+                className="ease-snap hover:text-foreground focus-visible:ring-ring ml-0.5 rounded-full transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2"
                 aria-label={t('removeFieldFilter', { field: c.field })}
               >
                 <X className="h-3 w-3" />

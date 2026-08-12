@@ -3,9 +3,10 @@
 **Verified:** 2026-08-12
 
 TaskNebula is a pnpm/Turborepo modular monolith centered on a Next.js web
-application and PostgreSQL. Hocuspocus is the one separately deployed runtime
-service. Redis and LiveKit are optional capabilities with explicit degraded
-modes.
+application and PostgreSQL. Hocuspocus is the separately deployed
+TaskNebula-owned application service; Redis is part of the maintained Compose
+baseline and LiveKit is an optional `voice` profile
+infrastructure capabilities with explicit degraded modes.
 
 ## System map
 
@@ -177,8 +178,13 @@ run, source snapshot/claim persistence, or mid-run refine flow yet.
 - Write-capable runs consult one fail-closed execution policy. When writes are
   disabled or approval/oversight is required, they stay in preview and perform
   zero domain writes.
-- Atomic approval/apply, transactions/idempotent effect ledger, provider-wide
-  cancellation/retry, and crash recovery remain incomplete.
+- Covered agent-marked issue/comment REST writes persist an approval and apply
+  its database mutation, audit, terminal state, and durable outbox atomically.
+  The external realtime/automation dispatch is leased and at-least-once. Base
+  Compose runs its reconciler; other deployments must schedule the protected
+  approval-effects endpoint every minute.
+- Project-engine proposal persistence/resume, provider-wide cancellation/retry,
+  end-to-end consumer idempotency, and crash recovery remain incomplete.
 - Local Claude/Codex sessions spawn configured CLIs with an allowlisted
   provider-specific environment. They still run under the web process rather
   than a leased durable worker.
@@ -225,9 +231,10 @@ runtime enforcement.
 ## Build and verification
 
 CI on `main` and pull requests installs with Node 22/pnpm 9, builds the MCP
-package, then runs i18n parity, repository hygiene, UI contract, type-check,
-lint, and unit tests. OpenAPI drift and browser tests are proportional local or
-release gates; see `.claude/commands/verify.md` and `docs/RELEASE.md`.
+package, then runs i18n parity, repository hygiene, UI and documentation
+contracts, OpenAPI drift, type-check, lint, and unit tests. Browser tests remain
+proportional local or release gates; see `.claude/commands/verify.md` and
+`docs/RELEASE.md`.
 
 Unit coverage is concentrated in the web app. Database migrations,
 Hocuspocus, multi-process recovery, provider integrations, and full browser

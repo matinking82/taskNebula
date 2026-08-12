@@ -17,19 +17,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
-  // 2026-05 roadmap: 34 worktree-merged feature commits in a single push.
-  // ESLint findings (mostly cosmetic — escaped chars, anchor-vs-Link, react/no-unescaped-entities,
-  // require-style imports inside tests) are tracked as a separate cleanup pass.
-  // Pre-commit hook (QUAL-20) catches new violations going forward.
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // tsc has already been run in CI via `pnpm type-check`. Avoid running the
-  // Next plugin a second time during `next build` so type errors don't
-  // double-fire on workspace boundaries.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],

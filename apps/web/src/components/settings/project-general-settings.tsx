@@ -154,7 +154,7 @@ export function ProjectGeneralSettings({ projectId }: ProjectGeneralSettingsProp
                 setFormData((current) => ({ ...current, name: event.target.value }))
               }
               placeholder={t('name_placeholder')}
-              className="ease-snap transition-all duration-150"
+              className="ease-snap transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
             />
           </div>
 
@@ -176,7 +176,7 @@ export function ProjectGeneralSettings({ projectId }: ProjectGeneralSettingsProp
               }
               maxLength={20}
               placeholder={t('key_placeholder')}
-              className="ease-snap transition-all duration-150"
+              className="ease-snap transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
             />
           </div>
 
@@ -192,7 +192,7 @@ export function ProjectGeneralSettings({ projectId }: ProjectGeneralSettingsProp
                 setFormData((current) => ({ ...current, description: event.target.value }))
               }
               placeholder={t('description_placeholder')}
-              className="ease-snap transition-all duration-150"
+              className="ease-snap transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
             />
           </div>
 
@@ -202,7 +202,7 @@ export function ProjectGeneralSettings({ projectId }: ProjectGeneralSettingsProp
               value={formData.status}
               onValueChange={(value) => setFormData((current) => ({ ...current, status: value }))}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label={t('status_label')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -223,7 +223,7 @@ export function ProjectGeneralSettings({ projectId }: ProjectGeneralSettingsProp
                 setFormData((current) => ({ ...current, visibility: value }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label={t('visibility_label')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

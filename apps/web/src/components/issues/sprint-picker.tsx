@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Check, ChevronsUpDown, Inbox } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
@@ -45,16 +45,26 @@ interface SprintPickerProps {
   value: string | null;
   onChange: (sprintId: string | null) => void;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
-export function SprintPicker({ projectId, value, onChange, disabled = false }: SprintPickerProps) {
+export function SprintPicker({
+  projectId,
+  value,
+  onChange,
+  disabled = false,
+  ariaLabel,
+}: SprintPickerProps) {
   const t = useTranslations('issueSidebar.sprint');
+  const tRows = useTranslations('issueSidebar.rows');
   const tc = useTranslations('sprintPicker');
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
   const { data, isLoading } = useSprints(projectId);
   const createSprint = useInlineCreateSprint();
 
@@ -143,21 +153,29 @@ export function SprintPicker({ projectId, value, onChange, disabled = false }: S
             variant="ghost"
             role="combobox"
             aria-expanded={open}
+            aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
             className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
             disabled={disabled || isLoading}
           >
+            <span id={triggerLabelId} className="sr-only">
+              {ariaLabel ?? tRows('sprint')}
+            </span>
             {selected ? (
               <span className="flex min-w-0 items-center gap-2">
                 <span
                   className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[selected.status])}
                   aria-hidden
                 />
-                <span className="truncate">{selected.name}</span>
+                <span id={triggerValueId} className="truncate">
+                  {selected.name}
+                </span>
               </span>
             ) : (
               <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-2">
                 <Inbox className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{t('backlog')}</span>
+                <span id={triggerValueId} className="truncate">
+                  {t('backlog')}
+                </span>
               </span>
             )}
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-40" />

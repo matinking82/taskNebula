@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,6 +36,7 @@ interface ComponentPickerProps {
   /** Called with the replacement id set (PUT semantics). */
   onChange: (componentIds: string[]) => void;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
 /** POST /api/projects/[id]/components caps `name` at 120 chars. */
@@ -46,6 +47,7 @@ export function ComponentPicker({
   value,
   onChange,
   disabled = false,
+  ariaLabel,
 }: ComponentPickerProps) {
   const t = useTranslations('issueSidebar.components');
   const queryClient = useQueryClient();
@@ -53,6 +55,8 @@ export function ComponentPicker({
   const [search, setSearch] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
   const { data: projectComponents, isLoading } = useProjectComponents(projectId);
   const createComponent = useCreateProjectComponent();
 
@@ -163,13 +167,21 @@ export function ComponentPicker({
             variant="ghost"
             role="combobox"
             aria-expanded={open}
+            aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
             className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
             disabled={disabled || isLoading}
           >
+            <span id={triggerLabelId} className="sr-only">
+              {ariaLabel ?? t('label')}
+            </span>
             {value.length > 0 ? (
-              <span className="min-w-0 flex-1 truncate">{value.map((c) => c.name).join(', ')}</span>
+              <span id={triggerValueId} className="min-w-0 flex-1 truncate">
+                {value.map((c) => c.name).join(', ')}
+              </span>
             ) : (
-              <span className="text-muted-foreground min-w-0 flex-1 truncate">{t('none')}</span>
+              <span id={triggerValueId} className="text-muted-foreground min-w-0 flex-1 truncate">
+                {t('none')}
+              </span>
             )}
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-40" />
           </Button>

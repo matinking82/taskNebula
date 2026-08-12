@@ -37,7 +37,7 @@ type ApprovalRequest = {
   targetId: string | null;
   proposedPayload: unknown;
   matchedRule: string | null;
-  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  status: 'pending' | 'executing' | 'approved' | 'rejected' | 'expired' | 'failed';
   requestedAt: string;
 };
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt, isNull, or } from 'drizzle-orm';
 import { agentApprovalRequests, createAuditLog, db } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { canManageAgentApprovals } from '@/lib/agent-policy/approval-permissions';
@@ -40,16 +40,37 @@ export async function POST(
     return NextResponse.json({ error: 'approval_not_pending' }, { status: 409 });
   }
 
+  const now = new Date();
+  if (approval.expiresAt && approval.expiresAt <= now) {
+    await db
+      .update(agentApprovalRequests)
+      .set({ status: 'expired', updatedAt: now })
+      .where(
+        and(eq(agentApprovalRequests.id, approval.id), eq(agentApprovalRequests.status, 'pending'))
+      );
+    return NextResponse.json({ error: 'approval_expired' }, { status: 410 });
+  }
+
   const [updated] = await db
     .update(agentApprovalRequests)
     .set({
       status: 'rejected',
       decidedBy: session.user.id,
-      decidedAt: new Date(),
-      updatedAt: new Date(),
+      decidedAt: now,
+      updatedAt: now,
     })
-    .where(eq(agentApprovalRequests.id, approval.id))
+    .where(
+      and(
+        eq(agentApprovalRequests.id, approval.id),
+        eq(agentApprovalRequests.status, 'pending'),
+        or(isNull(agentApprovalRequests.expiresAt), gt(agentApprovalRequests.expiresAt, now))
+      )
+    )
     .returning();
+
+  if (!updated) {
+    return NextResponse.json({ error: 'approval_not_pending' }, { status: 409 });
+  }
 
   await createAuditLog({
     userId: session.user.id,

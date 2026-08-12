@@ -37,7 +37,7 @@ pnpm type-check && pnpm lint
 
 - PKs are **CUID2** via `createId()` from `@paralleldrive/cuid2` (never UUID).
 - Every tenant-scoped table carries `organization_id`; index `organization_id`, `project_id`, and FKs.
-- **RLS is NOT implemented** (planned — roadmap #37). Isolation is app-level WHERE clauses only; never claim RLS.
+- **RLS is NOT implemented**. Isolation is app-level WHERE clauses only; its design and rollout belong to `docs/ROADMAP_2026.md` under P0 tenant-isolation hardening. Never claim RLS.
 - Structural layer (0054): `labels`/`issue_labels`, `project_versions` + `issue_fix_versions`/`issue_affects_versions`,
   `components`/`issue_components`, `issues.resolution`/`resolved_at`/`flagged`; issue keys unique per
   `(organization_id, key)` — not globally.

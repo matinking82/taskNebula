@@ -13,6 +13,7 @@
     "db:seed:prod": "tsx scripts/seed-production.ts",
     "db:setup": "pnpm db:migrate && pnpm db:seed",
     "db:setup:prod": "pnpm db:migrate:prod && pnpm db:seed:prod",
+    "test:integration:agent-execution-receipts": "tsx scripts/agent-execution-receipts.integration.ts",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts"
   },

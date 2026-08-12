@@ -1,5 +1,5 @@
 /**
- * Server helpers shared by the time-tracking route handlers (task #10).
+ * Server helpers shared by the time-tracking route handlers.
  *
  * Centralises three things so each `route.ts` stays short:
  *   1. {@link assertIssueAccess} — auth + "can this user view this issue?".

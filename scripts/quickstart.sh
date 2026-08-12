@@ -12,23 +12,33 @@ die()  { printf "%b✗%b %s\n"  "$RED"   "$NC" "$*" >&2; exit 1; }
 
 command -v docker >/dev/null 2>&1 || die "Docker is required. Install: https://docs.docker.com/get-docker/"
 docker compose version >/dev/null 2>&1 || die "Docker Compose v2 is required (docker compose plugin)."
-command -v openssl >/dev/null 2>&1 || die "openssl is required to generate AUTH_SECRET."
+command -v openssl >/dev/null 2>&1 || die "openssl is required to generate service credentials."
 
 TARGET_DIR="${TASKNEBULA_DIR:-$PWD/tasknebula}"
 
 set_env_var() {
   local key="$1"
   local value="$2"
+  local temporary
+  local found='false'
+  local line
 
-  if grep -q "^${key}=" .env; then
-    if [ "$(uname)" = "Darwin" ]; then
-      sed -i '' "s|^${key}=.*|${key}=${value}|" .env
+  temporary="$(mktemp .env.tmp.XXXXXX)"
+  chmod 600 "$temporary"
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [[ "$line" == "$key="* ]]; then
+      if [[ "$found" == 'false' ]]; then
+        printf '%s=%s\n' "$key" "$value" >>"$temporary"
+        found='true'
+      fi
     else
-      sed -i "s|^${key}=.*|${key}=${value}|" .env
+      printf '%s\n' "$line" >>"$temporary"
     fi
-  else
-    printf "\n%s=%s\n" "$key" "$value" >> .env
+  done <.env
+  if [[ "$found" == 'false' ]]; then
+    printf '%s=%s\n' "$key" "$value" >>"$temporary"
   fi
+  mv "$temporary" .env
 }
 
 env_value() {
@@ -52,6 +62,7 @@ if [ ! -f .env ]; then
 else
   warn ".env already exists — leaving it as-is."
 fi
+chmod 600 .env
 
 if [ -z "$(env_value AUTH_SECRET)" ]; then
   set_env_var "AUTH_SECRET" "$(openssl rand -base64 32)"
@@ -63,11 +74,34 @@ if [ -z "$(env_value REDIS_PASSWORD)" ]; then
   ok "Generated REDIS_PASSWORD (32-byte hex)."
 fi
 
+postgres_password="$(env_value POSTGRES_PASSWORD)"
+if [ -z "$postgres_password" ] || [ "$postgres_password" = 'postgres' ]; then
+  set_env_var "POSTGRES_PASSWORD" "$(openssl rand -hex 32)"
+  ok "Generated POSTGRES_PASSWORD (32-byte hex)."
+fi
+
+livekit_api_key="$(env_value LIVEKIT_API_KEY)"
+if [ -z "$livekit_api_key" ] || [ "$livekit_api_key" = 'tasknebula-dev' ]; then
+  set_env_var "LIVEKIT_API_KEY" "$(openssl rand -hex 16)"
+  ok "Generated optional LIVEKIT_API_KEY."
+fi
+
+livekit_api_secret="$(env_value LIVEKIT_API_SECRET)"
+if [ -z "$livekit_api_secret" ] || [ "$livekit_api_secret" = 'tasknebula-livekit-secret-local-2026' ]; then
+  set_env_var "LIVEKIT_API_SECRET" "$(openssl rand -hex 32)"
+  ok "Generated optional LIVEKIT_API_SECRET."
+fi
+
+if [ -z "$(env_value CRON_SECRET)" ]; then
+  set_env_var "CRON_SECRET" "$(openssl rand -hex 32)"
+  ok "Generated CRON_SECRET for the approval reconciler."
+fi
+
 log "Pulling latest published image: neuraparse/tasknebula:latest ..."
 docker compose pull web || warn "Image pull failed — will fall back to local build."
 
-log "Starting services (postgres · redis · livekit · web) ..."
-docker compose up -d
+log "Starting services (postgres · redis · web · approval reconciler) ..."
+docker compose up -d --wait
 
 log "Waiting for the web container to report healthy ..."
 DEADLINE=$(( $(date +%s) + 180 ))
@@ -84,3 +118,4 @@ printf "  First-time setup wizard will guide admin-account creation.\n"
 printf "  Logs:    docker compose logs -f web\n"
 printf "  Stop:    docker compose down\n"
 printf "  Update:  docker compose pull && docker compose up -d\n\n"
+printf "  Voice:   configure LIVEKIT_URL/NEXT_PUBLIC_LIVEKIT_URL, then docker compose --profile voice up -d\n\n"

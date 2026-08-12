@@ -18,7 +18,7 @@
 import bcrypt from 'bcryptjs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 // Import the schema directly to avoid pulling in `@tasknebula/db/client`,
 // which would instantiate a postgres connection at module load time.
@@ -50,11 +50,18 @@ export const E2E_PROJECT = {
   name: 'E2E Project',
 } as const;
 
+export const E2E_PUBLIC_SHARE_TOKEN = 'e2e-public-share-2026';
+
 export interface SeededIds {
   organizationId: string;
   userId: string;
   projectId: string;
   workflowId: string;
+  sprintId: string;
+  initiativeId: string;
+  intakeFormId: string;
+  publicDocumentPageId: string;
+  publicShareToken: string;
   statusIds: { backlog: string; inProgress: string; done: string };
   issueIds: string[];
 }
@@ -73,11 +80,7 @@ export async function ensureSeed(): Promise<SeededIds> {
   try {
     // --- User ---------------------------------------------------------------
     const existingUser = (
-      await db
-        .select()
-        .from(schema.users)
-        .where(eq(schema.users.email, E2E_ADMIN.email))
-        .limit(1)
+      await db.select().from(schema.users).where(eq(schema.users.email, E2E_ADMIN.email)).limit(1)
     )[0];
 
     const passwordHash = await bcrypt.hash(E2E_ADMIN.password, 10);
@@ -176,8 +179,22 @@ export async function ensureSeed(): Promise<SeededIds> {
       inProgressId = createId();
       doneId = createId();
       await db.insert(schema.workflowStatuses).values([
-        { id: backlogId, workflowId, name: 'Backlog', category: 'backlog', color: '#94a3b8', position: 0 },
-        { id: inProgressId, workflowId, name: 'In Progress', category: 'in_progress', color: '#3b82f6', position: 1 },
+        {
+          id: backlogId,
+          workflowId,
+          name: 'Backlog',
+          category: 'backlog',
+          color: '#94a3b8',
+          position: 0,
+        },
+        {
+          id: inProgressId,
+          workflowId,
+          name: 'In Progress',
+          category: 'in_progress',
+          color: '#3b82f6',
+          position: 1,
+        },
         { id: doneId, workflowId, name: 'Done', category: 'done', color: '#22c55e', position: 2 },
       ]);
     } else {
@@ -196,11 +213,7 @@ export async function ensureSeed(): Promise<SeededIds> {
     for (let i = 1; i <= 5; i++) {
       const key = `${E2E_PROJECT.key}-${i}`;
       const existing = (
-        await db
-          .select()
-          .from(schema.issues)
-          .where(eq(schema.issues.key, key))
-          .limit(1)
+        await db.select().from(schema.issues).where(eq(schema.issues.key, key)).limit(1)
       )[0];
       if (existing) {
         issueIds.push(existing.id);
@@ -230,11 +243,198 @@ export async function ensureSeed(): Promise<SeededIds> {
       });
     }
 
+    // --- Stable dynamic-route fixtures -------------------------------------
+    const existingSprint = (
+      await db.select().from(schema.sprints).where(eq(schema.sprints.projectId, projectId)).limit(1)
+    )[0];
+    const sprintId = existingSprint?.id ?? createId();
+    if (!existingSprint) {
+      await db.insert(schema.sprints).values({
+        id: sprintId,
+        projectId,
+        name: 'E2E Sprint',
+        goal: 'Stable fixture for dynamic route coverage',
+        startDate: new Date('2026-08-10T00:00:00.000Z'),
+        endDate: new Date('2026-08-24T00:00:00.000Z'),
+        status: 'active',
+        createdBy: userId,
+        updatedBy: userId,
+      });
+    }
+
+    const existingInitiative = (
+      await db
+        .select()
+        .from(schema.initiatives)
+        .where(
+          and(
+            eq(schema.initiatives.workspaceId, organizationId),
+            eq(schema.initiatives.slug, 'e2e-initiative')
+          )
+        )
+        .limit(1)
+    )[0];
+    const initiativeId = existingInitiative?.id ?? createId();
+    if (!existingInitiative) {
+      await db.insert(schema.initiatives).values({
+        id: initiativeId,
+        workspaceId: organizationId,
+        name: 'E2E Initiative',
+        slug: 'e2e-initiative',
+        description: 'Stable fixture for dynamic route coverage',
+        status: 'active',
+        ownerUserId: userId,
+        createdBy: userId,
+        updatedBy: userId,
+      });
+    }
+
+    const existingIntakeForm = (
+      await db
+        .select()
+        .from(schema.intakeForms)
+        .where(eq(schema.intakeForms.slug, 'e2e-intake'))
+        .limit(1)
+    )[0];
+    const intakeFormId = existingIntakeForm?.id ?? createId();
+    if (!existingIntakeForm) {
+      await db.insert(schema.intakeForms).values({
+        id: intakeFormId,
+        workspaceId: organizationId,
+        projectId,
+        slug: 'e2e-intake',
+        title: 'E2E Intake',
+        description: 'Stable fixture for dynamic route coverage',
+        fields: [
+          { name: 'summary', label: 'Summary', type: 'text', required: true },
+          { name: 'details', label: 'Details', type: 'textarea' },
+        ],
+      });
+    }
+
+    const existingDocumentSpace = (
+      await db
+        .select()
+        .from(schema.documentSpaces)
+        .where(
+          and(
+            eq(schema.documentSpaces.organizationId, organizationId),
+            eq(schema.documentSpaces.slug, 'e2e-public-docs')
+          )
+        )
+        .limit(1)
+    )[0];
+    const documentSpaceId = existingDocumentSpace?.id ?? createId();
+    if (!existingDocumentSpace) {
+      await db.insert(schema.documentSpaces).values({
+        id: documentSpaceId,
+        organizationId,
+        projectId,
+        scope: 'project',
+        name: 'E2E Public Docs',
+        slug: 'e2e-public-docs',
+        description: 'Stable public document fixture for surface coverage',
+        isDefault: false,
+        createdBy: userId,
+        updatedBy: userId,
+      });
+    }
+
+    const existingPublicDocument = (
+      await db
+        .select()
+        .from(schema.documentPages)
+        .where(eq(schema.documentPages.publicShareToken, E2E_PUBLIC_SHARE_TOKEN))
+        .limit(1)
+    )[0];
+    const publicDocumentPageId = existingPublicDocument?.id ?? createId();
+    const publicDocumentValues = {
+      title:
+        'E2E Public Document With A Very Long Unbroken Token ' +
+        'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789',
+      excerpt: 'Stable public share fixture used to verify responsive and accessible rendering.',
+      contentJson: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: 'This published document is intentionally safe for unauthenticated E2E coverage.',
+              },
+            ],
+          },
+        ],
+      },
+      contentText:
+        'This published document is intentionally safe for unauthenticated E2E coverage.',
+      publicShareEnabled: true,
+      publicShareToken: E2E_PUBLIC_SHARE_TOKEN,
+      publicShareAllowSearchIndexing: false,
+      publicShareIncludeAttachments: true,
+      publicSharePublishedAt: new Date('2026-08-12T00:00:00.000Z'),
+      publicSharePublishedBy: userId,
+      updatedBy: userId,
+    } as const;
+
+    if (existingPublicDocument) {
+      await db
+        .update(schema.documentPages)
+        .set(publicDocumentValues)
+        .where(eq(schema.documentPages.id, publicDocumentPageId));
+    } else {
+      await db.insert(schema.documentPages).values({
+        id: publicDocumentPageId,
+        spaceId: documentSpaceId,
+        organizationId,
+        projectId,
+        parentId: null,
+        slug: 'e2e-public-document',
+        icon: 'globe',
+        currentRevision: 1,
+        position: 0,
+        isArchived: false,
+        createdBy: userId,
+        ...publicDocumentValues,
+      });
+    }
+
+    const publicAttachmentFileName = 'e2e-' + 'attachment-name-without-breaks-'.repeat(5) + '.txt';
+    const existingPublicAttachment = (
+      await db
+        .select()
+        .from(schema.documentPageAttachments)
+        .where(
+          and(
+            eq(schema.documentPageAttachments.pageId, publicDocumentPageId),
+            eq(schema.documentPageAttachments.fileName, publicAttachmentFileName)
+          )
+        )
+        .limit(1)
+    )[0];
+    if (!existingPublicAttachment) {
+      await db.insert(schema.documentPageAttachments).values({
+        id: createId(),
+        pageId: publicDocumentPageId,
+        fileName: publicAttachmentFileName,
+        fileSize: 42,
+        mimeType: 'text/plain',
+        filePath: '/tmp/tasknebula-e2e-public-attachment.txt',
+        uploadedById: userId,
+      });
+    }
+
     cachedSeed = {
       organizationId,
       userId,
       projectId,
       workflowId,
+      sprintId,
+      initiativeId,
+      intakeFormId,
+      publicDocumentPageId,
+      publicShareToken: E2E_PUBLIC_SHARE_TOKEN,
       statusIds: { backlog: backlogId, inProgress: inProgressId, done: doneId },
       issueIds,
     };

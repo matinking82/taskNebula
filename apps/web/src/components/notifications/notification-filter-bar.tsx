@@ -185,7 +185,7 @@ export function NotificationFilterBar({
               data-active={active ? 'true' : undefined}
               onClick={() => onInvolvementChange(f.key)}
               className={cn(
-                'ease-snap focus-visible:ring-ring shrink-0 rounded-sm px-2.5 py-1 text-[11px] font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2',
+                'ease-snap focus-visible:ring-ring shrink-0 rounded-sm px-2.5 py-1 text-[11px] font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2',
                 active
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'

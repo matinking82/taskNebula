@@ -86,7 +86,7 @@ export function PullToRefresh({
     >
       {/* Pull indicator */}
       <div
-        className="absolute left-0 right-0 top-0 z-10 flex items-center justify-center overflow-hidden transition-all duration-200"
+        className="absolute left-0 right-0 top-0 z-10 flex items-center justify-center overflow-hidden transition-[height,opacity] duration-200"
         style={{
           height: `${pullDistance}px`,
           opacity: pullDistance > 0 ? 1 : 0,

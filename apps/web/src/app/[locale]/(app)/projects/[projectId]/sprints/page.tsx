@@ -72,6 +72,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
   if (isLoading || permissionsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
+        <h1 className="sr-only">{t('sprintsTitle')}</h1>
         <div className="text-muted-foreground">{t('loadingSprints')}</div>
       </div>
     );
@@ -86,7 +87,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
         <Lock className="text-muted-foreground h-12 w-12" />
-        <div className="text-lg font-medium">{t('accessDenied')}</div>
+        <h1 className="text-lg font-medium">{t('accessDenied')}</h1>
         <div className="text-muted-foreground">{t('noProjectPermission')}</div>
         <Button asChild variant="outline">
           <Link href="/projects">{t('backToProjects')}</Link>

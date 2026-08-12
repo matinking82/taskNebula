@@ -13,6 +13,7 @@ import {
   extendZodWithOpenApi,
 } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
+import webPackage from '../../../package.json';
 
 // Add `.openapi()` to all zod schemas (idempotent).
 extendZodWithOpenApi(z);
@@ -110,7 +111,7 @@ export function buildOpenApiDocument(opts?: { version?: string }): any {
     openapi: '3.1.0',
     info: {
       title: 'TaskNebula API',
-      version: opts?.version ?? process.env.npm_package_version ?? '0.0.0',
+      version: opts?.version ?? webPackage.version,
       description:
         'OpenAPI documentation for the TaskNebula HTTP API. Only the public, stable surface is documented; internal/admin routes are intentionally omitted.',
     },

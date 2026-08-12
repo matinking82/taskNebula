@@ -1,8 +1,8 @@
 /**
- * `/track 30m` command-palette hook (task #10).
+ * `/track 30m` command-palette hook.
  *
- * Full cmd-k wiring belongs to task #25; this module exposes only the parser +
- * the side-effect (POST to the time-entry endpoint) so that whoever wires
+ * This module exposes the parser and the side-effect (POST to the time-entry
+ * endpoint) so that whichever surface wires
  * cmd-k can call `handleTrackCommand` from inside their existing command
  * dispatcher. Keeping the imperative work here makes it trivial to unit-test
  * without spinning up the React tree.

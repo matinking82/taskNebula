@@ -2,7 +2,7 @@
 
 exports[`KpiTile renders a flat delta when none provided 1`] = `
 <div
-  class="surface-card ease-snap group relative flex h-full min-h-[128px] w-full flex-col gap-2 p-4 text-left transition-all duration-150"
+  class="surface-card ease-snap group relative flex h-full min-h-[128px] w-full flex-col gap-2 p-4 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
 >
   <div
     class="flex items-start justify-between gap-3"
@@ -52,7 +52,7 @@ exports[`KpiTile renders a flat delta when none provided 1`] = `
 
 exports[`KpiTile renders value, delta, and sparkline (snapshot) 1`] = `
 <div
-  class="surface-card ease-snap group relative flex h-full min-h-[128px] w-full flex-col gap-2 p-4 text-left transition-all duration-150"
+  class="surface-card ease-snap group relative flex h-full min-h-[128px] w-full flex-col gap-2 p-4 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
 >
   <div
     class="flex items-start justify-between gap-3"

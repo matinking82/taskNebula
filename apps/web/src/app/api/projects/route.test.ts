@@ -75,6 +75,7 @@ jest.mock('@tasknebula/db', () => ({
     key: 'projects.key',
     teamId: 'projects.teamId',
     updatedAt: 'projects.updatedAt',
+    status: 'projects.status',
   },
   organizationMembers: {
     userId: 'organizationMembers.userId',
@@ -117,6 +118,7 @@ jest.mock('drizzle-orm', () => ({
   desc: (value: unknown) => ({ type: 'desc', value }),
   eq: (left: unknown, right: unknown) => ({ type: 'eq', left, right }),
   inArray: (left: unknown, right: unknown) => ({ type: 'inArray', left, right }),
+  ne: (left: unknown, right: unknown) => ({ type: 'ne', left, right }),
   relations: () => ({}),
 }));
 
@@ -470,6 +472,55 @@ describe('/api/projects route', () => {
         organizationName: 'Member Org',
         team: null,
       },
+    ]);
+  });
+
+  it('applies limit after globally sorting admin and member organization projects', async () => {
+    authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    const rows: ProjectRow[] = [
+      {
+        project: {
+          id: 'project-admin-old',
+          organizationId: 'org-admin',
+          name: 'Older admin project',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        organizationName: 'Admin Org',
+        teamId: null,
+        teamName: null,
+        teamSlug: null,
+      },
+      {
+        project: {
+          id: 'project-member-new',
+          organizationId: 'org-member',
+          name: 'Newer member project',
+          updatedAt: '2026-02-01T00:00:00.000Z',
+        },
+        organizationName: 'Member Org',
+        teamId: null,
+        teamName: null,
+        teamSlug: null,
+      },
+    ];
+
+    dbSelectMock
+      .mockReturnValueOnce(limitBuilder([{ isSuperAdmin: false }]))
+      .mockReturnValueOnce(
+        whereBuilder([
+          { organizationId: 'org-admin', role: 'admin' },
+          { organizationId: 'org-member', role: 'member' },
+        ])
+      )
+      .mockReturnValueOnce(projectListBuilder(rows))
+      .mockReturnValueOnce(whereBuilder([{ projectId: 'project-member-new' }]))
+      .mockReturnValueOnce(projectListBuilder(rows));
+
+    const response = await GET(new NextRequestCtor('http://localhost:3002/api/projects?limit=1'));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([
+      expect.objectContaining({ id: 'project-member-new' }),
     ]);
   });
 

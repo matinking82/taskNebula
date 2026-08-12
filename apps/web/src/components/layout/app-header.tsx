@@ -25,7 +25,7 @@ export function AppHeader({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
               type="button"
               onClick={openPalette}
               aria-label={tActions('open_command_palette')}
-              className="bg-surface-elevated border-subtle ease-snap focus-visible:ring-ring group relative flex h-8 w-full max-w-xl items-center rounded-md border pe-2 ps-9 text-start text-[13px] text-white/65 transition-all duration-150 hover:border-white/20 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2"
+              className="bg-surface-elevated border-subtle ease-snap focus-visible:ring-ring group relative flex h-8 w-full max-w-xl items-center rounded-md border pe-2 ps-9 text-start text-[13px] text-white/65 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:border-white/20 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2"
             >
               <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
               <span className="truncate">{tNav('search_placeholder')}</span>
@@ -46,7 +46,7 @@ export function AppHeader({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
           asChild
           variant="ghost"
           size="icon"
-          className="ease-snap h-8 w-8 text-white/70 transition-all duration-150 hover:bg-white/10 hover:text-white"
+          className="ease-snap h-8 w-8 text-white/70 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:bg-white/10 hover:text-white"
         >
           <Link href="/api-docs" aria-label={tActions('help')}>
             <HelpCircle className="h-4 w-4" />

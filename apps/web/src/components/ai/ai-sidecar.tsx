@@ -69,6 +69,7 @@ export function AiSidecar() {
     <aside
       aria-hidden={!open}
       aria-label={t('sidecar.ariaLabel')}
+      inert={!open}
       role="complementary"
       className={cn(
         'bg-background border-border fixed bottom-0 right-0 top-0 z-40 flex w-[380px] max-w-full flex-col border-l shadow-md',
@@ -125,7 +126,7 @@ export function AiSidecar() {
             type="submit"
             disabled={!input.trim() || submitting}
             aria-label={t('sidecar.send')}
-            className="bg-primary text-primary-foreground ease-snap inline-flex h-9 w-9 items-center justify-center rounded-md transition-all duration-150 hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
+            className="bg-primary text-primary-foreground ease-snap inline-flex h-9 w-9 items-center justify-center rounded-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </button>

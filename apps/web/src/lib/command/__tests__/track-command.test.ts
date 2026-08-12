@@ -1,8 +1,8 @@
 /**
  * @jest-environment node
  *
- * The `/track 30m` slash command is the smallest piece of task #10's UI work
- * that ships standalone (full cmd-k wiring is task #25). We assert the parser
+ * The `/track 30m` slash command parser and side effect ship independently of
+ * command-palette presentation. We assert the parser
  * extracts the duration correctly, leaves the rest as description, and reports
  * structured errors so the dispatcher can toast.
  */
@@ -10,8 +10,12 @@
 import { handleTrackCommand } from '../track-command';
 
 function makeFetcher(status = 201, body: any = { ok: true }) {
-  return jest.fn(async () =>
-    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }),
+  return jest.fn(
+    async () =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      })
   );
 }
 

@@ -1,7 +1,7 @@
 ---
 description: Prepare and, only with explicit authorization, publish a TaskNebula release
 argument-hint: '<new SemVer>'
-allowed-tools: Read, Edit, Grep, Glob, Bash(pnpm:*), Bash(node scripts/i18n-check.mjs:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git pull:*), Bash(git push:*), Bash(git tag:*), Bash(gh release create:*), Bash(docker compose build:*), Bash(docker build:*), Bash(docker tag:*), Bash(docker push:*), Bash(docker buildx imagetools inspect:*)
+allowed-tools: Read, Edit, Grep, Glob, Bash(pnpm:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git pull:*), Bash(git push:*), Bash(git tag:*), Bash(gh release create:*), Bash(docker compose build:*), Bash(docker build:*), Bash(docker tag:*), Bash(docker push:*), Bash(docker buildx imagetools inspect:*)
 ---
 
 Read `CLAUDE.md`, any ignored operator-local guide, and `docs/RELEASE.md` in

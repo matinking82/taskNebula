@@ -4,10 +4,10 @@ import { withAgentPolicy } from './agent-policy.js';
 
 export const createIssueInput = z.object({
   projectId: z.string().min(1),
-  title: z.string().min(1).max(255),
+  title: z.string().min(1).max(500),
   description: z.string().optional(),
-  type: z.enum(['task', 'bug', 'story', 'epic', 'subtask']).default('task'),
-  priority: z.enum(['lowest', 'low', 'medium', 'high', 'highest']).default('medium'),
+  type: z.enum(['task', 'bug', 'story', 'epic']).default('task'),
+  priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).default('medium'),
   assigneeId: z.string().optional(),
   labels: z.array(z.string()).optional(),
   dueDate: z.string().datetime().optional(),

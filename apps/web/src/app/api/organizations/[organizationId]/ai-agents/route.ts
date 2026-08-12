@@ -67,7 +67,6 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ organizationId: string }> }
 ) {
-  if (!(await isAiFeatureEnabled())) return aiDisabledResponse();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

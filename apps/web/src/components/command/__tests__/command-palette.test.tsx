@@ -244,7 +244,12 @@ describe('CommandPalette (FEAT-25 omnibar)', () => {
     });
 
     expect(askEvent.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ detail: { prompt: 'why is sprint velocity dropping?' } })
+      expect.objectContaining({
+        detail: {
+          prompt: 'why is sprint velocity dropping?',
+          organizationId: 'org-1',
+        },
+      })
     );
     window.removeEventListener('tasknebula:ask-ai', askEvent);
   });

@@ -49,6 +49,7 @@ export default defineConfig({
     {
       name: 'chromium-public',
       testMatch: PUBLIC_SPEC_PATTERN,
+      dependencies: ['setup'],
       // These tests share the setup endpoint and intentionally run serially;
       // parallel cold compilation in Next dev can otherwise make the public
       // first-run check time out before the application is warm.
@@ -93,9 +94,6 @@ export default defineConfig({
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
-      // Force the AI draft endpoint to use a deterministic stub during e2e.
-      // The route reads PLAYWRIGHT_AI_STUB and short-circuits OpenAI when set.
-      PLAYWRIGHT_AI_STUB: '1',
       // Ensures Next dev server uses the same DB as the seeder.
       NODE_ENV: process.env.NODE_ENV ?? 'development',
     },

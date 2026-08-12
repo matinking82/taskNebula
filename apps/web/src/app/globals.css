@@ -212,44 +212,45 @@
     --surface: 220 20% 98%;
     --surface-2: 220 18% 96%;
 
-    /* Primary — blue (Tailwind blue-500) */
-    --primary: 217 91% 60%;
+    /* Primary colors serve both as text and as solid control backgrounds.
+       Keep the light-theme values dark enough for WCAG AA with white text. */
+    --primary: 217 91% 45%;
     --primary-foreground: 0 0% 100%;
     --primary-soft: 217 91% 96%;
-    --primary-ring: 217 91% 60%;
+    --primary-ring: 217 91% 45%;
 
     /* Secondary/muted — neutral cool gray */
     --secondary: 220 14% 96%;
     --secondary-foreground: 224 22% 18%;
     --muted: 220 14% 96%;
-    --muted-foreground: 220 8% 46%;
+    --muted-foreground: 220 8% 44%;
     --accent: 220 14% 94%;
     --accent-foreground: 224 22% 18%;
 
     /* Semantic accents — soft modern hues (used sparingly) */
-    --accent-blue: 212 92% 55%;
-    --accent-violet: 264 80% 62%;
-    --accent-cyan: 188 78% 46%;
-    --accent-emerald: 158 68% 42%;
-    --accent-amber: 36 92% 55%;
-    --accent-rose: 348 84% 60%;
-    --accent-indigo: 238 78% 60%;
+    --accent-blue: 212 92% 42%;
+    --accent-violet: 264 80% 50%;
+    --accent-cyan: 188 78% 28%;
+    --accent-emerald: 158 68% 27%;
+    --accent-amber: 36 96% 27%;
+    --accent-rose: 348 84% 44%;
+    --accent-indigo: 238 78% 45%;
 
     /* State */
-    --success: 158 68% 42%;
+    --success: 158 68% 27%;
     --success-foreground: 0 0% 100%;
-    --warning: 36 92% 48%;
-    --warning-foreground: 28 40% 14%;
-    --destructive: 0 76% 55%;
+    --warning: 36 92% 30%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 76% 46%;
     --destructive-foreground: 0 0% 100%;
-    --info: 212 92% 55%;
+    --info: 212 92% 42%;
     --info-foreground: 0 0% 100%;
 
     /* Borders / inputs */
     --border: 220 14% 90%;
     --border-strong: 220 14% 82%;
     --input: 220 14% 90%;
-    --ring: 217 91% 60%;
+    --ring: 217 91% 45%;
 
     /* Radius — compact product geometry */
     --radius: 0.25rem; /* 4px  — buttons, inputs, menus */
@@ -369,11 +370,11 @@
 
 /* ocean — teal */
 [data-theme='ocean'] {
-  --primary: 189 94% 43%;
+  --primary: 189 94% 27%;
   --primary-foreground: 0 0% 100%;
   --primary-soft: 189 94% 95%;
-  --primary-ring: 189 94% 43%;
-  --ring: 189 94% 43%;
+  --primary-ring: 189 94% 27%;
+  --ring: 189 94% 27%;
 }
 [data-theme='ocean'].dark {
   --primary: 188 86% 53%;
@@ -385,11 +386,11 @@
 
 /* forest — green */
 [data-theme='forest'] {
-  --primary: 142 76% 36%;
+  --primary: 142 76% 28%;
   --primary-foreground: 0 0% 100%;
   --primary-soft: 142 76% 95%;
-  --primary-ring: 142 76% 36%;
-  --ring: 142 76% 36%;
+  --primary-ring: 142 76% 28%;
+  --ring: 142 76% 28%;
 }
 [data-theme='forest'].dark {
   --primary: 142 71% 45%;
@@ -401,11 +402,11 @@
 
 /* sunset — orange */
 [data-theme='sunset'] {
-  --primary: 24 95% 53%;
+  --primary: 24 95% 34%;
   --primary-foreground: 0 0% 100%;
   --primary-soft: 24 95% 95%;
-  --primary-ring: 24 95% 53%;
-  --ring: 24 95% 53%;
+  --primary-ring: 24 95% 34%;
+  --ring: 24 95% 34%;
 }
 [data-theme='sunset'].dark {
   --primary: 24 94% 63%;
@@ -417,11 +418,11 @@
 
 /* purple */
 [data-theme='purple'] {
-  --primary: 271 91% 65%;
+  --primary: 271 91% 43%;
   --primary-foreground: 0 0% 100%;
   --primary-soft: 271 91% 96%;
-  --primary-ring: 271 91% 65%;
-  --ring: 271 91% 65%;
+  --primary-ring: 271 91% 43%;
+  --ring: 271 91% 43%;
 }
 [data-theme='purple'].dark {
   --primary: 270 95% 75%;
@@ -433,11 +434,11 @@
 
 /* rose */
 [data-theme='rose'] {
-  --primary: 346 77% 50%;
+  --primary: 346 77% 45%;
   --primary-foreground: 0 0% 100%;
   --primary-soft: 346 77% 95%;
-  --primary-ring: 346 77% 50%;
-  --ring: 346 77% 50%;
+  --primary-ring: 346 77% 45%;
+  --ring: 346 77% 45%;
 }
 [data-theme='rose'].dark {
   --primary: 346 84% 60%;
@@ -1067,13 +1068,18 @@
   --landing-text: #161616;
   --landing-text-dark: #000000;
   --landing-text-body: #393939;
-  --landing-text-muted: #8d8d8d;
-  --landing-text-subtle: #525252;
+  /* Muted copy still needs to pass WCAG AA at the 9–12px sizes used by
+     evidence rails and compact product mockups. */
+  --landing-text-muted: #525252;
+  --landing-text-subtle: #393939;
   --landing-text-icon: #525252;
 
   /* IBM-style constrained palette: blue + neutral grays. */
   --landing-accent-blue: #0f62fe;
   --landing-accent-blue-hover: #0043ce;
+  --landing-accent-blue-text: #0043ce;
+  --landing-accent-blue-solid: #0f62fe;
+  --landing-accent-blue-solid-hover: #0043ce;
   --landing-accent-violet: #0f62fe;
   --landing-accent-cyan: #0f62fe;
   --landing-accent-emerald: #0f62fe;
@@ -1092,6 +1098,46 @@
   font-family: var(--landing-font-sans);
   word-spacing: 0;
   overflow-x: clip;
+}
+
+/* The marketing shell participates in the global theme. Keeping its tokens
+   fixed to the light palette made the dark-mode route matrix a false positive:
+   `<html class="dark">` changed while the entire landing surface stayed light. */
+.dark .landing-dark {
+  --landing-bg: #161616;
+  --landing-bg-elevated: #262626;
+  --landing-bg-card: #262626;
+  --landing-bg-surface: #161616;
+  --landing-bg-hover: #393939;
+  --landing-bg-section: #161616;
+
+  --landing-border: #393939;
+  --landing-border-strong: #525252;
+  --landing-border-light: #6f6f6f;
+
+  --landing-text: #f4f4f4;
+  --landing-text-dark: #ffffff;
+  --landing-text-body: #c6c6c6;
+  --landing-text-muted: #a8a8a8;
+  --landing-text-subtle: #c6c6c6;
+  --landing-text-icon: #a8a8a8;
+
+  --landing-accent-blue: #a6c8ff;
+  --landing-accent-blue-hover: #a6c8ff;
+  --landing-accent-blue-text: #a6c8ff;
+  --landing-accent-blue-solid: #0f62fe;
+  --landing-accent-blue-solid-hover: #0043ce;
+  --landing-accent-violet: #a6c8ff;
+  --landing-accent-cyan: #a6c8ff;
+  --landing-accent-emerald: #a6c8ff;
+  --landing-accent-amber: #a6c8ff;
+  --landing-accent-rose: #a6c8ff;
+  --landing-accent-green: #a6c8ff;
+  --landing-accent-pink: #a6c8ff;
+  --landing-shadow: 0 24px 48px -32px rgb(0 0 0 / 0.72);
+  --divider: #393939;
+
+  color-scheme: dark;
 }
 
 body:has(> .landing-dark) {
@@ -1233,7 +1279,7 @@ html:has(body > .landing-dark) {
   .landing-dark :is(.chip-blue, .chip-violet, .chip-cyan, .chip-emerald, .chip-amber, .chip-rose) {
     background: color-mix(in srgb, var(--landing-accent-blue) 9%, transparent);
     border-color: color-mix(in srgb, var(--landing-accent-blue) 22%, transparent);
-    color: var(--landing-accent-blue);
+    color: var(--landing-accent-blue-text);
   }
 
   .landing-dark
@@ -1247,7 +1293,7 @@ html:has(body > .landing-dark) {
     ) {
     background: color-mix(in srgb, var(--landing-accent-blue) 9%, transparent);
     border-color: color-mix(in srgb, var(--landing-accent-blue) 22%, transparent);
-    color: var(--landing-accent-blue);
+    color: var(--landing-accent-blue-text);
   }
 
   .landing-dark .live-pill {
@@ -1898,6 +1944,10 @@ html:has(body > .landing-dark) {
    ---------------------------------------------------------------------------- */
 .landing-dark {
   --landing-terminal-bg: #ffffff;
+}
+
+.dark .landing-dark {
+  --landing-terminal-bg: #262626;
 }
 
 @layer utilities {

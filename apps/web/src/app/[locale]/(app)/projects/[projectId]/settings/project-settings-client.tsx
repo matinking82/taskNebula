@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ProjectSettingsContent } from '@/components/projects/project-settings-content';
 
 const VALID_TABS = [
@@ -26,6 +27,7 @@ function isTabValue(value: string | null): value is TabValue {
 }
 
 export function ProjectSettingsClient({ projectId }: { projectId: string }) {
+  const t = useTranslations('pagesProjects');
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,6 +46,7 @@ export function ProjectSettingsClient({ projectId }: { projectId: string }) {
 
   return (
     <div className="animate-fade-in flex h-full min-h-0 flex-col overflow-hidden">
+      <h1 className="sr-only">{t('projectSettings')}</h1>
       <ProjectSettingsContent
         projectId={projectId}
         initialTab={initialTab}

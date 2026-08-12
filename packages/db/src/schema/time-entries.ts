@@ -5,7 +5,7 @@ import { issues } from './issues';
 import { users } from './users';
 
 /**
- * Time entries (task #10 — native time tracking).
+ * Native time entries.
  *
  * A row represents either:
  *   - a running timer (ended_at IS NULL, duration_seconds IS NULL)
@@ -16,7 +16,7 @@ import { users } from './users';
  * for elapsed time on finalized rows; running rows always show NULL.
  *
  * `source` distinguishes how the row was created so analytics can include / exclude inferred
- * entries (e.g. GitHub commits parsed into time later by task #15 Toggl/Harvest area).
+ * entries (for example, future GitHub/Toggl/Harvest-derived time).
  */
 export const timeEntries = pgTable(
   'time_entries',
@@ -42,16 +42,13 @@ export const timeEntries = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    userStartedAtIdx: index('time_entries_user_started_at_idx').on(
-      table.userId,
-      table.startedAt,
-    ),
+    userStartedAtIdx: index('time_entries_user_started_at_idx').on(table.userId, table.startedAt),
     issueIdx: index('time_entries_issue_idx').on(table.issueId),
     // Partial unique index enforced in the migration: only one running timer (ended_at IS NULL)
     // per user. Drizzle can't express WHERE clauses on indexes here, so we keep this index
     // as documentation; the DB constraint lives in the SQL migration.
     userRunningIdx: index('time_entries_user_running_idx').on(table.userId, table.endedAt),
-  }),
+  })
 );
 
 /**

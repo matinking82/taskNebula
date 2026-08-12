@@ -3,7 +3,6 @@ import { ensureSeed } from './fixtures/seed';
 
 test.use({
   viewport: { width: 390, height: 844 },
-  isMobile: true,
   hasTouch: true,
 });
 

@@ -17,7 +17,7 @@ export function ProjectAccessDenied({
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
       <Lock className="text-muted-foreground h-12 w-12" />
-      <div className="text-lg font-medium">{t('accessDenied')}</div>
+      <h1 className="text-lg font-medium">{t('accessDenied')}</h1>
       <div className="text-muted-foreground max-w-md text-sm">{t(messageKey)}</div>
       <Button asChild variant="outline">
         <Link href="/projects">{t('backToProjects')}</Link>

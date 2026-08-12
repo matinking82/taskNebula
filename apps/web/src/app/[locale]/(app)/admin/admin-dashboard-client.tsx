@@ -505,7 +505,7 @@ export function AdminDashboardClient() {
           {/* Mobile nav */}
           <div className="lg:hidden">
             <Select value={activeTab} onValueChange={handleTabChange}>
-              <SelectTrigger>
+              <SelectTrigger aria-label={t(currentNav.labelKey)}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -742,7 +742,7 @@ function OverviewSection({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="surface-card space-y-3 p-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">{t('overview.orgHealth')}</h3>
+            <h2 className="text-sm font-semibold">{t('overview.orgHealth')}</h2>
             <BarChart3 className="text-muted-foreground h-4 w-4" />
           </div>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -776,7 +776,7 @@ function OverviewSection({
 
         <div className="surface-card space-y-3 p-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">{t('overview.last30Days')}</h3>
+            <h2 className="text-sm font-semibold">{t('overview.last30Days')}</h2>
             <Activity className="text-muted-foreground h-4 w-4" />
           </div>
           <dl className="space-y-2 text-sm">

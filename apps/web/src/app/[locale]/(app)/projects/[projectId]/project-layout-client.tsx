@@ -2,14 +2,15 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog';
 import { useProjectPermissions } from '@/lib/hooks/use-project-permissions';
+import { stripLocalePrefix } from '@/components/layout/nav-paths';
+import { cn } from '@/lib/utils';
 import {
   PanelsTopLeft,
   Timer,
@@ -52,7 +53,6 @@ export function ProjectLayoutClient({
 }: ProjectLayoutClientProps) {
   const t = useTranslations('pagesProjects');
   const pathname = usePathname();
-  const router = useRouter();
   const { permissions, isLoading: permissionsLoading } = useProjectPermissions(projectId);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -76,7 +76,15 @@ export function ProjectLayoutClient({
   });
 
   const activeSprint = sprints?.find((s: { status: string }) => s.status === 'active');
-  const currentTab = pathname?.split('/').pop() || 'views';
+  const normalizedPathname = stripLocalePrefix(pathname);
+  const projectRoot = `/projects/${projectId}`;
+  const matchedTab = tabs.find((tab) =>
+    normalizedPathname.includes(`${projectRoot}/${tab.href}`)
+  )?.href;
+  const currentTab =
+    normalizedPathname === projectRoot || normalizedPathname === `${projectRoot}/`
+      ? 'views'
+      : matchedTab;
   const hasProjectAccess =
     permissions.canBrowseProject ||
     permissions.isSuperAdmin ||
@@ -103,7 +111,7 @@ export function ProjectLayoutClient({
         return hasProjectAccess;
       });
 
-  const activeTabValue = visibleTabs.some((tab) => tab.href === currentTab) ? currentTab : 'views';
+  const activeTabValue = visibleTabs.some((tab) => tab.href === currentTab) ? currentTab : null;
   const projectName = project?.name || projectId;
 
   return (
@@ -116,39 +124,40 @@ export function ProjectLayoutClient({
                 {t('title')}
               </Link>
               <ChevronRight className="h-3 w-3 shrink-0 text-white/35" />
-              <span className="truncate font-medium text-white">{projectName}</span>
-              {project?.key ? (
-                <span className="ml-1 hidden font-mono text-[10px] uppercase tracking-[0.12em] text-white/45 sm:inline">
-                  {project.key}
-                </span>
-              ) : null}
             </nav>
+            <span className="min-w-0 truncate text-xs font-medium text-white">{projectName}</span>
+            {project?.key ? (
+              <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-white/45 sm:inline">
+                {project.key}
+              </span>
+            ) : null}
 
             <div className="h-4 w-px bg-white/15" aria-hidden="true" />
 
-            <Tabs
-              value={activeTabValue}
-              onValueChange={(value) => router.push(`/projects/${projectId}/${value}`)}
-              className="min-w-0 flex-1"
+            <nav
+              aria-label={t('sections')}
+              className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              <TabsList
-                className="h-auto max-w-full justify-start gap-0.5 overflow-x-auto bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                aria-label={t('sections')}
-              >
+              <div className="flex h-auto max-w-full justify-start gap-0.5">
                 {visibleTabs.map((tab) => {
                   const Icon = tab.icon;
                   const tabLabel = t(tab.labelKey);
+                  const isActive = activeTabValue === tab.href;
                   return (
                     <Tooltip key={tab.href}>
                       <TooltipTrigger asChild>
-                        <TabsTrigger
-                          value={tab.href}
+                        <Link
+                          href={`/projects/${projectId}/${tab.href}`}
                           aria-label={tabLabel}
-                          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground h-7 w-7 shrink-0 gap-1.5 rounded-md px-0 text-white/65 hover:bg-white/10 hover:text-white lg:w-auto lg:px-2.5"
+                          aria-current={isActive ? 'page' : undefined}
+                          className={cn(
+                            'inline-flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-0 text-white/65 transition-colors hover:bg-white/10 hover:text-white lg:w-auto lg:px-2.5',
+                            isActive && 'bg-primary text-primary-foreground'
+                          )}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
                           <span className="hidden text-xs font-medium lg:inline">{tabLabel}</span>
-                        </TabsTrigger>
+                        </Link>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="text-xs lg:hidden">
                         {tabLabel}
@@ -156,8 +165,8 @@ export function ProjectLayoutClient({
                     </Tooltip>
                   );
                 })}
-              </TabsList>
-            </Tabs>
+              </div>
+            </nav>
 
             <div className="ml-auto flex shrink-0 items-center gap-1.5">
               {activeSprint ? (

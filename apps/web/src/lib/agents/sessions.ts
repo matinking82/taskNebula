@@ -1,5 +1,5 @@
 /**
- * Linear Agent Protocol — session lifecycle helpers (P0-04).
+ * Linear Agent Protocol — session lifecycle helpers.
  *
  * Provides:
  *   - `AgentSessionEventSchema` — Zod schema matching Linear's AgentSessionEvent

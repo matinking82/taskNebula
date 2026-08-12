@@ -197,9 +197,9 @@ export function IntakeFormEditor({ form, recentSubmissions }: Props) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>{t('label_target_status')}</Label>
+            <Label htmlFor="target-status">{t('label_target_status')}</Label>
             <Select value={targetStatus} onValueChange={setTargetStatus}>
-              <SelectTrigger>
+              <SelectTrigger id="target-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -229,8 +229,11 @@ export function IntakeFormEditor({ form, recentSubmissions }: Props) {
                 <div className="flex items-start justify-between">
                   <div className="grid flex-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <Label className="text-xs">{t('field_label_name')}</Label>
+                      <Label htmlFor={`field-${index}-name`} className="text-xs">
+                        {t('field_label_name')}
+                      </Label>
                       <Input
+                        id={`field-${index}-name`}
                         value={field.name}
                         onChange={(e) =>
                           updateField(index, {
@@ -240,19 +243,24 @@ export function IntakeFormEditor({ form, recentSubmissions }: Props) {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">{t('field_label_label')}</Label>
+                      <Label htmlFor={`field-${index}-label`} className="text-xs">
+                        {t('field_label_label')}
+                      </Label>
                       <Input
+                        id={`field-${index}-label`}
                         value={field.label}
                         onChange={(e) => updateField(index, { label: e.target.value })}
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">{t('field_label_type')}</Label>
+                      <Label htmlFor={`field-${index}-type`} className="text-xs">
+                        {t('field_label_type')}
+                      </Label>
                       <Select
                         value={field.type}
                         onValueChange={(v) => updateField(index, { type: v as IntakeFieldType })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger id={`field-${index}-type`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -276,8 +284,11 @@ export function IntakeFormEditor({ form, recentSubmissions }: Props) {
                     </div>
                     {field.type === 'select' ? (
                       <div className="space-y-1 sm:col-span-2">
-                        <Label className="text-xs">{t('field_options')}</Label>
+                        <Label htmlFor={`field-${index}-options`} className="text-xs">
+                          {t('field_options')}
+                        </Label>
                         <Textarea
+                          id={`field-${index}-options`}
                           rows={3}
                           value={(field.options ?? []).join('\n')}
                           onChange={(e) =>

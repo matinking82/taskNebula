@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useFormatter, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Pencil, Loader2, Clock } from 'lucide-react';
@@ -10,8 +11,16 @@ import { IssueDocs } from './issue-docs';
 import { IssueLinks } from './issue-links';
 import { IssueSubtasks } from './issue-subtasks';
 import { IssueDiscussionCard } from '@/components/chat/issue-discussion-card';
-import { CollabDescriptionEditor } from './collab-description-editor';
 import { RichDescription } from './rich-description';
+
+// Yjs publishes separate ESM and CommonJS entry points. Rendering the
+// collaboration bundle during SSR can make Next load both variants, which
+// invalidates Yjs constructor checks. Keep the optional editor client-only so
+// every document/provider in the browser comes from the same module instance.
+const CollabDescriptionEditor = dynamic(
+  () => import('./collab-description-editor').then((module) => module.CollabDescriptionEditor),
+  { ssr: false }
+);
 
 // Feature flag for the Tiptap + Yjs collaborative editor. When `false` (the
 // default) we render the legacy textarea; when `true` we mount the live

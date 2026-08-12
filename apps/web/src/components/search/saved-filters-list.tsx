@@ -123,7 +123,7 @@ export function SavedFiltersList({ onSelectFilter }: SavedFiltersListProps) {
           {filters.map((filter) => (
             <li
               key={filter.id}
-              className="row-interactive animate-fade-up ease-snap group rounded-md transition-all duration-150"
+              className="row-interactive animate-fade-up ease-snap group rounded-md transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
             >
               {/* Visibility icon */}
               <div className="text-muted-foreground shrink-0">

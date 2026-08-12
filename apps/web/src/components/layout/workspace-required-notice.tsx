@@ -11,7 +11,7 @@ export async function WorkspaceRequiredNotice() {
       <div className="surface-card w-full max-w-lg space-y-4 p-8 text-center">
         <LockKeyhole className="text-muted-foreground mx-auto h-8 w-8" />
         <div className="space-y-2">
-          <p className="text-foreground text-sm font-medium">{t('projectInviteRequiredTitle')}</p>
+          <h1 className="text-foreground text-sm font-medium">{t('projectInviteRequiredTitle')}</h1>
           <p className="text-muted-foreground text-sm">{t('projectInviteRequiredDescription')}</p>
         </div>
         <Button asChild size="sm" variant="outline">

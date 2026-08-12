@@ -94,7 +94,7 @@ function RadioCard({
       aria-checked={active}
       onClick={onSelect}
       className={cn(
-        'ease-snap focus-visible:ring-ring focus-visible:ring-offset-background flex flex-1 flex-col items-start gap-2 rounded-md border p-3 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+        'ease-snap focus-visible:ring-ring focus-visible:ring-offset-background flex flex-1 flex-col items-start gap-2 rounded-md border p-3 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         active
           ? 'border-primary bg-primary/5 shadow-sm'
           : 'border-border bg-card hover:bg-accent/40'

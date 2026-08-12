@@ -28,6 +28,7 @@ export default function ProjectAnalyticsPage({
   if (healthLoading || velocityLoading) {
     return (
       <div className="flex h-full items-center justify-center">
+        <h1 className="sr-only">{t('analytics.title')}</h1>
         <div className="text-muted-foreground">{t('analytics.loading')}</div>
       </div>
     );

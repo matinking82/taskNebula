@@ -77,11 +77,15 @@ export function TeamMembersList({ canInviteMembers, members }: TeamMembersListPr
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('team.members.searchPlaceholder')}
+            aria-label={t('team.members.searchPlaceholder')}
             className="ease-snap h-9 rounded-md pl-8 transition-[border-color,box-shadow] duration-150"
           />
         </div>
         <Select value={role} onValueChange={setRole}>
-          <SelectTrigger className="ease-snap h-9 w-full rounded-md transition-[border-color,box-shadow] duration-150 sm:w-40">
+          <SelectTrigger
+            aria-label={t('team.members.rolePlaceholder')}
+            className="ease-snap h-9 w-full rounded-md transition-[border-color,box-shadow] duration-150 sm:w-40"
+          >
             <SelectValue placeholder={t('team.members.rolePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
@@ -143,13 +147,12 @@ export function TeamMembersList({ canInviteMembers, members }: TeamMembersListPr
                         ? 'text-accent-emerald inline-flex items-center gap-1.5 text-xs font-medium'
                         : 'text-muted-foreground inline-flex items-center gap-1.5 text-xs font-medium'
                     }
-                    aria-label={isActive ? t('team.members.online') : t('team.members.offline')}
                   >
                     <span
                       className={isActive ? 'status-dot status-live' : 'status-dot status-idle'}
                       aria-hidden
                     />
-                    <span className="hidden sm:inline">
+                    <span className="sr-only sm:not-sr-only">
                       {isActive ? t('team.members.online') : t('team.members.offline')}
                     </span>
                   </span>

@@ -460,7 +460,7 @@ export function ImportWizard({
           </div>
           <div className="bg-muted h-2 w-full overflow-hidden rounded">
             <div
-              className="bg-foreground h-full transition-all"
+              className="bg-foreground ease-smooth h-full transition-[width] duration-200"
               style={{
                 width:
                   jobStatus.total > 0

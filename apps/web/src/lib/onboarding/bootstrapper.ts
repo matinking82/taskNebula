@@ -1,5 +1,5 @@
 /**
- * AI Workspace Bootstrapper (P1-13).
+ * AI Workspace Bootstrapper.
  *
  * Given a natural-language project description plus team-size and primary
  * role hints, returns a fully-typed `WorkspaceSeed`: project name, team(s),
@@ -173,13 +173,14 @@ export function generateWorkspaceSeedNative(
     .split(/\s+/)
     .filter(Boolean);
   const projectName = words.slice(0, 4).join(' ').slice(0, 80) || 'My Project';
-  const projectKey = (
-    words
-      .map((w) => w[0]?.toUpperCase())
-      .filter(Boolean)
-      .join('')
-      .slice(0, 5) || 'PROJ'
-  ).replace(/[^A-Z]/g, '') || 'PROJ';
+  const projectKey =
+    (
+      words
+        .map((w) => w[0]?.toUpperCase())
+        .filter(Boolean)
+        .join('')
+        .slice(0, 5) || 'PROJ'
+    ).replace(/[^A-Z]/g, '') || 'PROJ';
 
   // Team setup by size + role.
   const teams = nativeTeams(input.teamSize, input.role);
@@ -215,10 +216,7 @@ export function generateWorkspaceSeedNative(
   });
 }
 
-function nativeTeams(
-  size: TeamSizeBucket,
-  role: OnboardingRole
-): WorkspaceSeed['teams'] {
+function nativeTeams(size: TeamSizeBucket, role: OnboardingRole): WorkspaceSeed['teams'] {
   if (size === 'solo') {
     return [{ name: 'Core', slug: 'core' }];
   }
@@ -445,10 +443,16 @@ export async function generateWorkspaceSeed(
     throw new BootstrapperError('invalid_input', 'projectDescription is required.');
   }
   if (!TEAM_SIZE_BUCKETS.includes(input.teamSize)) {
-    throw new BootstrapperError('invalid_input', `teamSize must be one of ${TEAM_SIZE_BUCKETS.join(', ')}`);
+    throw new BootstrapperError(
+      'invalid_input',
+      `teamSize must be one of ${TEAM_SIZE_BUCKETS.join(', ')}`
+    );
   }
   if (!ONBOARDING_ROLES.includes(input.role)) {
-    throw new BootstrapperError('invalid_input', `role must be one of ${ONBOARDING_ROLES.join(', ')}`);
+    throw new BootstrapperError(
+      'invalid_input',
+      `role must be one of ${ONBOARDING_ROLES.join(', ')}`
+    );
   }
 
   const provider: BootstrapperProvider =

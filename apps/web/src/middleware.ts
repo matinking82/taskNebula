@@ -38,10 +38,31 @@ function applyHtmlAttrs(response: NextResponse, locale: string): NextResponse {
   return response;
 }
 
+function resolveRequestLocale(request: NextRequest): string {
+  const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
+  return isSupportedLocale(cookieLocale)
+    ? cookieLocale
+    : (matchLocaleFromAcceptLanguage(request.headers.get('accept-language')) ?? defaultLocale);
+}
+
+function continueWithLocale(request: NextRequest, locale: string): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-tasknebula-locale', locale);
+  return applyHtmlAttrs(NextResponse.next({ request: { headers: requestHeaders } }), locale);
+}
+
 export default auth((req) => {
   const request = req as unknown as NextRequest;
   const { pathname } = request.nextUrl;
   const isLoggedIn = !!(req as unknown as { auth?: unknown }).auth;
+
+  // TaskNebula uses authenticated REST route handlers and currently ships no
+  // Server Actions. Reject forged Next-Action probes at the edge so Next.js
+  // does not attempt to resolve attacker-supplied action ids and flood runtime
+  // logs with "Failed to find Server Action" errors.
+  if (request.headers.has('next-action')) {
+    return new NextResponse(null, { status: 400 });
+  }
 
   // Static files and Next.js internals - skip middleware entirely.
   if (
@@ -58,13 +79,15 @@ export default auth((req) => {
 
   // Setup page and setup API are always accessible.
   if (pathname === '/setup' || pathname === '/api/setup') {
-    return NextResponse.next();
+    return pathname === '/setup'
+      ? continueWithLocale(request, resolveRequestLocale(request))
+      : NextResponse.next();
   }
 
   // Un-localized public routes (landing page lives at the root and is also
   // not under a [locale] segment for now).
   if (pathname === '/' || pathname.startsWith('/share/')) {
-    return NextResponse.next();
+    return continueWithLocale(request, resolveRequestLocale(request));
   }
 
   // API routes never get locale handling. Boundary check matters: a naive
@@ -107,9 +130,22 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Auth routes themselves are not run through the intl middleware.
+  // `/issues` is a compatibility alias for the canonical personal issue
+  // list. Redirect at the request boundary instead of from the rewritten
+  // Server Component route: a component-level redirect can stream two
+  // different React trees during development and shift useId/Radix ids at
+  // hydration time. Issue detail routes remain under `/issues/[issueId]`.
+  if (isLoggedIn && pathWithoutLocale === '/issues') {
+    const issuesUrl = request.nextUrl.clone();
+    issuesUrl.pathname = hasLocalePrefix ? `/${firstSegment}/my-issues` : '/my-issues';
+    return NextResponse.redirect(issuesUrl);
+  }
+
+  // Un-localized pages still need the resolved locale forwarded to the root
+  // layout. Without this request header, a statically cached public response
+  // can leak the first visitor's `lang`/`dir` into subsequent requests.
   if (isUnLocalizedPath(pathname)) {
-    return NextResponse.next();
+    return continueWithLocale(request, resolveRequestLocale(request));
   }
 
   // Everything else (dashboard, projects, settings, …) lives under
@@ -162,6 +198,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)',
+    '/((?!api/health(?:/|$)|_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|.*\\.png$|.*\\.jpg$|.*\\.svg$).*)',
   ],
 };

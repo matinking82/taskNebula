@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
 
   const { provider, apiKey } = await resolveProviderAndKey(body.provider, project.organizationId);
 
-  // P1-16: run the prompt-injection sandbox before we forward the user's
+  // Run the prompt-injection sandbox before we forward the user's
   // text to any provider. `warn` mode logs hits and continues; `strict`
   // mode refuses with 422 so an attacker cannot reach the LLM at all.
   const safetyMode = workspace.aiSafetyMode ?? 'warn';

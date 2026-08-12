@@ -1,3 +1,5 @@
+import type { AgentApprovalRequestStatus } from '@tasknebula/db';
+
 export type AgentPolicyEffect = 'allow' | 'deny' | 'require_approval';
 
 export type AgentPolicyDecision = AgentPolicyEffect;
@@ -70,6 +72,6 @@ export type AgentPolicyMarker = {
   targetType?: string;
 };
 
-export type AgentApprovalRequestStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+export type { AgentApprovalRequestStatus };
 
 export type AgentApprovalExecutor = 'issues:create' | 'issues:update' | 'comments:create';

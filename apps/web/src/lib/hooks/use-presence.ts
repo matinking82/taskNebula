@@ -31,7 +31,7 @@ export function usePresence(issueId: string | null) {
   });
 
   // Update presence mutation
-  const updatePresence = useMutation({
+  const { mutate: updatePresence } = useMutation({
     mutationFn: async (issueId: string) => {
       const response = await fetch(`/api/presence/${issueId}`, {
         method: 'POST',
@@ -44,7 +44,7 @@ export function usePresence(issueId: string | null) {
   });
 
   // Remove presence mutation
-  const removePresence = useMutation({
+  const { mutate: removePresence } = useMutation({
     mutationFn: async (issueId: string) => {
       const response = await fetch(`/api/presence/${issueId}`, {
         method: 'DELETE',
@@ -61,28 +61,28 @@ export function usePresence(issueId: string | null) {
     if (!issueId || !user || !isActive) return;
 
     // Initial presence update
-    updatePresence.mutate(issueId);
+    updatePresence(issueId);
 
     // Update presence every 30 seconds
     const interval = setInterval(() => {
       if (isActive) {
-        updatePresence.mutate(issueId);
+        updatePresence(issueId);
       }
     }, 30000);
 
     return () => {
       clearInterval(interval);
     };
-  }, [issueId, user, isActive]);
+  }, [issueId, user, isActive, updatePresence]);
 
   // Remove presence on unmount
   useEffect(() => {
     if (!issueId || !user) return;
 
     return () => {
-      removePresence.mutate(issueId);
+      removePresence(issueId);
     };
-  }, [issueId, user]);
+  }, [issueId, user, removePresence]);
 
   // Handle visibility change
   useEffect(() => {
@@ -91,7 +91,7 @@ export function usePresence(issueId: string | null) {
 
       if (!document.hidden && issueId && user) {
         // Update presence when tab becomes visible
-        updatePresence.mutate(issueId);
+        updatePresence(issueId);
       }
     };
 
@@ -99,7 +99,7 @@ export function usePresence(issueId: string | null) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [issueId, user]);
+  }, [issueId, user, updatePresence]);
 
   // Filter out current user from presence list
   const otherUsers = presenceData?.users.filter((u) => u.userId !== user?.id) || [];

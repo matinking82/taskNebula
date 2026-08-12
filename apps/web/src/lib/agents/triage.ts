@@ -1,5 +1,5 @@
 /**
- * Triage Intelligence agent (TaskNebula Roadmap P0-02).
+ * Triage Intelligence agent.
  *
  * Given an issue ID, builds a compact context window (issue body +
  * workspace label catalog + team taxonomies + last 50 issues for the
@@ -84,9 +84,8 @@ export interface TriageContext {
   issue: TriageIssueSnapshot;
   projectKey: string;
   projectName: string;
-  // Distinct labels seen across recent issues in this project — acts as
-  // an implicit "workspace label catalog" until task #4 introduces an
-  // explicit labels table.
+  // Distinct labels seen across recent issues in this project provide bounded
+  // project context alongside the first-class label catalog.
   labelCatalog: string[];
   teamTaxonomy: Array<{
     id: string;
@@ -96,8 +95,8 @@ export interface TriageContext {
   // Members that could reasonably be assigned. We bound this aggressively
   // (max 30) so the prompt stays small; the LLM picks from this list.
   candidateAssignees: Array<{ id: string; name: string | null }>;
-  // Up to 50 most recent issues; titles + statuses + assignees act as
-  // implicit retrieval context (full embeddings live in task #1).
+  // Up to 50 most recent issues; titles + statuses + assignees act as bounded
+  // retrieval context while the organization-safe embedding leg is dormant.
   recentIssues: Array<{
     key: string;
     title: string;

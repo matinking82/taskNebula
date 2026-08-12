@@ -67,7 +67,7 @@ export async function GET(
     // Get all members of the organization with role.
     // `isAgent` / `agentProvider` are exposed so the UI can render virtual
     // agent users (claude/cursor/devin/copilot) differently and show the
-    // Agent Activity panel when one is the assignee — see P0-04.
+    // Agent Activity panel when one is the assignee.
     const members = await db
       .select({
         id: users.id,

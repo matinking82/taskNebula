@@ -17,7 +17,7 @@ services:
       - pg_stat_statements.max=10000
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (generate with `openssl rand -hex 32`)}
       POSTGRES_DB: ${POSTGRES_DB:-tasknebula}
     ports:
       # Bind to localhost only to prevent external network access to the database.
@@ -63,6 +63,7 @@ services:
   livekit:
     image: livekit/livekit-server:v1.10.1
     container_name: tasknebula-livekit
+    profiles: ['voice']
     restart: unless-stopped
     network_mode: host
     depends_on:
@@ -76,10 +77,10 @@ services:
       LIVEKIT_TURN_UDP_PORT: ${LIVEKIT_TURN_UDP_PORT:-3478}
       LIVEKIT_RTC_START_PORT: ${LIVEKIT_RTC_START_PORT:-50000}
       LIVEKIT_RTC_END_PORT: ${LIVEKIT_RTC_END_PORT:-50020}
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-tasknebula-dev}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET must be set}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       LIVEKIT_WEBHOOK_URL: ${LIVEKIT_WEBHOOK_URL:-http://127.0.0.1:${PORT:-3000}/api/chat/livekit/webhook}
-      # Prometheus exporter (OBS-35). Default 0 = disabled; set to e.g. 6789
+      # Optional Prometheus exporter. Default 0 = disabled; set to e.g. 6789
       # to expose http://<host>:6789/metrics. See docs/OBSERVABILITY.md.
       LIVEKIT_PROMETHEUS_PORT: ${LIVEKIT_PROMETHEUS_PORT:-0}
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -87,7 +88,8 @@ services:
     volumes:
       - ./docker/livekit/start-livekit.sh:/etc/livekit/start-livekit.sh:ro
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:7880/ | grep -q OK || exit 1']
+      test:
+        ['CMD-SHELL', 'wget -qO- "http://localhost:$${LIVEKIT_PORT:-7880}/" | grep -q OK || exit 1']
       interval: 30s
       timeout: 5s
       start_period: 20s
@@ -113,21 +115,20 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      livekit:
-        condition: service_started
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-tasknebula}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-tasknebula}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set (generate with `openssl rand -base64 32`)}
       AUTH_URL: ${APP_URL:-http://localhost:3000}
+      AUTH_DEBUG: ${AUTH_DEBUG:-false}
       NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_APP_NAME: ${APP_NAME:-TaskNebula}
       NEXT_PUBLIC_COLLAB_ENABLED: ${NEXT_PUBLIC_COLLAB_ENABLED:-false}
       NEXT_PUBLIC_HOCUSPOCUS_URL: ${NEXT_PUBLIC_HOCUSPOCUS_URL:-}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      LIVEKIT_URL: ${LIVEKIT_URL:-http://host.docker.internal:7880}
-      NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-ws://${LIVEKIT_PUBLIC_HOST:-127.0.0.1}:7880}
-      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-tasknebula-dev}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET must be set}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379
+      LIVEKIT_URL: ${LIVEKIT_URL:-}
+      NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       TURN_URL: ${TURN_URL:-}
       TURN_USERNAME: ${TURN_USERNAME:-}
       TURN_PASSWORD: ${TURN_PASSWORD:-}
@@ -152,6 +153,7 @@ services:
       # dev; prod should enter keys through the admin/workspace config UI.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AGENT_PROVIDER_HOST_ALLOWLIST: ${AGENT_PROVIDER_HOST_ALLOWLIST:-}
       # Optional beta: dispatch issues directly to Claude Code or Codex CLI
       # installed inside this container/custom image. Admin → Agent control
       # still controls which workspaces may use the local handoff.
@@ -177,8 +179,11 @@ services:
       # shared secret. Set CRON_SECRET to enable them. The optional
       # JANITOR_SYSTEM_USER_ID is the user id used as the author for janitor
       # comments and updates; without it the janitor runs in dry-run mode.
-      CRON_SECRET: ${CRON_SECRET:-}
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set (generate with `openssl rand -hex 32`)}
       JANITOR_SYSTEM_USER_ID: ${JANITOR_SYSTEM_USER_ID:-}
+      # Optional Prometheus scrape token for GET /api/metrics. The endpoint
+      # stays unavailable when this value is unset or shorter than 16 chars.
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       # Optional Docker Hub inbound webhook for immediate image-update
       # detection. Pair with /api/cron/version-check as the polling fallback.
       TASKNEBULA_DOCKER_HUB_WEBHOOK_SECRET: ${TASKNEBULA_DOCKER_HUB_WEBHOOK_SECRET:-}
@@ -211,8 +216,32 @@ services:
       start_period: 60s
       retries: 3
 
-  # Optional: lightweight cron sidecar that calls the standup + janitor
-  # endpoints on a schedule. Comment out if you prefer Vercel Cron, k8s
+  # Default durability worker for post-approval effects. Keep this in the base
+  # lifecycle so a failed `after()` fast-path cannot strand an outbox row.
+  approval-reconciler:
+    image: alpine:3.20
+    container_name: tasknebula-approval-reconciler
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set}
+      WEB_BASE_URL: ${CRON_WEB_BASE_URL:-http://web:3000}
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -eu
+        while true; do
+          wget -qO /dev/null \
+            --header="x-cron-secret: $$CRON_SECRET" \
+            --post-data='' \
+            "$$WEB_BASE_URL/api/cron/agent-approval-effects" || true
+          sleep 60
+        done
+
+  # Optional: lightweight cron sidecar that calls scheduled product jobs.
+  # Comment out if you prefer Vercel Cron, k8s
   # CronJobs, or an external scheduler. The container uses busybox so the
   # whole footprint is < 5 MB.
   cron:
@@ -228,9 +257,9 @@ services:
       WEB_BASE_URL: ${CRON_WEB_BASE_URL:-http://web:3000}
     entrypoint: ['/bin/sh', '-c']
     # Daily standup at 08:00 UTC, hourly janitor, 6-hourly version check, and
-    # daily cycle-rollover at 02:00 UTC (off-peak so any cross-cycle DB churn
-    # doesn't collide with the standup digest window). busybox crond reads
-    # /etc/crontabs/root.
+    # daily cycle-rollover at 02:00 UTC
+    # (off-peak so any cross-cycle DB churn doesn't collide with the standup
+    # digest window). busybox crond reads /etc/crontabs/root.
     command:
       - |
         if [ -z "$$CRON_SECRET" ]; then

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Check, ChevronsUpDown, GitBranch, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ interface ParentPickerProps {
   value: string | null;
   onChange: (parentId: string | null) => void;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
 export function ParentPicker({
@@ -35,9 +36,13 @@ export function ParentPicker({
   value,
   onChange,
   disabled = false,
+  ariaLabel,
 }: ParentPickerProps) {
   const t = useTranslations('issueSidebar.parent');
+  const tRows = useTranslations('issueSidebar.rows');
   const [open, setOpen] = useState(false);
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
   const { data, isLoading } = useIssues({ projectId });
 
   const allIssues = (data ?? []) as IssueWithParent[];
@@ -54,17 +59,23 @@ export function ParentPicker({
           variant="ghost"
           role="combobox"
           aria-expanded={open}
+          aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
           className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
           disabled={disabled || isLoading}
         >
+          <span id={triggerLabelId} className="sr-only">
+            {ariaLabel ?? tRows('parent')}
+          </span>
           {selected ? (
-            <span className="flex min-w-0 items-center gap-2">
+            <span id={triggerValueId} className="flex min-w-0 items-center gap-2">
               <GitBranch className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
               <span className="text-muted-foreground font-mono text-[11px]">{selected.key}</span>
               <span className="truncate">{selected.title}</span>
             </span>
           ) : (
-            <span className="text-muted-foreground min-w-0 flex-1 truncate">{t('none')}</span>
+            <span id={triggerValueId} className="text-muted-foreground min-w-0 flex-1 truncate">
+              {t('none')}
+            </span>
           )}
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-40" />
         </Button>

@@ -5,7 +5,9 @@ Model Context Protocol server for TaskNebula, implemented in this monorepo.
 ## Current status
 
 - Source package with stdio and HTTP scaffolding.
-- Twelve issue/project-oriented tools plus resources and prompts.
+- Eleven issue/project-oriented tools plus resources and prompts. A pull-request
+  link tool is intentionally not advertised until the web API has a matching
+  persisted remote-link contract.
 - Not published to npm; `npx @tasknebula/mcp-server` does not work yet.
 - End-to-end calls are blocked until the web REST API accepts scoped API keys
   (or OAuth) instead of requiring only a browser session cookie.
@@ -59,10 +61,9 @@ src/prompts.ts            prompt definitions
 ## Tool surface
 
 The current source registers tools for issue create/read/update/assignment,
-comments, transitions, subtasks, PR links, search, projects, assigned work, and
-workload. Treat the web REST schema as authoritative: MCP input enums and
-payloads have known drift and must be verified against the route before a tool
-is expanded or published.
+comments, transitions, parent-linked subtasks, search, projects, assigned work,
+and workload. Treat the web REST schema as authoritative and verify it before a
+tool is expanded or published.
 
 Agent-origin metadata can be supplied through `TASKNEBULA_AGENT_ACTOR`; it does
 not replace server-side authorization, approval, tenancy, audit, or idempotency.

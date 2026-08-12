@@ -12,7 +12,7 @@
  *     request, validates it against the TaskNebula API (or, eventually,
  *     against our OAuth 2.1 provider — see TODO below).
  *
- * NOTE (P0-05 follow-up): the OAuth 2.1 + PKCE flow itself (authorize +
+ * NOTE: the OAuth 2.1 + PKCE flow itself (authorize +
  * token endpoints, dynamic client registration per RFC 7591, refresh
  * tokens, scope management) is intentionally a stub. The hooks below
  * give a place to plug in the real implementation in P1-XX without
@@ -45,7 +45,7 @@ export function resolveStdioAuth(env: NodeJS.ProcessEnv = process.env): StdioAut
     // eslint-disable-next-line no-console
     console.error(
       '[tasknebula-mcp] WARNING: TASKNEBULA_API_KEY is not set. ' +
-        'Tools that hit the API will fail until you set it.',
+        'Tools that hit the API will fail until you set it.'
     );
   }
   return { apiUrl, apiKey };
@@ -63,7 +63,7 @@ export function resolveStdioAuth(env: NodeJS.ProcessEnv = process.env): StdioAut
  */
 export function resolveHttpAuth(
   request: { headers: Headers | Record<string, string | string[] | undefined> },
-  env: NodeJS.ProcessEnv = process.env,
+  env: NodeJS.ProcessEnv = process.env
 ): HttpAuthContext {
   const apiUrl = env.TASKNEBULA_API_URL ?? 'http://localhost:3000';
   const headerValue = getHeader(request.headers, 'authorization');
@@ -75,9 +75,9 @@ export function resolveHttpAuth(
     return { apiUrl };
   }
   const token = match[1]!.trim();
-  // For now we forward the token verbatim to the REST API which already
-  // accepts session bearer tokens and API keys. A real OAuth provider
-  // would do JWT verification here.
+  // Forward the token verbatim. The web REST API does not accept API keys or
+  // OAuth bearer tokens yet, so authenticated tool calls remain blocked until
+  // that server-side resolver is implemented.
   return {
     apiUrl,
     accessToken: token,
@@ -96,7 +96,7 @@ export function clientOptionsFromHttp(ctx: HttpAuthContext): TaskNebulaClientOpt
 
 function getHeader(
   headers: Headers | Record<string, string | string[] | undefined>,
-  name: string,
+  name: string
 ): string | undefined {
   if (typeof (headers as Headers).get === 'function') {
     return (headers as Headers).get(name) ?? undefined;

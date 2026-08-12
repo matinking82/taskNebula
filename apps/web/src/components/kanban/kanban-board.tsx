@@ -279,7 +279,7 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
             <div className="w-[320px] flex-shrink-0 self-start">
               <Button
                 variant="ghost"
-                className="border-border text-muted-foreground ease-snap hover:border-primary/40 hover:bg-primary/5 hover:text-primary h-10 w-full rounded-md border border-dashed text-sm transition-all duration-150"
+                className="border-border text-muted-foreground ease-snap hover:border-primary/40 hover:bg-primary/5 hover:text-primary h-10 w-full rounded-md border border-dashed text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                 onClick={() => setAddColumnOpen(true)}
               >
                 <Plus className="mr-1.5 h-4 w-4" />

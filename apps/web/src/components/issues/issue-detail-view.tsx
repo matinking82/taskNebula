@@ -119,7 +119,11 @@ export function IssueDetailView({
 
   if (isLoading) {
     return (
-      <div className="bg-background flex h-full min-h-0 flex-col overflow-y-auto lg:overflow-hidden">
+      <div
+        className="bg-background flex h-full min-h-0 flex-col overflow-y-auto lg:overflow-hidden"
+        tabIndex={0}
+      >
+        <h1 className="sr-only">{t('triage.loading')}</h1>
         {/* Header skeleton */}
         <div className="border-border bg-background shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
           <div className="space-y-2">
@@ -207,7 +211,10 @@ export function IssueDetailView({
   const extras = issue as IssueDetailExtras;
 
   return (
-    <div className="bg-background animate-fade-up flex h-full min-h-0 flex-col overflow-y-auto lg:overflow-hidden">
+    <div
+      className="bg-background animate-fade-up flex h-full min-h-0 flex-col overflow-y-auto lg:overflow-hidden"
+      tabIndex={0}
+    >
       {/* FEAT-31: morph target — pairs with `issue-${id}` on the source card
           (kanban / dashboard list) so navigation feels continuous. */}
       <ViewTransition name={`issue-${issue.id}`}>

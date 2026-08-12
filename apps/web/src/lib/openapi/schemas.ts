@@ -540,6 +540,7 @@ export const HealthResponseSchema = z
       database: z.string(),
       memory: z.string(),
       redis: z.string(),
+      collaboration: z.string(),
       livekit: z.string(),
       smtp: z.string(),
     }),

@@ -5,10 +5,10 @@ import { withAgentPolicy } from './agent-policy.js';
 export const createSubtaskInput = z.object({
   parentIssueId: z.string().min(1),
   projectId: z.string().min(1),
-  title: z.string().min(1).max(255),
+  title: z.string().min(1).max(500),
   description: z.string().optional(),
   assigneeId: z.string().optional(),
-  priority: z.enum(['lowest', 'low', 'medium', 'high', 'highest']).optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).optional(),
 });
 
 export const createSubtaskTool: ToolDefinition<typeof createSubtaskInput> = {
@@ -21,8 +21,8 @@ export const createSubtaskTool: ToolDefinition<typeof createSubtaskInput> = {
       '/api/issues',
       withAgentPolicy({
         ...body,
-        type: 'subtask',
-        parentIssueId,
+        type: 'task',
+        parentId: parentIssueId,
       })
     );
   },

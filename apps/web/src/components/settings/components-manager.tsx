@@ -221,7 +221,7 @@ export function ComponentsManager({ projectId }: ComponentsManagerProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <span className="kicker">{t('kicker')}</span>
-            <h3 className="text-sm font-semibold tracking-tight">{t('title')}</h3>
+            <h2 className="text-sm font-semibold tracking-tight">{t('title')}</h2>
             <p className="text-muted-foreground text-xs">{t('subtitle')}</p>
           </div>
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>

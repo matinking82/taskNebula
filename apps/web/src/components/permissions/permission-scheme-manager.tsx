@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,11 +81,7 @@ export function PermissionSchemeManager({
   const getErrorDescription = (error: unknown, fallback: string) =>
     isApiPermissionError(error) ? tSettings('error_no_permission') : fallback;
 
-  useEffect(() => {
-    void fetchSchemes();
-  }, [organizationId, projectId]);
-
-  async function fetchSchemes() {
+  const fetchSchemes = useCallback(async () => {
     setLoading(true);
 
     try {
@@ -115,7 +111,11 @@ export function PermissionSchemeManager({
     } finally {
       setLoading(false);
     }
-  }
+  }, [organizationId, projectId, t, toast]);
+
+  useEffect(() => {
+    void fetchSchemes();
+  }, [fetchSchemes]);
 
   async function createScheme() {
     try {

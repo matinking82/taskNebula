@@ -198,7 +198,7 @@ function RegistrationSection() {
                 key={option.mode}
                 type="button"
                 className={cn(
-                  'ease-snap focus-visible:ring-ring flex min-h-28 flex-col items-start gap-2 rounded-md border p-4 text-left text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60',
+                  'ease-snap focus-visible:ring-ring flex min-h-28 flex-col items-start gap-2 rounded-md border p-4 text-left text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60',
                   selected
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-card hover:border-foreground/30'
@@ -412,7 +412,7 @@ function SmtpSection() {
             <Input
               value={emailFrom}
               onChange={(e) => setEmailFrom(e.target.value)}
-              placeholder={t('systemCredentials.smtp.fromAddressPlaceholder')}
+              placeholder={String(t.raw('systemCredentials.smtp.fromAddressPlaceholder'))}
             />
           </Field>
           <div className="flex items-center gap-3 self-end pb-2">

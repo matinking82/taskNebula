@@ -55,8 +55,6 @@ import {
   useConversationStream,
   useCreateConversationMessage,
   useDeleteConversationMessage,
-  useEndConversationCall,
-  useLeaveConversationCall,
   useMarkConversationRead,
   useModerateConversationMessages,
   useProjectChatBootstrap,
@@ -237,10 +235,8 @@ export function ChatShell({ projectId }: { projectId: string }) {
   const reactToMessage = useUpdateConversationMessage(selectedRoomId || undefined);
   const deleteMessage = useDeleteConversationMessage(selectedRoomId || undefined);
   const moderateMessages = useModerateConversationMessages(selectedRoomId || undefined);
-  const markRead = useMarkConversationRead(selectedRoomId || undefined);
+  const { mutate: markConversationRead } = useMarkConversationRead(selectedRoomId || undefined);
   const startCall = useStartConversationCall(selectedRoomId || undefined);
-  const endCall = useEndConversationCall(selectedRoomId || undefined);
-  const leaveCall = useLeaveConversationCall(selectedRoomId || undefined);
   const callToken = useCallToken(selectedRoomId || undefined);
   const stream = useConversationStream(selectedRoomId || undefined, Boolean(selectedRoomId));
 
@@ -371,7 +367,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
     }
 
     lastReadMarkerRef.current = nextMarker;
-    markRead.mutate(lastReadableMessageId, {
+    markConversationRead(lastReadableMessageId, {
       onError: () => {
         if (lastReadMarkerRef.current === nextMarker) {
           lastReadMarkerRef.current = null;
@@ -381,7 +377,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
   }, [
     bootstrap?.effectiveSettings.unreadTrackingEnabled,
     lastReadableMessageId,
-    markRead.mutate,
+    markConversationRead,
     selectedRoomId,
   ]);
 
@@ -574,7 +570,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
   async function handleToggleReaction(messageId: string, emoji: string) {
     try {
       await reactToMessage.mutateAsync({ messageId, reactionEmoji: emoji });
-    } catch (mutationError) {
+    } catch {
       toast({
         title: t('chat.message.reactionFailed'),
         description: t('chat.message.reactionFailed'),
@@ -586,7 +582,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
   async function handleDeleteMessage(messageId: string) {
     try {
       await deleteMessage.mutateAsync(messageId);
-    } catch (mutationError) {
+    } catch {
       toast({
         title: t('chat.message.deleteFailed'),
         description: t('chat.message.deleteFailed'),
@@ -613,7 +609,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
             : t('chat.moderation.nothingToClean'),
       });
       setPendingModerationAction(null);
-    } catch (mutationError) {
+    } catch {
       toast({
         title: t('chat.moderation.actionFailed'),
         description: t('chat.moderation.actionFailedDescription'),
@@ -891,6 +887,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
+        <h1 className="sr-only">{t('chat.sidebar.projectChat')}</h1>
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <Loader2 className="h-4 w-4 animate-spin" />
           {t('chat.loading')}
@@ -902,6 +899,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
   if (error || !bootstrap) {
     return (
       <div className="flex h-full items-center justify-center p-6">
+        <h1 className="sr-only">{t('chat.sidebar.projectChat')}</h1>
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>{t('chat.unavailableTitle')}</CardTitle>
@@ -917,6 +915,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
   if (!bootstrap.effectiveSettings.enabled) {
     return (
       <div className="p-6">
+        <h1 className="sr-only">{t('chat.sidebar.projectChat')}</h1>
         <Card className="max-w-2xl">
           <CardHeader>
             <CardTitle>{t('chat.disabledTitle')}</CardTitle>
@@ -953,6 +952,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
 
   return (
     <>
+      <h1 className="sr-only">{t('chat.sidebar.projectChat')}</h1>
       <Dialog open={isCreateChannelOpen} onOpenChange={setIsCreateChannelOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -2754,7 +2754,15 @@ function ManagedLiveKitRoomProvider({
       room.off(RoomEvent.MediaDevicesError, handleMediaDevicesError);
       void room.disconnect();
     };
-  }, [room, session.roomName, session.token, session.url, t]);
+  }, [
+    room,
+    session.audioDeviceId,
+    session.roomName,
+    session.startWithMicrophone,
+    session.token,
+    session.url,
+    t,
+  ]);
 
   return <RoomContext.Provider value={room}>{children}</RoomContext.Provider>;
 }

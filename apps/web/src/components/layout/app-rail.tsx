@@ -110,7 +110,7 @@ export function AppRail({
                       aria-label={showInboxBadge ? `${label} · ${unreadLabel}` : label}
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'ease-snap group relative mx-auto flex h-[50px] w-12 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 text-white/60 transition-all duration-150 hover:bg-white/10 hover:text-white',
+                        'ease-snap group relative mx-auto flex h-[50px] w-12 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 text-white/60 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:bg-white/10 hover:text-white',
                         isActive &&
                           'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-none'
                       )}
@@ -149,7 +149,7 @@ export function AppRail({
                   data-active={normalizedPathname.startsWith('/admin') ? 'true' : undefined}
                   aria-label={tNav('admin')}
                   className={cn(
-                    'ease-snap group mx-auto flex h-[50px] w-12 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 text-white/60 transition-all duration-150 hover:bg-white/10 hover:text-white',
+                    'ease-snap group mx-auto flex h-[50px] w-12 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 text-white/60 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:bg-white/10 hover:text-white',
                     normalizedPathname.startsWith('/admin') &&
                       'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-none'
                   )}

@@ -14,6 +14,13 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - A canonical bounded research topology and August 2026 agent-runtime maturity
   contract, plus repository-wide documentation/link drift checks.
 - Thin repository instruction adapters for GitHub Copilot and Cursor.
+- Exhaustive authenticated-page browser contracts covering every product
+  surface, mobile/RTL layouts, semantic headings, horizontal overflow,
+  automated WCAG checks, HTTP failures, and browser-console errors.
+- Journaled approval execution receipts, webhook deduplication receipts, and a
+  leased approval-effect outbox with retry/reconciliation coverage.
+- A migration-owned `collab_documents` schema, dedicated frozen-lockfile
+  Hocuspocus image, and database-aware readiness checks.
 
 ### Changed
 
@@ -39,6 +46,48 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 - Reframed AI transparency and oversight copy as documented product policy
   instead of mischaracterizing EU AI Act Article 50 as a blanket model-card or
   human-approval requirement; corrected model and retention disclosures.
+- Hardened fresh-clone setup, quickstart, database reset, backup, Compose, and
+  Desktop flows around generated secrets, explicit local database targets,
+  deterministic images, migration ordering, and default approval recovery.
+- Updated the maintained web/auth/observability/MCP/chart/OpenAPI dependencies
+  and lockfile while preserving React 19 and Next.js 15 compatibility.
+- Reworked page hierarchy, responsive overflow, focus states, loading shells,
+  chart semantics, settings navigation, public recovery/share screens, and
+  design tokens against the canonical design contract.
+- Revalidated key/ICU parity across all 30 locale catalogs; Turkish product
+  copy received an additional linguistic pass.
+
+### Fixed
+
+- Project-agent writes now fail closed when approval is required; covered issue
+  create/update/comment approvals validate tenant targets and atomically commit
+  the effect, audit trail, terminal state, and durable outbox intent.
+- Agent-session webhooks now reject duplicate and out-of-order delivery with
+  tenant-scoped fingerprints and compare-and-set terminal transitions.
+- Awaited Redis publication keeps approval outbox rows retryable until fan-out
+  accepts the event instead of acknowledging fire-and-forget delivery.
+- Ask source markers now round-trip through prompt, parser, stream, and Sidecar;
+  organization/project scope is explicit and the unsafe vector leg stays off
+  until an organization-safe embedder is available.
+- Authenticated layouts receive their Auth.js session during SSR, removing
+  client session-fetch races; the roadmap now hydrates through a stable server
+  wrapper, and mobile browser coverage no longer requests Chromium-only
+  emulation from Firefox.
+- The legacy `/issues` alias now redirects before React rendering, preventing
+  streamed-tree hydration drift; settled settings tabs now preserve a single
+  page heading and meet dark-theme text-contrast checks.
+
+### Security
+
+- Local coding-agent child processes receive only provider-specific allowlisted
+  environment variables, and configurable remote provider endpoints enforce
+  HTTPS/egress validation and finite request deadlines.
+- Production dependency audit findings were resolved, including patched Next,
+  Auth.js, Nodemailer, PostCSS, Sentry/OpenTelemetry, MCP SDK, Recharts, and
+  Swagger UI dependency lines.
+- Public health responses no longer expose raw dependency errors, and setup
+  scripts avoid world-readable generated secrets or inherited remote libpq
+  targets during destructive reset operations.
 
 ## [0.14.0] - 2026-07-27
 

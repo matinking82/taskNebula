@@ -77,7 +77,10 @@ export const authConfig: NextAuthConfig = {
   session: {
     strategy: 'jwt',
   },
-  debug: process.env.NODE_ENV === 'development',
+  // Auth.js debug logging is intentionally opt-in. Enabling it for every dev
+  // process floods route/browser verification logs and can expose more auth
+  // context than routine development needs.
+  debug: process.env.AUTH_DEBUG === 'true',
 };
 
 export default authConfig;

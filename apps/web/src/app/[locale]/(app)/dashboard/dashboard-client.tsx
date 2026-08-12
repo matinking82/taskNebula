@@ -184,7 +184,7 @@ export function DashboardClient() {
   );
 
   if (isLoading) {
-    return <DashboardLoadingShell />;
+    return <DashboardLoadingShell title={tDash('kicker')} />;
   }
 
   const firstName = session?.user?.name?.split(' ')[0] || t('greeting_fallback_name');

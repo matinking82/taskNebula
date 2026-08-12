@@ -102,8 +102,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
     .returning();
 
-  // NOTE: Slack cross-post for initiative updates is tracked by roadmap
-  // task #15 — intentionally out of scope here.
+  // NOTE: Slack cross-post for initiative updates is not implemented here.
 
   return NextResponse.json({ update: created }, { status: 201 });
 }

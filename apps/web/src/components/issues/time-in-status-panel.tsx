@@ -15,9 +15,8 @@ interface Bucket {
 
 /**
  * Compact panel that surfaces the issue's Time-in-Status breakdown beneath
- * the issue sidebar. The richer visualization (stacked bars, sparklines) is
- * tracked separately in roadmap task #26 — this component is intentionally a
- * minimal numeric summary so the underlying data plumbing can ship first.
+ * the issue sidebar. This component intentionally stays a compact numeric
+ * summary; richer visualizations should be justified by a concrete decision.
  */
 export function TimeInStatusPanel({ issueId }: { issueId: string }) {
   const t = useTranslations('issueMisc');

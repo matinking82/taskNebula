@@ -70,7 +70,6 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
 
   const getSprintProgress = () => {
     if (!currentSprint || currentSprint.status !== 'active') return null;
-    const start = new Date(currentSprint.startDate).getTime();
     const end = new Date(currentSprint.endDate).getTime();
     const now = Date.now();
     const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
@@ -81,6 +80,7 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
 
   return (
     <div className="flex h-full flex-col">
+      <h1 className="sr-only">{t('tabBoard')}</h1>
       {/* Board Header - single compact row */}
       <div className="border-border bg-background/95 shrink-0 border-b px-4 py-2 backdrop-blur">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -89,7 +89,10 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
             value={selectedSprintId || 'all'}
             onValueChange={(value) => setSelectedSprintId(value === 'all' ? undefined : value)}
           >
-            <SelectTrigger className="border-border bg-background h-8 w-40 shrink-0 text-xs shadow-none sm:w-48">
+            <SelectTrigger
+              aria-label={t('sprintsHeader')}
+              className="border-border bg-background h-8 w-40 shrink-0 text-xs shadow-none sm:w-48"
+            >
               <SelectValue placeholder={t('allIssues')} />
             </SelectTrigger>
             <SelectContent>

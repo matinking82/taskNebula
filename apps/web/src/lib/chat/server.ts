@@ -192,17 +192,6 @@ function toPermissionValue(value: string | null | undefined, fallback = false) {
   return fallback;
 }
 
-function slugifyChannel(value: string) {
-  return (
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'channel'
-  );
-}
-
 export async function resolveProjectIdOrThrow(projectIdOrKey: string, userId?: string) {
   const project = await resolveProjectByIdOrKey(projectIdOrKey, userId);
   if (!project) {
@@ -1960,7 +1949,11 @@ export async function getActiveCallSummary(roomId: string) {
     return null;
   }
 
-  const { databaseParticipantCount, freshHeartbeatCount, ...callRecord } = call;
+  const {
+    databaseParticipantCount,
+    freshHeartbeatCount: _freshHeartbeatCount,
+    ...callRecord
+  } = call;
   const summary = {
     ...callRecord,
     participantCount: resolveActiveCallParticipantCount({

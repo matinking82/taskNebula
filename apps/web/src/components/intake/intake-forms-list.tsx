@@ -117,9 +117,9 @@ export function IntakeFormsList({ forms, projectLookup, accessibleProjects }: Pr
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>{t('label_project')}</Label>
+                <Label htmlFor="intake-project">{t('label_project')}</Label>
                 <Select value={projectId} onValueChange={setProjectId}>
-                  <SelectTrigger>
+                  <SelectTrigger id="intake-project">
                     <SelectValue placeholder={t('select_project')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -201,7 +201,12 @@ export function IntakeFormsList({ forms, projectLookup, accessibleProjects }: Pr
                 </div>
                 <div className="flex items-center gap-2">
                   <Button asChild variant="ghost" size="sm">
-                    <a href={`/intake/${form.slug}`} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={`/intake/${form.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${form.title} · ${t('public_url_label')}`}
+                    >
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   </Button>

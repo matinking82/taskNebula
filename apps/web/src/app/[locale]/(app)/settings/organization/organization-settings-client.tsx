@@ -270,7 +270,7 @@ export function OrganizationSettingsClient() {
             )}
             <div className="space-y-1">
               <span className="kicker">{t('org.workspaceKicker')}</span>
-              <h1 className="text-lg font-semibold tracking-tight">{org.name}</h1>
+              <h2 className="text-lg font-semibold tracking-tight">{org.name}</h2>
               <p className="text-muted-foreground max-w-prose text-sm">
                 {t('org.workspaceSubtitle')}
               </p>
@@ -365,7 +365,7 @@ export function OrganizationSettingsClient() {
                         setFormData((current) => ({ ...current, logoUrl: event.target.value }))
                       }
                       disabled={!canManageSettings}
-                      className="ease-snap transition-all duration-150"
+                      className="ease-snap transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                     />
                   </div>
                 </div>
@@ -381,7 +381,7 @@ export function OrganizationSettingsClient() {
                       setFormData((current) => ({ ...current, name: event.target.value }))
                     }
                     disabled={!canManageSettings}
-                    className="ease-snap transition-all duration-150"
+                    className="ease-snap transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                   />
                 </div>
 
@@ -406,7 +406,7 @@ export function OrganizationSettingsClient() {
                     <Globe className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                     <Input
                       id="org-domain"
-                      className="ease-snap pl-9 transition-all duration-150"
+                      className="ease-snap pl-9 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       placeholder={t('org.domainPlaceholder')}
                       value={formData.domain}
                       onChange={(event) =>

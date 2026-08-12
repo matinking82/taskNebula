@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events';
-import type Redis from 'ioredis';
 import { createRedisSubscriber, ensureRedisConnection, getRedisClient } from '@/lib/server/redis';
 
 type ChatRealtimeEvent = {
@@ -125,12 +124,7 @@ export async function touchRoomPresence(params: {
   const client = await ensureRedisConnection(getRedisClient());
 
   if (client) {
-    await client.set(
-      getPresenceKey(params.roomId, params.userId),
-      JSON.stringify(entry),
-      'EX',
-      70
-    );
+    await client.set(getPresenceKey(params.roomId, params.userId), JSON.stringify(entry), 'EX', 70);
   } else {
     getPresenceStore().set(getPresenceKey(params.roomId, params.userId), entry);
   }

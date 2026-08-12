@@ -1,14 +1,10 @@
 import { registerRoute, TAGS } from '../registry';
-import {
-  ErrorResponseSchema,
-  SearchBodySchema,
-  SearchResponseSchema,
-} from '../schemas';
+import { ErrorResponseSchema, SearchBodySchema, SearchResponseSchema } from '../schemas';
 
 // POST /api/search
 //
 // The runtime route currently accepts the same parameters via GET query
-// string. We expose `POST` here because the MCP server (task #5) and other
+// string. We expose `POST` here because the MCP server and other
 // programmatic clients prefer a JSON body for complex JQL queries.
 registerRoute({
   method: 'post',

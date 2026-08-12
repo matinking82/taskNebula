@@ -535,60 +535,69 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div className="bg-background flex h-full flex-col">
+      <Tabs
+        value={activeViewType}
+        onValueChange={(value) => setActiveViewType(value as ViewType)}
+        className="bg-background flex h-full flex-col"
+      >
+        <h1 className="sr-only">{t('shell.views')}</h1>
         <div className="border-border bg-background shrink-0 border-b px-4 py-1.5">
           {/* Compact toolbar: view-mode icons + filters + actions (icon-only) */}
           <div className="flex flex-wrap items-center gap-2">
-            <Tabs
-              value={activeViewType}
-              onValueChange={(value) => setActiveViewType(value as ViewType)}
-              className="shrink-0"
-            >
+            <TabsList className="bg-muted/30 flex h-7 shrink-0 items-center gap-0.5 rounded-md p-0.5">
               {/* Icon-only on mobile/tablet (compact squares); icon + label on
                   desktop (lg+). aria-label keeps the icon-only state accessible. */}
-              <TabsList className="bg-muted/30 h-7 gap-0.5 rounded-md p-0.5">
-                <TabsTrigger
-                  value="list"
-                  aria-label={t('shell.view_list')}
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-xs h-6 w-6 gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2"
-                >
-                  <LayoutList className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden text-xs font-medium lg:inline">
-                    {t('shell.view_list')}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="board"
-                  aria-label={t('shell.view_board')}
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-xs h-6 w-6 gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2"
-                >
-                  <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden text-xs font-medium lg:inline">
-                    {t('shell.view_board')}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="timeline"
-                  aria-label={t('shell.view_timeline')}
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-xs h-6 w-6 gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2"
-                >
-                  <GanttChartSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden text-xs font-medium lg:inline">
-                    {t('shell.view_timeline')}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="calendar"
-                  aria-label={t('shell.view_calendar')}
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-xs h-6 w-6 gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2"
-                >
-                  <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden text-xs font-medium lg:inline">
-                    {t('shell.view_calendar')}
-                  </span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+              <TabsTrigger
+                value="list"
+                aria-label={t('shell.view_list')}
+                className={cn(
+                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  activeViewType === 'list' && 'bg-card shadow-xs'
+                )}
+              >
+                <LayoutList className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden text-xs font-medium lg:inline">{t('shell.view_list')}</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="board"
+                aria-label={t('shell.view_board')}
+                className={cn(
+                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  activeViewType === 'board' && 'bg-card shadow-xs'
+                )}
+              >
+                <FolderKanban className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden text-xs font-medium lg:inline">
+                  {t('shell.view_board')}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="timeline"
+                aria-label={t('shell.view_timeline')}
+                className={cn(
+                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  activeViewType === 'timeline' && 'bg-card shadow-xs'
+                )}
+              >
+                <GanttChartSquare className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden text-xs font-medium lg:inline">
+                  {t('shell.view_timeline')}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="calendar"
+                aria-label={t('shell.view_calendar')}
+                className={cn(
+                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  activeViewType === 'calendar' && 'bg-card shadow-xs'
+                )}
+              >
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden text-xs font-medium lg:inline">
+                  {t('shell.view_calendar')}
+                </span>
+              </TabsTrigger>
+            </TabsList>
 
             <div className="bg-border/70 hidden h-4 w-px shrink-0 sm:block" aria-hidden="true" />
 
@@ -700,386 +709,375 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
           </div>
         </div>
 
-        <Tabs
-          value={activeViewType}
-          onValueChange={(value) => setActiveViewType(value as ViewType)}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <TabsContent value="list" className="mt-0 min-h-0 flex-1 overflow-hidden">
-            <div className="h-full overflow-auto px-5 py-4">
-              <div className="border-border bg-card animate-fade-up overflow-hidden rounded-lg border">
-                {isLoading ? (
-                  <div className="text-muted-foreground px-4 py-8 text-sm">
-                    {t('shell.loading_issues')}
-                  </div>
-                ) : filteredIssues.length === 0 ? (
-                  <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
-                    <p className="text-muted-foreground text-sm">{t('shell.no_issues_match')}</p>
-                    <Button size="sm" onClick={() => setCreateIssueOpen(true)}>
-                      <Plus className="mr-1.5 h-3.5 w-3.5" />
-                      {t('shell.new_issue_button')}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="stagger">
-                    {groupedListIssues.map((group) => {
-                      const isCollapsed = !!collapsedGroups[group.status.id];
-                      const groupColor = group.status.color || '#94a3b8';
-
-                      return (
-                        <section
-                          key={group.status.id}
-                          className="border-border/60 border-b last:border-b-0"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleGroup(group.status.id)}
-                            className={cn(
-                              'border-border/60 bg-background sticky top-0 z-10 flex w-full items-center gap-2 border-b px-4 py-2 text-left',
-                              'hover:bg-accent/40 ease-snap transition-colors duration-150'
-                            )}
-                            aria-expanded={!isCollapsed}
-                          >
-                            {isCollapsed ? (
-                              <ChevronRight className="text-muted-foreground h-3.5 w-3.5" />
-                            ) : (
-                              <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
-                            )}
-                            <span
-                              aria-hidden="true"
-                              className="inline-block h-2.5 w-2.5 rounded-full border"
-                              style={{ backgroundColor: groupColor, borderColor: groupColor }}
-                            />
-                            <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
-                              {group.status.name}
-                            </span>
-                            <span className="text-muted-foreground text-xs">
-                              {group.issues.length}
-                            </span>
-                          </button>
-
-                          {!isCollapsed ? (
-                            group.issues.length === 0 ? (
-                              <div className="text-muted-foreground px-4 py-3 text-xs">
-                                {t('shell.no_items')}
-                              </div>
-                            ) : (
-                              <ul className="divide-border/60 divide-y">
-                                {group.issues.map((issue) => {
-                                  const priorityKey = [
-                                    'critical',
-                                    'high',
-                                    'medium',
-                                    'low',
-                                  ].includes(issue.priority)
-                                    ? issue.priority
-                                    : 'low';
-                                  const dotColor = issue.statusColor || groupColor;
-                                  const dueLabel = issue.dueDate
-                                    ? formatter.dateTime(parseISO(issue.dueDate), {
-                                        month: 'short',
-                                        day: 'numeric',
-                                      })
-                                    : null;
-                                  const assignees = issue.assignee ? [issue.assignee] : [];
-                                  const labels = Array.isArray(issue.labels) ? issue.labels : [];
-
-                                  return (
-                                    <li key={issue.id} className="relative">
-                                      <span
-                                        aria-hidden="true"
-                                        className={cn(
-                                          'priority-indicator absolute bottom-0 left-0 top-0 h-full',
-                                          `priority-${priorityKey}`
-                                        )}
-                                      />
-                                      <button
-                                        onClick={() => setSelectedIssueId(issue.id)}
-                                        className="ease-snap hover:bg-accent/50 group flex h-9 w-full items-center gap-3 rounded-md pl-4 pr-4 text-left transition-colors duration-150"
-                                      >
-                                        <span
-                                          aria-hidden="true"
-                                          className="inline-block h-2 w-2 shrink-0 rounded-full border"
-                                          style={{
-                                            backgroundColor: dotColor,
-                                            borderColor: dotColor,
-                                          }}
-                                        />
-                                        <span className="text-muted-foreground w-16 shrink-0 truncate font-mono text-[11px]">
-                                          {issue.key}
-                                        </span>
-                                        <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">
-                                          {issue.title}
-                                        </span>
-
-                                        <span className="ml-auto flex shrink-0 items-center gap-2">
-                                          {labels.length > 0 ? (
-                                            <span className="hidden items-center gap-1 md:flex">
-                                              {labels.slice(0, 2).map((label) => (
-                                                <span
-                                                  key={label}
-                                                  className="bg-muted/50 text-muted-foreground rounded-full px-2 py-0.5 text-xs"
-                                                >
-                                                  {label}
-                                                </span>
-                                              ))}
-                                              {labels.length > 2 ? (
-                                                <span className="bg-muted/50 text-muted-foreground rounded-full px-2 py-0.5 text-xs">
-                                                  +{labels.length - 2}
-                                                </span>
-                                              ) : null}
-                                            </span>
-                                          ) : null}
-
-                                          {dueLabel ? (
-                                            <span className="text-muted-foreground hidden items-center gap-1 text-xs sm:inline-flex">
-                                              <CalendarDays className="h-3 w-3" />
-                                              {dueLabel}
-                                            </span>
-                                          ) : null}
-
-                                          <span
-                                            aria-hidden="true"
-                                            className={cn(
-                                              'h-2 w-2 rounded-full',
-                                              priorityKey === 'critical' && 'bg-rose-500',
-                                              priorityKey === 'high' && 'bg-orange-500',
-                                              priorityKey === 'medium' && 'bg-amber-400',
-                                              priorityKey === 'low' && 'bg-muted-foreground/40'
-                                            )}
-                                            title={t('shell.priority_tooltip', {
-                                              priority: priorityKey,
-                                            })}
-                                          />
-
-                                          {assignees.length > 0 ? (
-                                            <AvatarStack max={3} size="xs">
-                                              {assignees.map((person) => (
-                                                <Avatar key={person.id} size="xs">
-                                                  {person.image ? (
-                                                    <AvatarImage
-                                                      src={person.image}
-                                                      alt={person.name || person.email}
-                                                    />
-                                                  ) : null}
-                                                  <AvatarFallback>
-                                                    {(person.name || person.email || '?')
-                                                      .charAt(0)
-                                                      .toUpperCase()}
-                                                  </AvatarFallback>
-                                                </Avatar>
-                                              ))}
-                                            </AvatarStack>
-                                          ) : null}
-                                        </span>
-                                      </button>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            )
-                          ) : null}
-                        </section>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="board" className="mt-0 min-h-0 flex-1 overflow-hidden">
-            <KanbanBoard projectId={projectId} filters={filters} />
-          </TabsContent>
-
-          <TabsContent value="timeline" className="mt-0 min-h-0 flex-1 overflow-hidden">
-            <div className="h-full overflow-auto px-5 py-4">
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-                <div className="animate-fade-up space-y-3">
-                  <span className="kicker">{t('shell.scheduled')}</span>
-                  <div className="border-border bg-card overflow-hidden rounded-lg border">
-                    {scheduledIssues.length === 0 ? (
-                      <div className="text-muted-foreground px-4 py-8 text-sm">
-                        {t('shell.no_scheduled')}
-                      </div>
-                    ) : (
-                      <ul className="stagger divide-border/60 divide-y">
-                        {scheduledIssues.map((issue) => {
-                          const priorityKey = ['critical', 'high', 'medium', 'low'].includes(
-                            issue.priority
-                          )
-                            ? issue.priority
-                            : 'low';
-                          return (
-                            <li key={issue.id} className="relative">
-                              <span
-                                aria-hidden="true"
-                                className={cn(
-                                  'priority-indicator absolute bottom-0 left-0 top-0 h-full',
-                                  `priority-${priorityKey}`
-                                )}
-                              />
-                              <button
-                                onClick={() => setSelectedIssueId(issue.id)}
-                                className="row-interactive flex w-full items-center justify-between gap-4 rounded-md py-2.5 pl-4 pr-4 text-left"
-                              >
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium">{issue.title}</p>
-                                  <p className="text-muted-foreground text-xs">
-                                    <span className="font-mono">{issue.key}</span> ·{' '}
-                                    {issue.assignee?.name ||
-                                      issue.assignee?.email ||
-                                      t('shell.unassigned')}
-                                  </p>
-                                </div>
-                                <span className="text-muted-foreground shrink-0 text-xs font-medium">
-                                  {issue.dueDate
-                                    ? formatter.dateTime(parseISO(issue.dueDate), {
-                                        month: 'short',
-                                        day: 'numeric',
-                                      })
-                                    : '—'}
-                                </span>
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
+        <TabsContent value="list" className="mt-0 min-h-0 flex-1 overflow-hidden">
+          <div className="h-full overflow-auto px-5 py-4">
+            <div className="border-border bg-card animate-fade-up overflow-hidden rounded-lg border">
+              {isLoading ? (
+                <div className="text-muted-foreground px-4 py-8 text-sm">
+                  {t('shell.loading_issues')}
                 </div>
-
-                <div className="animate-fade-up space-y-3">
-                  <span className="kicker">{t('shell.unscheduled')}</span>
-                  <div className="border-border bg-card overflow-hidden rounded-lg border">
-                    {unscheduledIssues.length === 0 ? (
-                      <div className="text-muted-foreground px-4 py-8 text-sm">
-                        {t('shell.all_scheduled')}
-                      </div>
-                    ) : (
-                      <ul className="divide-border/60 divide-y">
-                        {unscheduledIssues.map((issue) => (
-                          <li key={issue.id}>
-                            <button
-                              onClick={() => setSelectedIssueId(issue.id)}
-                              className="row-interactive flex w-full items-center justify-between gap-3 rounded-md px-4 py-2.5 text-left"
-                            >
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-medium">{issue.title}</p>
-                                <p className="text-muted-foreground font-mono text-xs">
-                                  {issue.key}
-                                </p>
-                              </div>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+              ) : filteredIssues.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+                  <p className="text-muted-foreground text-sm">{t('shell.no_issues_match')}</p>
+                  <Button size="sm" onClick={() => setCreateIssueOpen(true)}>
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    {t('shell.new_issue_button')}
+                  </Button>
                 </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="calendar" className="mt-0 min-h-0 flex-1 overflow-hidden">
-            <div className="h-full overflow-auto px-5 py-4">
-              <div className="border-border bg-card animate-fade-up overflow-hidden rounded-lg border">
-                <div className="border-border flex items-center justify-between border-b px-4 py-3">
-                  <h2 className="text-sm font-semibold">
-                    {formatter.dateTime(calendarMonth, {
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </h2>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setCalendarMonth((value) => subMonths(value, 1))}
-                      aria-label={t('shell.previous_month')}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setCalendarMonth((value) => addMonths(value, 1))}
-                      aria-label={t('shell.next_month')}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="border-border grid grid-cols-7 border-b">
-                  {(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const).map((day) => (
-                    <div
-                      key={day}
-                      className="text-muted-foreground px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
-                    >
-                      {t(`shell.weekday.${day}`)}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7">
-                  {calendarDays.map((day) => {
-                    const key = format(day, 'yyyy-MM-dd');
-                    const dayIssues = issuesByCalendarDay.get(key) ?? [];
+              ) : (
+                <div className="stagger">
+                  {groupedListIssues.map((group) => {
+                    const isCollapsed = !!collapsedGroups[group.status.id];
+                    const groupColor = group.status.color || '#94a3b8';
 
                     return (
-                      <div
-                        key={key}
-                        className={cn(
-                          'border-border/60 min-h-32 border-b border-r px-2 py-2 last:border-r-0',
-                          !isSameMonth(day, calendarMonth) && 'bg-muted/30 text-muted-foreground/60'
-                        )}
+                      <section
+                        key={group.status.id}
+                        className="border-border/60 border-b last:border-b-0"
                       >
-                        <div className="mb-1.5 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(group.status.id)}
+                          className={cn(
+                            'border-border/60 bg-background sticky top-0 z-10 flex w-full items-center gap-2 border-b px-4 py-2 text-left',
+                            'hover:bg-accent/40 ease-snap transition-colors duration-150'
+                          )}
+                          aria-expanded={!isCollapsed}
+                        >
+                          {isCollapsed ? (
+                            <ChevronRight className="text-muted-foreground h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
+                          )}
                           <span
-                            className={cn(
-                              'text-xs font-medium',
-                              isToday(day) &&
-                                'bg-primary text-primary-foreground rounded-sm px-1.5 py-0.5'
-                            )}
-                          >
-                            {formatter.dateTime(day, { day: 'numeric' })}
+                            aria-hidden="true"
+                            className="inline-block h-2.5 w-2.5 rounded-full border"
+                            style={{ backgroundColor: groupColor, borderColor: groupColor }}
+                          />
+                          <span className="text-foreground text-xs font-semibold uppercase tracking-wide">
+                            {group.status.name}
                           </span>
-                          {dayIssues.length > 1 ? (
-                            <span className="chip text-[9px]">{dayIssues.length}</span>
-                          ) : null}
-                        </div>
+                          <span className="text-muted-foreground text-xs">
+                            {group.issues.length}
+                          </span>
+                        </button>
 
-                        <div className="space-y-1">
-                          {dayIssues.slice(0, 3).map((issue) => (
-                            <button
-                              key={issue.id}
-                              onClick={() => setSelectedIssueId(issue.id)}
-                              className="ease-snap hover:bg-accent/60 w-full rounded-sm px-1.5 py-0.5 text-left transition-all duration-150"
-                            >
-                              <p className="truncate text-[11px] font-medium">{issue.title}</p>
-                              <p className="text-muted-foreground truncate font-mono text-[10px]">
-                                {issue.key}
-                              </p>
-                            </button>
-                          ))}
-                          {dayIssues.length > 3 ? (
-                            <p className="text-muted-foreground text-[10px]">
-                              {t('shell.more_count', { count: dayIssues.length - 3 })}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
+                        {!isCollapsed ? (
+                          group.issues.length === 0 ? (
+                            <div className="text-muted-foreground px-4 py-3 text-xs">
+                              {t('shell.no_items')}
+                            </div>
+                          ) : (
+                            <ul className="divide-border/60 divide-y">
+                              {group.issues.map((issue) => {
+                                const priorityKey = ['critical', 'high', 'medium', 'low'].includes(
+                                  issue.priority
+                                )
+                                  ? issue.priority
+                                  : 'low';
+                                const dotColor = issue.statusColor || groupColor;
+                                const dueLabel = issue.dueDate
+                                  ? formatter.dateTime(parseISO(issue.dueDate), {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })
+                                  : null;
+                                const assignees = issue.assignee ? [issue.assignee] : [];
+                                const labels = Array.isArray(issue.labels) ? issue.labels : [];
+
+                                return (
+                                  <li key={issue.id} className="relative">
+                                    <span
+                                      aria-hidden="true"
+                                      className={cn(
+                                        'priority-indicator absolute bottom-0 left-0 top-0 h-full',
+                                        `priority-${priorityKey}`
+                                      )}
+                                    />
+                                    <button
+                                      onClick={() => setSelectedIssueId(issue.id)}
+                                      className="ease-snap hover:bg-accent/50 group flex h-9 w-full items-center gap-3 rounded-md pl-4 pr-4 text-left transition-colors duration-150"
+                                    >
+                                      <span
+                                        aria-hidden="true"
+                                        className="inline-block h-2 w-2 shrink-0 rounded-full border"
+                                        style={{
+                                          backgroundColor: dotColor,
+                                          borderColor: dotColor,
+                                        }}
+                                      />
+                                      <span className="text-muted-foreground w-16 shrink-0 truncate font-mono text-[11px]">
+                                        {issue.key}
+                                      </span>
+                                      <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">
+                                        {issue.title}
+                                      </span>
+
+                                      <span className="ml-auto flex shrink-0 items-center gap-2">
+                                        {labels.length > 0 ? (
+                                          <span className="hidden items-center gap-1 md:flex">
+                                            {labels.slice(0, 2).map((label) => (
+                                              <span
+                                                key={label}
+                                                className="bg-muted/50 text-muted-foreground rounded-full px-2 py-0.5 text-xs"
+                                              >
+                                                {label}
+                                              </span>
+                                            ))}
+                                            {labels.length > 2 ? (
+                                              <span className="bg-muted/50 text-muted-foreground rounded-full px-2 py-0.5 text-xs">
+                                                +{labels.length - 2}
+                                              </span>
+                                            ) : null}
+                                          </span>
+                                        ) : null}
+
+                                        {dueLabel ? (
+                                          <span className="text-muted-foreground hidden items-center gap-1 text-xs sm:inline-flex">
+                                            <CalendarDays className="h-3 w-3" />
+                                            {dueLabel}
+                                          </span>
+                                        ) : null}
+
+                                        <span
+                                          aria-hidden="true"
+                                          className={cn(
+                                            'h-2 w-2 rounded-full',
+                                            priorityKey === 'critical' && 'bg-rose-500',
+                                            priorityKey === 'high' && 'bg-orange-500',
+                                            priorityKey === 'medium' && 'bg-amber-400',
+                                            priorityKey === 'low' && 'bg-muted-foreground/40'
+                                          )}
+                                          title={t('shell.priority_tooltip', {
+                                            priority: priorityKey,
+                                          })}
+                                        />
+
+                                        {assignees.length > 0 ? (
+                                          <AvatarStack max={3} size="xs">
+                                            {assignees.map((person) => (
+                                              <Avatar key={person.id} size="xs">
+                                                {person.image ? (
+                                                  <AvatarImage
+                                                    src={person.image}
+                                                    alt={person.name || person.email}
+                                                  />
+                                                ) : null}
+                                                <AvatarFallback>
+                                                  {(person.name || person.email || '?')
+                                                    .charAt(0)
+                                                    .toUpperCase()}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                            ))}
+                                          </AvatarStack>
+                                        ) : null}
+                                      </span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )
+                        ) : null}
+                      </section>
                     );
                   })}
                 </div>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="board" className="mt-0 min-h-0 flex-1 overflow-hidden">
+          <KanbanBoard projectId={projectId} filters={filters} />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-0 min-h-0 flex-1 overflow-hidden">
+          <div className="h-full overflow-auto px-5 py-4">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="animate-fade-up space-y-3">
+                <span className="kicker">{t('shell.scheduled')}</span>
+                <div className="border-border bg-card overflow-hidden rounded-lg border">
+                  {scheduledIssues.length === 0 ? (
+                    <div className="text-muted-foreground px-4 py-8 text-sm">
+                      {t('shell.no_scheduled')}
+                    </div>
+                  ) : (
+                    <ul className="stagger divide-border/60 divide-y">
+                      {scheduledIssues.map((issue) => {
+                        const priorityKey = ['critical', 'high', 'medium', 'low'].includes(
+                          issue.priority
+                        )
+                          ? issue.priority
+                          : 'low';
+                        return (
+                          <li key={issue.id} className="relative">
+                            <span
+                              aria-hidden="true"
+                              className={cn(
+                                'priority-indicator absolute bottom-0 left-0 top-0 h-full',
+                                `priority-${priorityKey}`
+                              )}
+                            />
+                            <button
+                              onClick={() => setSelectedIssueId(issue.id)}
+                              className="row-interactive flex w-full items-center justify-between gap-4 rounded-md py-2.5 pl-4 pr-4 text-left"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{issue.title}</p>
+                                <p className="text-muted-foreground text-xs">
+                                  <span className="font-mono">{issue.key}</span> ·{' '}
+                                  {issue.assignee?.name ||
+                                    issue.assignee?.email ||
+                                    t('shell.unassigned')}
+                                </p>
+                              </div>
+                              <span className="text-muted-foreground shrink-0 text-xs font-medium">
+                                {issue.dueDate
+                                  ? formatter.dateTime(parseISO(issue.dueDate), {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })
+                                  : '—'}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="animate-fade-up space-y-3">
+                <span className="kicker">{t('shell.unscheduled')}</span>
+                <div className="border-border bg-card overflow-hidden rounded-lg border">
+                  {unscheduledIssues.length === 0 ? (
+                    <div className="text-muted-foreground px-4 py-8 text-sm">
+                      {t('shell.all_scheduled')}
+                    </div>
+                  ) : (
+                    <ul className="divide-border/60 divide-y">
+                      {unscheduledIssues.map((issue) => (
+                        <li key={issue.id}>
+                          <button
+                            onClick={() => setSelectedIssueId(issue.id)}
+                            className="row-interactive flex w-full items-center justify-between gap-3 rounded-md px-4 py-2.5 text-left"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{issue.title}</p>
+                              <p className="text-muted-foreground font-mono text-xs">{issue.key}</p>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-0 min-h-0 flex-1 overflow-hidden">
+          <div className="h-full overflow-auto px-5 py-4">
+            <div className="border-border bg-card animate-fade-up overflow-hidden rounded-lg border">
+              <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                <h2 className="text-sm font-semibold">
+                  {formatter.dateTime(calendarMonth, {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </h2>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCalendarMonth((value) => subMonths(value, 1))}
+                    aria-label={t('shell.previous_month')}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCalendarMonth((value) => addMonths(value, 1))}
+                    aria-label={t('shell.next_month')}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-border grid grid-cols-7 border-b">
+                {(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const).map((day) => (
+                  <div
+                    key={day}
+                    className="text-muted-foreground px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide"
+                  >
+                    {t(`shell.weekday.${day}`)}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7">
+                {calendarDays.map((day) => {
+                  const key = format(day, 'yyyy-MM-dd');
+                  const dayIssues = issuesByCalendarDay.get(key) ?? [];
+
+                  return (
+                    <div
+                      key={key}
+                      className={cn(
+                        'border-border/60 min-h-32 border-b border-r px-2 py-2 last:border-r-0',
+                        !isSameMonth(day, calendarMonth) && 'bg-muted/30 text-muted-foreground/60'
+                      )}
+                    >
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span
+                          className={cn(
+                            'text-xs font-medium',
+                            isToday(day) &&
+                              'bg-primary text-primary-foreground rounded-sm px-1.5 py-0.5'
+                          )}
+                        >
+                          {formatter.dateTime(day, { day: 'numeric' })}
+                        </span>
+                        {dayIssues.length > 1 ? (
+                          <span className="chip text-[9px]">{dayIssues.length}</span>
+                        ) : null}
+                      </div>
+
+                      <div className="space-y-1">
+                        {dayIssues.slice(0, 3).map((issue) => (
+                          <button
+                            key={issue.id}
+                            onClick={() => setSelectedIssueId(issue.id)}
+                            className="ease-snap hover:bg-accent/60 w-full rounded-sm px-1.5 py-0.5 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
+                          >
+                            <p className="truncate text-[11px] font-medium">{issue.title}</p>
+                            <p className="text-muted-foreground truncate font-mono text-[10px]">
+                              {issue.key}
+                            </p>
+                          </button>
+                        ))}
+                        {dayIssues.length > 3 ? (
+                          <p className="text-muted-foreground text-[10px]">
+                            {t('shell.more_count', { count: dayIssues.length - 3 })}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={saveViewOpen} onOpenChange={setSaveViewOpen}>
         <DialogContent>

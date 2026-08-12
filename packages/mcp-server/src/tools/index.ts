@@ -7,7 +7,6 @@ import { updateIssueTool } from './update-issue.js';
 import { transitionStatusTool } from './transition-status.js';
 import { assignIssueTool } from './assign-issue.js';
 import { addCommentTool } from './add-comment.js';
-import { linkPrTool } from './link-pr.js';
 import { listProjectsTool } from './list-projects.js';
 import { createSubtaskTool } from './create-subtask.js';
 import { getMyWorkloadTool } from './get-my-workload.js';
@@ -22,7 +21,6 @@ export const allTools: AnyToolDefinition[] = [
   toAnyTool(transitionStatusTool),
   toAnyTool(assignIssueTool),
   toAnyTool(addCommentTool),
-  toAnyTool(linkPrTool),
   toAnyTool(listProjectsTool),
   toAnyTool(createSubtaskTool),
   toAnyTool(getMyWorkloadTool),
@@ -37,7 +35,6 @@ export {
   transitionStatusTool,
   assignIssueTool,
   addCommentTool,
-  linkPrTool,
   listProjectsTool,
   createSubtaskTool,
   getMyWorkloadTool,

@@ -27,7 +27,14 @@ interface DemoUser {
   status: 'active' | 'inactive' | 'invited';
   isSuperAdmin?: boolean;
   orgRole: 'owner' | 'admin' | 'member' | 'viewer';
-  projectRole: 'product_owner' | 'scrum_master' | 'tech_lead' | 'developer' | 'qa_engineer' | 'designer' | 'viewer';
+  projectRole:
+    | 'product_owner'
+    | 'scrum_master'
+    | 'tech_lead'
+    | 'developer'
+    | 'qa_engineer'
+    | 'designer'
+    | 'viewer';
 }
 
 const createDemoUsers = (): DemoUser[] => [
@@ -174,23 +181,91 @@ async function seed() {
   try {
     // Clean up existing seed data first (ignore errors for non-existent tables)
     console.log('🧹 Cleaning up existing data...');
-    try { await db.delete(schema.issueDocumentLinks); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.documentPageLinks); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.documentPageRevisions); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.documentPageAttachments); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.documentPages); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.documentSpaces); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.issues); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.sprints); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.workflowStatuses); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.workflows); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.projectMembers); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.projects); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.organizationMembers); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.sessions); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.accounts); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.users); } catch (e) { /* ignore */ }
-    try { await db.delete(schema.organizations); } catch (e) { /* ignore */ }
+    try {
+      await db.delete(schema.issueDocumentLinks);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.documentPageLinks);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.documentPageRevisions);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.documentPageAttachments);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.documentPages);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.documentSpaces);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.issues);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.sprints);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.workflowStatuses);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.workflows);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.projectMembers);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.projects);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.organizationMembers);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.sessions);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.accounts);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.users);
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      await db.delete(schema.organizations);
+    } catch (e) {
+      /* ignore */
+    }
     console.log('✅ Cleanup complete\n');
 
     // Hash password for all users
@@ -198,7 +273,7 @@ async function seed() {
 
     // Create demo users
     seedData.users = createDemoUsers();
-    seedData.users.forEach(user => {
+    seedData.users.forEach((user) => {
       user.password = passwordHash;
     });
 
@@ -219,7 +294,7 @@ async function seed() {
 
     // Insert users
     console.log('Creating users...');
-    const usersToInsert = seedData.users.map(u => ({
+    const usersToInsert = seedData.users.map((u) => ({
       id: u.id,
       email: u.email,
       name: u.name,
@@ -233,7 +308,7 @@ async function seed() {
 
     // Add users to organization
     console.log('Creating organization members...');
-    const orgMembers = seedData.users.map(u => ({
+    const orgMembers = seedData.users.map((u) => ({
       id: createId(),
       organizationId: org.id,
       userId: u.id,
@@ -243,14 +318,14 @@ async function seed() {
 
     // Seed virtual agent users (@claude, @cursor, @devin, @copilot) so the
     // Linear Agent Protocol dispatcher has someone to attribute comments to
-    // and the assignee picker shows them as first-class users (P0-04).
+    // and the assignee picker shows them as first-class users.
     console.log('Seeding virtual agent users...');
     const { ensureVirtualAgentUsers } = await import('./utils/seed-agent-users');
     await ensureVirtualAgentUsers(org.id);
 
     // Create teams
-    const adminUser = seedData.users.find(u => u.isSuperAdmin)!;
-    const scrumMaster = seedData.users.find(u => u.projectRole === 'scrum_master')!;
+    const adminUser = seedData.users.find((u) => u.isSuperAdmin)!;
+    const scrumMaster = seedData.users.find((u) => u.projectRole === 'scrum_master')!;
 
     const teams = [
       {
@@ -277,22 +352,22 @@ async function seed() {
     await db.insert(schema.teams).values(teams);
 
     // Add users to teams
-    const developers = seedData.users.filter(u =>
+    const developers = seedData.users.filter((u) =>
       ['developer', 'tech_lead', 'qa_engineer'].includes(u.projectRole)
     );
-    const designers = seedData.users.filter(u => u.projectRole === 'designer');
+    const designers = seedData.users.filter((u) => u.projectRole === 'designer');
 
     const teamMembers = [
       // Product team members
-      ...developers.map(u => ({
+      ...developers.map((u) => ({
         id: createId(),
         teamId: productTeam.id,
         userId: u.id,
-        role: u.projectRole === 'tech_lead' ? 'lead' as const : 'member' as const,
+        role: u.projectRole === 'tech_lead' ? ('lead' as const) : ('member' as const),
       })),
       { id: createId(), teamId: productTeam.id, userId: scrumMaster.id, role: 'lead' as const },
       // Design team members
-      ...designers.map(u => ({
+      ...designers.map((u) => ({
         id: createId(),
         teamId: designTeam.id,
         userId: u.id,
@@ -303,8 +378,10 @@ async function seed() {
 
     // Create projects
     console.log('Creating projects...');
-    const productOwner = seedData.users.find(u => u.projectRole === 'product_owner' && !u.isSuperAdmin)!;
-    const techLead = seedData.users.find(u => u.projectRole === 'tech_lead')!;
+    const productOwner = seedData.users.find(
+      (u) => u.projectRole === 'product_owner' && !u.isSuperAdmin
+    )!;
+    const techLead = seedData.users.find((u) => u.projectRole === 'tech_lead')!;
 
     const projects = [
       {
@@ -391,7 +468,7 @@ async function seed() {
         { name: 'Done', category: 'done' as const, color: '#22c55e', position: 5 },
       ];
 
-      const workflowStatuses = statuses.map(status => ({
+      const workflowStatuses = statuses.map((status) => ({
         id: createId(),
         workflowId: workflow.id,
         ...status,
@@ -437,17 +514,17 @@ async function seed() {
 
     // Create issues
     console.log('Creating issues...');
-    const dev1 = seedData.users.find(u => u.email === 'dev1@tasknebula.io')!;
-    const dev2 = seedData.users.find(u => u.email === 'dev2@tasknebula.io')!;
-    const qa = seedData.users.find(u => u.projectRole === 'qa_engineer')!;
-    const designer = seedData.users.find(u => u.projectRole === 'designer')!;
+    const dev1 = seedData.users.find((u) => u.email === 'dev1@tasknebula.io')!;
+    const dev2 = seedData.users.find((u) => u.email === 'dev2@tasknebula.io')!;
+    const qa = seedData.users.find((u) => u.projectRole === 'qa_engineer')!;
+    const designer = seedData.users.find((u) => u.projectRole === 'designer')!;
 
-    const backlogStatus = mainWorkflowStatuses.find(s => s.name === 'Backlog')!;
-    const todoStatus = mainWorkflowStatuses.find(s => s.name === 'To Do')!;
-    const inProgressStatus = mainWorkflowStatuses.find(s => s.category === 'in_progress')!;
-    const reviewStatus = mainWorkflowStatuses.find(s => s.name === 'Code Review')!;
-    const qaStatus = mainWorkflowStatuses.find(s => s.name === 'QA Testing')!;
-    const doneStatus = mainWorkflowStatuses.find(s => s.category === 'done')!;
+    const backlogStatus = mainWorkflowStatuses.find((s) => s.name === 'Backlog')!;
+    const todoStatus = mainWorkflowStatuses.find((s) => s.name === 'To Do')!;
+    const inProgressStatus = mainWorkflowStatuses.find((s) => s.category === 'in_progress')!;
+    const reviewStatus = mainWorkflowStatuses.find((s) => s.name === 'Code Review')!;
+    const qaStatus = mainWorkflowStatuses.find((s) => s.name === 'QA Testing')!;
+    const doneStatus = mainWorkflowStatuses.find((s) => s.category === 'done')!;
 
     seedData.issues = [
       // Sprint 1 issues
@@ -688,8 +765,10 @@ async function seed() {
           'Welcome to TaskNebula. Start here for local setup, daily rituals, and communication norms.',
           'Review the project docs space for active engineering specs tied to current delivery work.',
         ]),
-        contentText: 'Welcome to TaskNebula. Start here for local setup, daily rituals, and communication norms. Review the project docs space for active engineering specs tied to current delivery work.',
-        excerpt: 'Welcome to TaskNebula. Start here for local setup, daily rituals, and communication norms.',
+        contentText:
+          'Welcome to TaskNebula. Start here for local setup, daily rituals, and communication norms. Review the project docs space for active engineering specs tied to current delivery work.',
+        excerpt:
+          'Welcome to TaskNebula. Start here for local setup, daily rituals, and communication norms.',
         currentRevision: 1,
         position: 0,
         isArchived: false,
@@ -708,8 +787,10 @@ async function seed() {
         contentJson: createDocContent('Release Checklist', [
           'Run migrations, verify smoke tests, and publish release notes before every production deployment.',
         ]),
-        contentText: 'Run migrations, verify smoke tests, and publish release notes before every production deployment.',
-        excerpt: 'Run migrations, verify smoke tests, and publish release notes before every production deployment.',
+        contentText:
+          'Run migrations, verify smoke tests, and publish release notes before every production deployment.',
+        excerpt:
+          'Run migrations, verify smoke tests, and publish release notes before every production deployment.',
         currentRevision: 1,
         position: 0,
         isArchived: false,
@@ -729,8 +810,10 @@ async function seed() {
           'This spec tracks implementation scope for the DEMO-1 auth epic and linked stories.',
           'Document OAuth callback handling, session invalidation fixes, and release sequencing.',
         ]),
-        contentText: 'This spec tracks implementation scope for the DEMO-1 auth epic and linked stories. Document OAuth callback handling, session invalidation fixes, and release sequencing.',
-        excerpt: 'This spec tracks implementation scope for the DEMO-1 auth epic and linked stories.',
+        contentText:
+          'This spec tracks implementation scope for the DEMO-1 auth epic and linked stories. Document OAuth callback handling, session invalidation fixes, and release sequencing.',
+        excerpt:
+          'This spec tracks implementation scope for the DEMO-1 auth epic and linked stories.',
         currentRevision: 1,
         position: 0,
         isArchived: false,
@@ -749,8 +832,10 @@ async function seed() {
         contentJson: createDocContent('QA Test Matrix', [
           'Cover session expiry, OAuth account linking, and role-based route protection before release.',
         ]),
-        contentText: 'Cover session expiry, OAuth account linking, and role-based route protection before release.',
-        excerpt: 'Cover session expiry, OAuth account linking, and role-based route protection before release.',
+        contentText:
+          'Cover session expiry, OAuth account linking, and role-based route protection before release.',
+        excerpt:
+          'Cover session expiry, OAuth account linking, and role-based route protection before release.',
         currentRevision: 1,
         position: 0,
         isArchived: false,
@@ -831,14 +916,13 @@ async function seed() {
     console.log('┌─────────────────────────────┬──────────────────┬─────────────────┐');
     console.log('│ Email                       │ Org Role         │ Project Role    │');
     console.log('├─────────────────────────────┼──────────────────┼─────────────────┤');
-    seedData.users.forEach(u => {
+    seedData.users.forEach((u) => {
       const email = u.email.padEnd(27);
       const orgRole = u.orgRole.padEnd(16);
       const projectRole = u.projectRole.padEnd(15);
       console.log(`│ ${email} │ ${orgRole} │ ${projectRole} │`);
     });
     console.log('└─────────────────────────────┴──────────────────┴─────────────────┘');
-
   } catch (error) {
     console.error('❌ Seed failed:', error);
     throw error;

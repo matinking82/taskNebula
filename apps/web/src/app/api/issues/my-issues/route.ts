@@ -4,12 +4,20 @@ import { db, issues, workflowStatuses, projects, watchers } from '@tasknebula/db
 import { eq, desc, inArray, and, or, isNotNull } from 'drizzle-orm';
 
 type ViewMode = 'assigned' | 'created' | 'subscribed' | 'mentioned';
+type StatusBucket = 'open' | 'in_progress' | 'blocked' | 'done' | 'all';
 
 function parseView(value: string | null): ViewMode {
   if (value === 'created' || value === 'subscribed' || value === 'mentioned') {
     return value;
   }
   return 'assigned';
+}
+
+function parseStatusBucket(value: string | null): StatusBucket {
+  if (value === 'open' || value === 'in_progress' || value === 'blocked' || value === 'done') {
+    return value;
+  }
+  return 'all';
 }
 
 export async function GET(request: NextRequest) {
@@ -24,6 +32,11 @@ export async function GET(request: NextRequest) {
     const organizationId = searchParams.get('organizationId');
     const teamId = searchParams.get('teamId');
     const view = parseView(searchParams.get('view'));
+    const statusBucket = parseStatusBucket(searchParams.get('status'));
+    const limit = Math.min(
+      100,
+      Math.max(1, Number.parseInt(searchParams.get('limit') || '100', 10) || 100)
+    );
 
     let allowedProjectIds: string[] | null = null;
     if (organizationId || teamId) {
@@ -92,25 +105,27 @@ export async function GET(request: NextRequest) {
       .where(inArray(workflowStatuses.id, statusIds));
 
     const projectIds = [...new Set(myIssuesRaw.map((i) => i.projectId))];
-    const projectsData = await db
-      .select()
-      .from(projects)
-      .where(inArray(projects.id, projectIds));
+    const projectsData = await db.select().from(projects).where(inArray(projects.id, projectIds));
 
-    const myIssues = myIssuesRaw.map((issue) => ({
-      ...issue,
-      status:
-        statuses.find((s) => s.id === issue.statusId) || {
+    const myIssues = myIssuesRaw
+      .map((issue) => ({
+        ...issue,
+        status: statuses.find((s) => s.id === issue.statusId) || {
           name: 'Unknown',
-          category: 'backlog',
+          category: 'backlog' as const,
           color: '#64748b',
         },
-      project:
-        projectsData.find((p) => p.id === issue.projectId) || {
+        project: projectsData.find((p) => p.id === issue.projectId) || {
           key: 'UNKNOWN',
           name: 'Unknown',
         },
-    }));
+      }))
+      .filter((issue) => {
+        if (statusBucket === 'all') return true;
+        if (statusBucket === 'open') return issue.status.category !== 'done';
+        return issue.status.category === statusBucket;
+      })
+      .slice(0, limit);
 
     return NextResponse.json({ issues: myIssues, view });
   } catch (error) {

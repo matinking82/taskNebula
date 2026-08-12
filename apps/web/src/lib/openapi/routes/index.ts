@@ -4,9 +4,9 @@
  *
  * Add new route files here.
  *
- * TODO(QUAL-19 follow-up): the remaining ~185 routes under `apps/web/src/app/api/`
- * are not yet documented. Track the rest under a separate task; the current
- * scope is the public/stable surface that the MCP server (task #5) targets.
+ * The registry intentionally covers the public/stable surface consumed by the
+ * MCP server and other API clients. Add routes by capability rather than
+ * copying a volatile count into this file.
  *
  * Outstanding categories to register next, in rough priority order:
  *   - activities, audit-logs, notifications

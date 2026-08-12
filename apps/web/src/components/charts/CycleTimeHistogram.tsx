@@ -67,7 +67,7 @@ export function CycleTimeHistogram({ values, buckets, height = 240 }: CycleTimeH
             borderRadius: 8,
             fontSize: 12,
           }}
-          formatter={(v: number) => [t('issuesCount', { count: v }), t('count')]}
+          formatter={(value) => [t('issuesCount', { count: Number(value ?? 0) }), t('count')]}
           labelFormatter={(l) => t('cycleLabel', { bucket: String(l) })}
         />
         <Bar dataKey="count" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />

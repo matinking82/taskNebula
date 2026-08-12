@@ -1,5 +1,5 @@
 /**
- * Virtual agent users seeder (P0-04 — Linear Agent Protocol).
+ * Virtual agent users seeder for the Linear Agent Protocol integration.
  *
  * Seeds first-class TaskNebula user rows for each provider in
  * `agent_session_provider`. These rows appear in the assignee picker like

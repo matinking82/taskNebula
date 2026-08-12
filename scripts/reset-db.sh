@@ -1,71 +1,126 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# TaskNebula Database Reset Script
-# ⚠️  WARNING: This will delete all data in the database!
+# Reset the local TaskNebula database. This permanently deletes its data.
 
-set -e
+set -euo pipefail
 
-echo "⚠️  TaskNebula Database Reset"
-echo "============================"
-echo ""
-echo "This will:"
-echo "  1. Drop the existing database"
-echo "  2. Create a new database"
-echo "  3. Run all migrations"
-echo ""
-echo "⚠️  ALL DATA WILL BE LOST!"
-echo ""
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
 
-read -p "Are you sure you want to continue? (type 'yes' to confirm) " -r
-echo
-if [[ ! $REPLY == "yes" ]]; then
-    echo "❌ Aborted"
+env_value() {
+  local file="$1"
+  local key="$2"
+
+  [[ -f "$file" ]] || return 0
+  awk -v key="$key" '
+    index($0, key "=") == 1 { value = substr($0, length(key) + 2) }
+    END { print value }
+  ' "$file"
+}
+
+database_url="${DATABASE_URL:-$(env_value .env DATABASE_URL)}"
+database_name="${POSTGRES_DB:-$(env_value .env POSTGRES_DB)}"
+database_user="${POSTGRES_USER:-$(env_value .env POSTGRES_USER)}"
+database_password="${POSTGRES_PASSWORD:-$(env_value .env POSTGRES_PASSWORD)}"
+database_port="${DB_PORT:-$(env_value .env DB_PORT)}"
+database_name="${database_name:-tasknebula}"
+database_user="${database_user:-postgres}"
+database_port="${database_port:-5432}"
+database_host=''
+
+if [[ -n "$database_url" ]]; then
+  database_name="$(DATABASE_URL="$database_url" node -e '
+    const url = new URL(process.env.DATABASE_URL);
+    process.stdout.write(decodeURIComponent(url.pathname.replace(/^\//, "")));
+  ')"
+  database_host="$(DATABASE_URL="$database_url" node -e '
+    process.stdout.write(new URL(process.env.DATABASE_URL).hostname);
+  ')"
+
+  if [[ "$database_host" != 'localhost' && "$database_host" != '127.0.0.1' &&
+    "$database_host" != '::1' && "$database_host" != 'postgres' &&
+    "${TASKNEBULA_ALLOW_REMOTE_DB_RESET:-0}" != '1' ]]; then
+    printf 'Error: refusing to reset non-local database host %q.\n' "$database_host" >&2
+    printf 'Set TASKNEBULA_ALLOW_REMOTE_DB_RESET=1 only after independently verifying the target.\n' >&2
     exit 1
+  fi
 fi
 
-# Load DATABASE_URL from .env
-if [ -f "packages/db/.env" ]; then
-    export $(cat packages/db/.env | grep DATABASE_URL | xargs)
+if [[ ! "$database_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+  printf 'Error: refusing to reset unsafe database name %q.\n' "$database_name" >&2
+  exit 1
 fi
 
-# Extract database name from DATABASE_URL
-DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
-
-if [ -z "$DB_NAME" ]; then
-    echo "❌ Could not extract database name from DATABASE_URL"
-    exit 1
+printf 'TaskNebula database reset\n'
+printf 'This will permanently drop and recreate database: %s\n' "$database_name"
+read -r -p "Type the database name to confirm: " confirmation
+if [[ "$confirmation" != "$database_name" ]]; then
+  printf 'Aborted.\n'
+  exit 1
 fi
 
-echo "🗄️  Database: $DB_NAME"
-echo ""
+use_compose='false'
+if [[ -z "$database_url" || "$database_host" == 'postgres' ]] &&
+  command -v docker >/dev/null 2>&1 &&
+  docker compose version >/dev/null 2>&1 &&
+  docker compose ps --status running --services 2>/dev/null | grep -qx postgres; then
+  use_compose='true'
+fi
 
-# Check if using Docker
-if docker-compose ps postgres &> /dev/null; then
-    echo "🐳 Using Docker PostgreSQL..."
-    
-    # Drop and recreate database
-    echo "🗑️  Dropping database..."
-    docker-compose exec -T postgres psql -U postgres -c "DROP DATABASE IF EXISTS $DB_NAME;"
-    
-    echo "📦 Creating database..."
-    docker-compose exec -T postgres psql -U postgres -c "CREATE DATABASE $DB_NAME;"
+if [[ "$use_compose" == 'true' ]]; then
+  printf 'Resetting the Docker Compose PostgreSQL database...\n'
+  docker compose exec -T postgres psql \
+    -v ON_ERROR_STOP=1 \
+    -U "$database_user" \
+    -d postgres \
+    -c "DROP DATABASE IF EXISTS \"$database_name\" WITH (FORCE);"
+  docker compose exec -T postgres psql \
+    -v ON_ERROR_STOP=1 \
+    -U "$database_user" \
+    -d postgres \
+    -c "CREATE DATABASE \"$database_name\";"
 else
-    echo "💻 Using local PostgreSQL..."
-    
-    # Drop and recreate database
-    echo "🗑️  Dropping database..."
-    dropdb --if-exists $DB_NAME
-    
-    echo "📦 Creating database..."
-    createdb $DB_NAME
+  command -v dropdb >/dev/null 2>&1 || {
+    printf 'Error: dropdb is required when the Compose database is not running.\n' >&2
+    exit 1
+  }
+  command -v createdb >/dev/null 2>&1 || {
+    printf 'Error: createdb is required when the Compose database is not running.\n' >&2
+    exit 1
+  }
+
+  unset PGHOSTADDR PGSERVICE PGSERVICEFILE
+  export PGHOST PGPORT PGUSER PGPASSWORD
+  if [[ -n "$database_url" ]]; then
+    PGHOST="$(DATABASE_URL="$database_url" node -e '
+      process.stdout.write(new URL(process.env.DATABASE_URL).hostname);
+    ')"
+    PGPORT="$(DATABASE_URL="$database_url" node -e '
+      process.stdout.write(new URL(process.env.DATABASE_URL).port || "5432");
+    ')"
+    PGUSER="$(DATABASE_URL="$database_url" node -e '
+      process.stdout.write(decodeURIComponent(new URL(process.env.DATABASE_URL).username));
+    ')"
+    PGPASSWORD="$(DATABASE_URL="$database_url" node -e '
+      process.stdout.write(decodeURIComponent(new URL(process.env.DATABASE_URL).password));
+    ')"
+    if [[ "$PGHOST" == 'postgres' ]]; then
+      printf 'Error: Compose host "postgres" is unavailable outside the running Compose service.\n' >&2
+      exit 1
+    fi
+  else
+    PGHOST='127.0.0.1'
+    PGPORT="$database_port"
+    PGUSER="$database_user"
+    PGPASSWORD="$database_password"
+  fi
+
+  printf 'Resetting PostgreSQL at %s:%s through explicit libpq configuration...\n' "$PGHOST" "$PGPORT"
+  dropdb --host "$PGHOST" --port "$PGPORT" --username "$PGUSER" --if-exists --force "$database_name"
+  createdb --host "$PGHOST" --port "$PGPORT" --username "$PGUSER" "$database_name"
 fi
 
-# Run migrations
-echo ""
-echo "🗄️  Running migrations..."
+printf 'Running migrations...\n'
 pnpm db:migrate
-
-echo ""
-echo "✅ Database reset complete!"
-echo ""
-echo "🚀 You can now start the development server with 'pnpm dev'"
+printf 'Database reset complete.\n'

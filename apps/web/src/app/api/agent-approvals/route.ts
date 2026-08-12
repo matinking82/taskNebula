@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, desc, eq } from 'drizzle-orm';
-import { agentApprovalRequests, db } from '@tasknebula/db';
+import { agentApprovalRequests, db, type AgentApprovalRequestStatus } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
+
+const approvalStatuses = new Set<AgentApprovalRequestStatus>([
+  'pending',
+  'executing',
+  'approved',
+  'rejected',
+  'expired',
+  'failed',
+]);
+
+function isApprovalStatus(value: string): value is AgentApprovalRequestStatus {
+  return approvalStatuses.has(value as AgentApprovalRequestStatus);
+}
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -24,6 +37,9 @@ export async function GET(request: NextRequest) {
   const status = request.nextUrl.searchParams.get('status') || 'pending';
   const conditions = [eq(agentApprovalRequests.workspaceId, organizationId)];
   if (status !== 'all') {
+    if (!isApprovalStatus(status)) {
+      return NextResponse.json({ error: 'invalid_status' }, { status: 400 });
+    }
     conditions.push(eq(agentApprovalRequests.status, status));
   }
 

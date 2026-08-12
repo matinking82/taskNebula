@@ -102,7 +102,10 @@ export function IssueSubtasks({ issueId, projectId }: IssueSubtasksProps) {
       {totalCount > 0 && (
         <div className="flex items-center gap-2">
           <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
-            <div className="bg-primary h-full transition-all" style={{ width: `${progress}%` }} />
+            <div
+              className="bg-primary ease-smooth h-full transition-[width] duration-200"
+              style={{ width: `${progress}%` }}
+            />
           </div>
           <span className="text-muted-foreground text-xs">
             {completedCount}

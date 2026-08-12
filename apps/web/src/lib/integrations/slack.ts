@@ -22,16 +22,12 @@
 
 import crypto from 'crypto';
 import { getClientCredentials } from './client-credentials';
-import {
-  asTokenEnvelope,
-  decryptToken,
-  type TokenEnvelope,
-} from './token-crypto';
+import { asTokenEnvelope, decryptToken, type TokenEnvelope } from './token-crypto';
 
 export const SLACK_PROVIDER = 'slack';
 export const SLACK_STATE_COOKIE = 'tn_slack_state';
 
-// Scopes documented in the roadmap task. `commands` is required for the slash
+// `commands` is required for the slash
 // command, `chat:write` for thread replies and modals, `reactions:read` for
 // emoji-triage, `app_mentions:read` so the bot can react to @mentions in
 // channels, `channels:read` + `users:read` for the channel/user resolvers.
@@ -93,9 +89,7 @@ export async function getSlackClientCredentials(): Promise<ResolvedSlackCredenti
   };
 }
 
-export async function buildSlackAuthorizeUrl(params: {
-  state: string;
-}): Promise<string> {
+export async function buildSlackAuthorizeUrl(params: { state: string }): Promise<string> {
   const { clientId, redirectUri, scope } = await getSlackClientCredentials();
   const url = new URL(SLACK_AUTHORIZE_URL);
   url.searchParams.set('client_id', clientId);
@@ -106,11 +100,8 @@ export async function buildSlackAuthorizeUrl(params: {
   return url.toString();
 }
 
-export async function exchangeSlackCode(
-  code: string
-): Promise<SlackOauthAccessResponse> {
-  const { clientId, clientSecret, redirectUri } =
-    await getSlackClientCredentials();
+export async function exchangeSlackCode(code: string): Promise<SlackOauthAccessResponse> {
+  const { clientId, clientSecret, redirectUri } = await getSlackClientCredentials();
   const response = await fetch(SLACK_TOKEN_URL, {
     method: 'POST',
     headers: {
@@ -164,10 +155,7 @@ export function verifySlackSignature(input: SlackSignatureInput): boolean {
   if (Math.abs(now - ts) > SLACK_SIGNATURE_MAX_AGE_SECONDS) return false;
 
   const base = `v0:${timestamp}:${body}`;
-  const expected = `v0=${crypto
-    .createHmac('sha256', signingSecret)
-    .update(base)
-    .digest('hex')}`;
+  const expected = `v0=${crypto.createHmac('sha256', signingSecret).update(base).digest('hex')}`;
 
   // crypto.timingSafeEqual throws if the buffers differ in length, so we
   // size-check first to short-circuit cleanly.
@@ -190,14 +178,7 @@ export function getSlackSigningSecret(): string | null {
 // Slash command parser
 // ---------------------------------------------------------------------------
 
-export type SlackSlashVerb =
-  | 'new'
-  | 'list'
-  | 'search'
-  | 'assign'
-  | 'status'
-  | 'help'
-  | 'unknown';
+export type SlackSlashVerb = 'new' | 'list' | 'search' | 'assign' | 'status' | 'help' | 'unknown';
 
 export interface ParsedSlashCommand {
   verb: SlackSlashVerb;
@@ -232,9 +213,7 @@ export function parseSlashCommand(text: string | null | undefined): ParsedSlashC
   const tokens = tokenize(trimmed);
   const head = tokens.shift() ?? '';
   const verbCandidate = head.toLowerCase() as SlackSlashVerb;
-  const verb: SlackSlashVerb = KNOWN_VERBS.has(verbCandidate)
-    ? verbCandidate
-    : 'unknown';
+  const verb: SlackSlashVerb = KNOWN_VERBS.has(verbCandidate) ? verbCandidate : 'unknown';
 
   return {
     verb,

@@ -4,7 +4,7 @@
 -- Enable pgvector extension for AI semantic search
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Enable pg_stat_statements for query-level observability (OBS-35).
+-- Enable pg_stat_statements for query-level observability.
 -- Requires `shared_preload_libraries=pg_stat_statements` (see docker-compose
 -- command override). Without that load the CREATE EXTENSION succeeds but the
 -- view will be empty, so the docs warn operators to verify with:

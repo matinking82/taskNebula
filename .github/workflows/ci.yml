@@ -43,8 +43,8 @@ jobs:
       - name: Build workspace packages consumed via dist
         run: pnpm --filter @tasknebula/mcp-server build
 
-      - name: Verify web i18n catalog parity
-        run: node scripts/i18n-check.mjs
+      - name: Verify web i18n contracts and catalog parity
+        run: pnpm i18n:check
 
       - name: Verify open-source repository hygiene
         run: pnpm hygiene:check

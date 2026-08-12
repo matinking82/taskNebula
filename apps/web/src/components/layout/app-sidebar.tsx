@@ -417,7 +417,7 @@ function isHomeSectionPath(pathname: string | null | undefined): boolean {
 }
 
 const SIDEBAR_NAV_LINK_CLASS =
-  'row-interactive text-muted-foreground ease-snap border border-transparent hover:border-border-strong hover:bg-accent/70 hover:text-foreground data-[active=true]:border-primary/30 data-[active=true]:bg-primary/10 data-[active=true]:text-foreground min-h-8 w-full min-w-0 rounded-md text-[13px] font-medium transition-all duration-150';
+  'row-interactive text-muted-foreground ease-snap border border-transparent hover:border-border-strong hover:bg-accent/70 hover:text-foreground data-[active=true]:border-primary/30 data-[active=true]:bg-primary/10 data-[active=true]:text-foreground min-h-8 w-full min-w-0 rounded-md text-[13px] font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150';
 const SIDEBAR_NAV_LABEL_CLASS = 'min-w-0 flex-1 truncate';
 
 export function AppSidebar({
@@ -574,7 +574,7 @@ export function AppSidebar({
   return (
     <div className="flex h-screen">
       <AppRail hasWorkspaceAccess={hasWorkspaceAccess} isSuperAdmin={isSuperAdmin} />
-      <aside className="border-border bg-background flex w-64 flex-col border-r">
+      <div className="border-border bg-background flex w-64 flex-col border-r">
         <div className="bg-surface-dark border-border-strong flex h-12 items-center border-b px-3 text-white">
           <div className="flex w-full items-center px-1 py-1.5 text-sm font-medium">
             <div className="flex items-center gap-2.5">
@@ -843,7 +843,7 @@ export function AppSidebar({
                     {projects && projects.length > 5 ? (
                       <Link
                         href="/projects"
-                        className="row-interactive text-muted-foreground ease-snap hover:text-foreground rounded-md text-xs transition-all duration-150"
+                        className="row-interactive text-muted-foreground ease-snap hover:text-foreground rounded-md text-xs transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       >
                         {tCommon('view_all_projects', { count: projects.length })}
                       </Link>
@@ -924,7 +924,7 @@ export function AppSidebar({
                   <Link
                     key={call.id}
                     href={call.room.href}
-                    className="bg-surface-2 ease-snap hover:bg-accent/60 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-start transition-all duration-150"
+                    className="bg-surface-2 ease-snap hover:bg-accent/60 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-start transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                   >
                     <span className="realtime-ping shrink-0">
                       <span className="status-dot status-live" />
@@ -947,7 +947,7 @@ export function AppSidebar({
               : null}
           </div>
         ) : null}
-      </aside>
+      </div>
     </div>
   );
 }
@@ -1270,7 +1270,7 @@ function SidebarVoiceWorkspace({
             <Button
               size="sm"
               variant="ghost"
-              className="text-muted-foreground ease-snap h-6 w-6 rounded-sm px-0 transition-all duration-150"
+              className="text-muted-foreground ease-snap h-6 w-6 rounded-sm px-0 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
               onClick={onOpenVoiceSettings}
               title={tLayout('voice.openVoiceSettings')}
               aria-label={tLayout('voice.openVoiceSettings')}

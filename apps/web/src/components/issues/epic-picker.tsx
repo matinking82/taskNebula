@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Check, ChevronsUpDown, X, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ interface EpicPickerProps {
   /** The issue being edited — an epic must never be its own epic. */
   excludeIssueId?: string;
   disabled?: boolean;
+  ariaLabel?: string;
 }
 
 /** POST /api/issues caps `title` at 500 chars. */
@@ -43,13 +44,17 @@ export function EpicPicker({
   onChange,
   excludeIssueId,
   disabled = false,
+  ariaLabel,
 }: EpicPickerProps) {
   const t = useTranslations('issueSidebar.epic');
+  const tRows = useTranslations('issueSidebar.rows');
   const tCreate = useTranslations('epicPicker');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const triggerLabelId = useId();
+  const triggerValueId = useId();
   const { data, isLoading } = useIssues({ projectId, type: 'epic' });
   const createEpic = useCreateEpic();
 
@@ -127,16 +132,24 @@ export function EpicPicker({
             variant="ghost"
             role="combobox"
             aria-expanded={open}
+            aria-labelledby={`${triggerLabelId} ${triggerValueId}`}
             className="hover:bg-accent ease-snap h-8 w-full justify-between rounded-md px-2 text-sm transition-colors duration-150"
             disabled={disabled || isLoading}
           >
+            <span id={triggerLabelId} className="sr-only">
+              {ariaLabel ?? tRows('epic')}
+            </span>
             {selected ? (
               <span className="flex min-w-0 items-center gap-2">
                 <Zap className="text-accent-violet h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{selected.title}</span>
+                <span id={triggerValueId} className="truncate">
+                  {selected.title}
+                </span>
               </span>
             ) : (
-              <span className="text-muted-foreground min-w-0 flex-1 truncate">{t('none')}</span>
+              <span id={triggerValueId} className="text-muted-foreground min-w-0 flex-1 truncate">
+                {t('none')}
+              </span>
             )}
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-40" />
           </Button>

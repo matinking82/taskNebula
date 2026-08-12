@@ -10,6 +10,7 @@ import {
   issues,
   workflowStatuses,
   workflows,
+  sprints,
   users,
   projectMembers,
   organizationMembers,
@@ -129,20 +130,20 @@ async function checkIssuePermission(
 
 // Validation schema for creating an issue
 const createIssueSchema = z.object({
-  projectId: z.string(),
+  projectId: z.string().min(1),
   type: z.enum(['story', 'task', 'bug', 'epic']),
   title: z.string().min(1).max(500),
   description: z.string().optional().nullable(),
   priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).default('medium'),
-  assigneeId: z.string().optional(),
+  assigneeId: z.string().min(1).optional(),
   labels: z.array(z.string()).default([]),
-  sprintId: z.string().optional(),
-  epicId: z.string().optional(),
-  parentId: z.string().optional(),
+  sprintId: z.string().min(1).optional(),
+  epicId: z.string().min(1).optional(),
+  parentId: z.string().min(1).optional(),
   estimate: z.number().optional(),
   dueDate: z.string().datetime().optional(),
   customFields: z.record(z.any()).default({}),
-  statusId: z.string().optional(),
+  statusId: z.string().min(1).optional(),
   agentPolicy: z
     .object({
       actor: z.string().min(1).max(120),
@@ -377,6 +378,79 @@ export const POST = withValidation({ body: createIssueSchema })(async (
 
     const agentPolicy = readAgentPolicyMarker(validatedData.agentPolicy);
     const issueInput = stripAgentPolicyMarker(validatedData);
+
+    if (issueInput.parentId) {
+      const [parentIssue] = await db
+        .select({
+          id: issues.id,
+          projectId: issues.projectId,
+          organizationId: issues.organizationId,
+        })
+        .from(issues)
+        .where(eq(issues.id, issueInput.parentId))
+        .limit(1);
+
+      if (
+        !parentIssue ||
+        parentIssue.projectId !== actualProjectId ||
+        parentIssue.organizationId !== project.organizationId
+      ) {
+        return NextResponse.json(
+          { error: 'Parent issue must belong to the same project' },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (issueInput.epicId) {
+      const [epicIssue] = await db
+        .select({
+          id: issues.id,
+          projectId: issues.projectId,
+          organizationId: issues.organizationId,
+          type: issues.type,
+        })
+        .from(issues)
+        .where(eq(issues.id, issueInput.epicId))
+        .limit(1);
+      if (
+        !epicIssue ||
+        epicIssue.type !== 'epic' ||
+        epicIssue.projectId !== actualProjectId ||
+        epicIssue.organizationId !== project.organizationId
+      ) {
+        return NextResponse.json({ error: 'invalid_epic' }, { status: 400 });
+      }
+    }
+
+    if (issueInput.sprintId) {
+      const [sprint] = await db
+        .select({ id: sprints.id })
+        .from(sprints)
+        .where(and(eq(sprints.id, issueInput.sprintId), eq(sprints.projectId, actualProjectId)))
+        .limit(1);
+      if (!sprint) {
+        return NextResponse.json({ error: 'invalid_sprint' }, { status: 400 });
+      }
+    }
+
+    if (issueInput.assigneeId) {
+      const [assigneeMembership] = await db
+        .select({ userId: organizationMembers.userId })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.userId, issueInput.assigneeId),
+            eq(organizationMembers.organizationId, project.organizationId),
+            eq(organizationMembers.status, 'active')
+          )
+        )
+        .limit(1);
+      if (!assigneeMembership) {
+        return NextResponse.json({ error: 'invalid_assignee' }, { status: 400 });
+      }
+    }
+
     if (agentPolicy) {
       const guard = await guardAgentAction({
         workspaceId: project.organizationId,
@@ -430,15 +504,18 @@ export const POST = withValidation({ body: createIssueSchema })(async (
       .from(workflowStatuses)
       .where(eq(workflowStatuses.workflowId, workflowId));
 
-    // Resolve the final status: prefer the client-supplied statusId when it
-    // belongs to this workflow; otherwise fall back to the first backlog status.
+    // Resolve the final status. Cross-workflow ids are rejected explicitly so
+    // API and MCP callers cannot silently create an issue in an unintended state.
     let finalStatusId: string | undefined;
     if (issueInput.statusId) {
       const match = allStatuses.find((s) => s.id === issueInput.statusId);
-      if (match) {
-        finalStatusId = match.id;
+      if (!match) {
+        return NextResponse.json(
+          { error: 'Status does not belong to the project workflow' },
+          { status: 400 }
+        );
       }
-      // Unrecognised / cross-workflow statusId: silently fall through to backlog default.
+      finalStatusId = match.id;
     }
 
     if (!finalStatusId) {
@@ -483,8 +560,10 @@ export const POST = withValidation({ body: createIssueSchema })(async (
           reporterId: session.user.id,
           assigneeId: issueInput.assigneeId || null,
           sprintId: issueInput.sprintId || null,
+          epicId: issueInput.epicId || null,
           parentId: issueInput.parentId || null,
           estimate: issueInput.estimate ?? null,
+          dueDate: issueInput.dueDate ? new Date(issueInput.dueDate) : null,
           labels: issueInput.labels || [],
           customFields: issueInput.customFields || {},
           metadata: {},

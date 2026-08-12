@@ -83,41 +83,69 @@ class RealtimeEventBus {
 // Singleton - shared across all API routes in the same process.
 export const eventBus = new RealtimeEventBus();
 
-// Helper to publish from API routes. Fire-and-forget: callers (the issue/sprint/
-// project routes) do not await realtime delivery.
-export function publishEvent(
+type RealtimeEventContext = Partial<
+  Pick<RealtimeEvent, 'projectId' | 'sprintId' | 'issueId' | 'organizationId' | 'targetUserId'>
+>;
+
+function createRealtimeEvent(
   type: RealtimeEventType,
   userId: string,
-  context?: Partial<
-    Pick<RealtimeEvent, 'projectId' | 'sprintId' | 'issueId' | 'organizationId' | 'targetUserId'>
-  >
-) {
-  const event: RealtimeEvent = {
+  context?: RealtimeEventContext
+): RealtimeEvent {
+  return {
     type,
     userId,
     timestamp: Date.now(),
     ...(context ?? {}),
   };
+}
+
+// Helper to publish from ordinary API routes. Fire-and-forget semantics are
+// preserved for existing callers: local subscribers run synchronously and a
+// Redis failure is logged without rejecting the request.
+export function publishEvent(
+  type: RealtimeEventType,
+  userId: string,
+  context?: RealtimeEventContext
+) {
+  const event = createRealtimeEvent(type, userId, context);
 
   // 1) Deliver to subscribers in THIS process immediately. Resilient to Redis
   //    being unavailable and is the whole story for single-instance deploys.
   eventBus.publish(event);
 
   // 2) Fan out to OTHER instances via Redis (no-op when REDIS_URL is unset).
-  void fanOutToRedis(event);
+  void fanOutToRedis(event).catch((err) => {
+    // Ordinary request handlers retain their best-effort realtime contract.
+    console.error('[realtime] redis fan-out failed', err);
+  });
+}
+
+/**
+ * Publish locally and wait until Redis accepts the cross-instance fan-out.
+ *
+ * This is for durable workers whose receipt must not be acknowledged while an
+ * external transport operation is still in flight. With no configured Redis,
+ * local delivery is the complete transport and this resolves immediately.
+ * Redis errors intentionally reject so the caller can retain/retry its durable
+ * work item. Local listeners remain isolated and synchronous, matching
+ * `publishEvent`; a retry may therefore deliver locally more than once.
+ */
+export async function publishEventAwaitingFanOut(
+  type: RealtimeEventType,
+  userId: string,
+  context?: RealtimeEventContext
+): Promise<void> {
+  const event = createRealtimeEvent(type, userId, context);
+  eventBus.publish(event);
+  await fanOutToRedis(event);
 }
 
 async function fanOutToRedis(event: RealtimeEvent): Promise<void> {
   const client = getRedisClient();
   if (!client) return;
-  try {
-    await ensureRedisConnection(client);
-    await client.publish(REALTIME_CHANNEL, JSON.stringify({ origin: PROCESS_ID, event }));
-  } catch (err) {
-    // A Redis hiccup must never throw into a request handler / `after()` task.
-    // Local subscribers already got the event via step 1 above.
-    console.error('[realtime] redis fan-out failed', err);
-  }
+  await ensureRedisConnection(client);
+  await client.publish(REALTIME_CHANNEL, JSON.stringify({ origin: PROCESS_ID, event }));
 }
 
 declare global {

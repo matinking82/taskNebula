@@ -1,7 +1,7 @@
 /**
  * POST /api/webhooks/agent-session/[provider]
  *
- * Linear Agent Protocol receiver (P0-04). The provider POSTs an
+ * Linear Agent Protocol receiver. The provider POSTs an
  * AgentSessionEvent here when its session changes state. We:
  *
  *   1. Verify the HMAC signature against the per-session secret (preferred)
@@ -11,28 +11,27 @@
  *      400 so misbehaving providers learn fast.
  *   3. Reduce the state machine. Invalid transitions are dropped with a 200
  *      so the provider doesn't retry forever; the row stays put.
- *   4. Update the `agent_sessions` row (state, payload merge, finishedAt for
- *      terminal states).
+ *   4. Atomically claim a durable fingerprint receipt, update the
+ *      `agent_sessions` row and create the downstream DB effects.
  *   5. Post a short comment on the linked issue ("Cursor started", "Devin
  *      completed PR #42 → <url>"). The comment is created as the virtual
  *      agent user when one is configured.
- *   6. If the event reports terminal completion, best-effort transition the
- *      issue to the first `in_review` (when a PR is attached) or `done`
- *      workflow status. Transition failures are logged but never surface to
- *      the provider.
+ *   6. If the event reports terminal completion, transition the issue to the
+ *      first `in_review` (when a PR is attached) or `done` workflow status.
  *
  * The route is intentionally permissive about extra fields — providers add
  * metadata over time and we don't want to force a redeploy on every change.
  */
 
+import { createHash } from 'node:crypto';
+import { createId } from '@paralleldrive/cuid2';
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  agentSessionWebhookDeliveries,
   agentSessions,
   agentProviders,
-  createComment,
   db,
   eq,
-  getIssueById,
   issues,
   issueComments,
   workflows,
@@ -51,8 +50,12 @@ import {
   verifyAgentSignature,
   isTerminalState,
 } from '@/lib/agents/sessions';
+import { childLogger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
+
+const log = childLogger('api/webhooks/agent-session');
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function isValidProvider(value: string): value is AgentProviderKind {
   return (AGENT_PROVIDERS as readonly string[]).includes(value);
@@ -139,8 +142,11 @@ async function verifySignature(
   return { ok: false, session, reason: 'Bad signature' };
 }
 
-async function findAgentUser(provider: AgentProviderKind): Promise<string | null> {
-  const [agent] = await db
+async function findAgentUser(
+  tx: DbTransaction,
+  provider: AgentProviderKind
+): Promise<string | null> {
+  const [agent] = await tx
     .select({ id: users.id })
     .from(users)
     .where(and(eq(users.isAgent, true), eq(users.agentProvider, provider)))
@@ -149,19 +155,20 @@ async function findAgentUser(provider: AgentProviderKind): Promise<string | null
 }
 
 async function maybeTransitionIssueOnComplete(
+  tx: DbTransaction,
   issueId: string,
   organizationId: string,
   event: AgentSessionEvent
 ): Promise<void> {
   // Look up the org's default workflow.
-  const [workflow] = await db
+  const [workflow] = await tx
     .select()
     .from(workflows)
     .where(and(eq(workflows.organizationId, organizationId), eq(workflows.isDefault, true)))
     .limit(1);
   if (!workflow) return;
 
-  const statuses = await db
+  const statuses = await tx
     .select()
     .from(workflowStatuses)
     .where(eq(workflowStatuses.workflowId, workflow.id));
@@ -175,17 +182,10 @@ async function maybeTransitionIssueOnComplete(
   const target = candidates[0];
   if (!target) return;
 
-  try {
-    await db
-      .update(issues)
-      .set({ statusId: target.id, updatedAt: new Date() })
-      .where(eq(issues.id, issueId));
-  } catch (err) {
-    console.warn('[agent-session] failed to transition issue', {
-      issueId,
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+  await tx
+    .update(issues)
+    .set({ statusId: target.id, updatedAt: new Date() })
+    .where(and(eq(issues.id, issueId), eq(issues.organizationId, organizationId)));
 }
 
 export async function POST(
@@ -245,73 +245,198 @@ export async function POST(
     );
   }
 
-  const currentState = session.state as AgentSessionState;
   const requestedState = event.state;
-  const newState = nextSessionState(currentState, requestedState);
-  if (!newState) {
-    // Drop invalid transitions but don't make the provider retry forever.
-    console.warn('[agent-session] dropping invalid transition', {
-      sessionId: session.id,
-      from: currentState,
-      to: requestedState,
+  const eventFingerprint = createHash('sha256').update(rawBody).digest('hex');
+  if (!workspaceId) {
+    return NextResponse.json({ error: 'Unable to resolve session workspace' }, { status: 401 });
+  }
+
+  type DeliveryDecision =
+    | { kind: 'duplicate'; state: AgentSessionState }
+    | { kind: 'dropped'; state: AgentSessionState; reason: string }
+    | { kind: 'accepted'; state: AgentSessionState };
+
+  let decision: DeliveryDecision;
+  try {
+    decision = await db.transaction<DeliveryDecision>(async (tx) => {
+      const deliveryId = createId();
+      const [delivery] = await tx
+        .insert(agentSessionWebhookDeliveries)
+        .values({
+          id: deliveryId,
+          workspaceId,
+          sessionId: session.id,
+          provider,
+          fingerprint: eventFingerprint,
+          eventState: requestedState,
+          payload: event,
+          status: 'processing',
+        })
+        .onConflictDoNothing()
+        .returning({ id: agentSessionWebhookDeliveries.id });
+
+      // The tenant/session/fingerprint unique index is the durable concurrency
+      // gate. PostgreSQL waits for an in-flight conflicting insert, so only the
+      // transaction that owns this receipt may perform downstream side effects.
+      if (!delivery) {
+        const [latest] = await tx
+          .select({ state: agentSessions.state })
+          .from(agentSessions)
+          .where(and(eq(agentSessions.id, session.id), eq(agentSessions.provider, provider)))
+          .limit(1);
+        return {
+          kind: 'duplicate',
+          state: (latest?.state ?? session.state) as AgentSessionState,
+        };
+      }
+
+      const [lockedSession] = await tx
+        .select()
+        .from(agentSessions)
+        .where(and(eq(agentSessions.id, session.id), eq(agentSessions.provider, provider)))
+        .limit(1)
+        .for('update');
+      if (!lockedSession) throw new Error('agent_session_disappeared');
+
+      const currentState = lockedSession.state as AgentSessionState;
+      if (currentState === requestedState && isTerminalState(currentState)) {
+        await tx
+          .update(agentSessionWebhookDeliveries)
+          .set({ status: 'dropped', completedAt: new Date() })
+          .where(
+            and(
+              eq(agentSessionWebhookDeliveries.id, delivery.id),
+              eq(agentSessionWebhookDeliveries.workspaceId, workspaceId)
+            )
+          );
+        return { kind: 'duplicate', state: currentState };
+      }
+
+      const newState = nextSessionState(currentState, requestedState);
+      if (!newState) {
+        const reason = `Invalid transition ${currentState} -> ${requestedState}`;
+        await tx
+          .update(agentSessionWebhookDeliveries)
+          .set({ status: 'dropped', completedAt: new Date(), lastError: reason })
+          .where(
+            and(
+              eq(agentSessionWebhookDeliveries.id, delivery.id),
+              eq(agentSessionWebhookDeliveries.workspaceId, workspaceId)
+            )
+          );
+        return { kind: 'dropped', state: currentState, reason };
+      }
+
+      const storedPayload =
+        typeof lockedSession.payload === 'object' && lockedSession.payload !== null
+          ? (lockedSession.payload as Record<string, unknown>)
+          : {};
+      const mergedPayload = { ...storedPayload, lastEvent: event };
+
+      const [updatedSession] = await tx
+        .update(agentSessions)
+        .set({
+          state: newState,
+          externalId: event.externalId ?? lockedSession.externalId,
+          payload: mergedPayload,
+          updatedAt: new Date(),
+          finishedAt: isTerminalState(newState) ? new Date() : null,
+        })
+        .where(and(eq(agentSessions.id, session.id), eq(agentSessions.state, currentState)))
+        .returning({ state: agentSessions.state });
+      if (!updatedSession) {
+        // This protects against non-webhook writers that do not take the row
+        // lock. The receipt remains durable but is explicitly marked dropped.
+        const reason = 'Concurrent session update won';
+        await tx
+          .update(agentSessionWebhookDeliveries)
+          .set({ status: 'dropped', completedAt: new Date(), lastError: reason })
+          .where(
+            and(
+              eq(agentSessionWebhookDeliveries.id, delivery.id),
+              eq(agentSessionWebhookDeliveries.workspaceId, workspaceId)
+            )
+          );
+        return { kind: 'dropped', state: currentState, reason };
+      }
+
+      // Every downstream effect in this receiver is database-only, so keep it
+      // in the same transaction as the receipt and session CAS. A crash before
+      // commit rolls back the fingerprint and lets the provider safely retry;
+      // a committed receipt means the comment/transition committed too.
+      const [issue] = await tx
+        .select()
+        .from(issues)
+        .where(and(eq(issues.id, lockedSession.issueId), eq(issues.organizationId, workspaceId)))
+        .limit(1);
+      if (!issue) throw new Error('agent_session_issue_not_found');
+
+      const agentUserId = (await findAgentUser(tx, provider)) ?? issue.reporterId;
+      await tx.insert(issueComments).values({
+        id: createId(),
+        issueId: lockedSession.issueId,
+        content: renderAgentComment(provider, newState, event),
+        mentions: [],
+        reactions: [],
+        isInternal: 'false',
+        createdBy: agentUserId,
+        updatedBy: agentUserId,
+      });
+
+      if (newState === 'complete') {
+        await maybeTransitionIssueOnComplete(
+          tx,
+          lockedSession.issueId,
+          issue.organizationId,
+          event
+        );
+      }
+
+      await tx
+        .update(agentSessionWebhookDeliveries)
+        .set({ status: 'completed', completedAt: new Date(), lastError: null })
+        .where(
+          and(
+            eq(agentSessionWebhookDeliveries.id, delivery.id),
+            eq(agentSessionWebhookDeliveries.workspaceId, workspaceId),
+            eq(agentSessionWebhookDeliveries.status, 'processing')
+          )
+        );
+
+      return { kind: 'accepted', state: newState };
     });
+  } catch (err) {
+    log.error({ err, sessionId: session.id }, 'agent-session atomic delivery failed');
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
+  }
+
+  if (decision.kind === 'duplicate') {
     return NextResponse.json({
       ok: true,
       sessionId: session.id,
-      state: currentState,
+      state: decision.state,
       dropped: true,
-      reason: `Invalid transition ${currentState} -> ${requestedState}`,
+      duplicate: true,
     });
   }
-
-  const mergedPayload = {
-    ...(typeof session.payload === 'object' && session.payload !== null
-      ? (session.payload as Record<string, unknown>)
-      : {}),
-    lastEvent: event,
-  };
-
-  await db
-    .update(agentSessions)
-    .set({
-      state: newState,
-      externalId: event.externalId ?? session.externalId,
-      payload: mergedPayload,
-      updatedAt: new Date(),
-      finishedAt: isTerminalState(newState) ? new Date() : null,
-    })
-    .where(eq(agentSessions.id, session.id));
-
-  // Best-effort comment + issue transition. We swallow errors so the provider
-  // gets a clean 200 even if our downstream side-effects fail.
-  try {
-    const issue = await getIssueById(session.issueId);
-    if (issue) {
-      const agentUserId = (await findAgentUser(provider)) ?? issue.reporterId;
-      // The createdBy/updatedBy columns are NOT NULL — fall back to the issue
-      // reporter when no virtual agent user has been seeded yet.
-      const comment = renderAgentComment(provider, newState, event);
-      await createComment({
-        issueId: session.issueId,
-        content: comment,
-        createdBy: agentUserId,
-        updatedBy: agentUserId,
-      } as typeof issueComments.$inferInsert);
-
-      if (newState === 'complete') {
-        await maybeTransitionIssueOnComplete(session.issueId, issue.organizationId, event);
-      }
-    }
-  } catch (err) {
-    console.error('[agent-session] downstream side-effect failed', {
+  if (decision.kind === 'dropped') {
+    // Drop invalid transitions but don't make the provider retry forever.
+    log.warn(
+      { sessionId: session.id, state: decision.state, reason: decision.reason },
+      'dropping invalid agent-session transition'
+    );
+    return NextResponse.json({
+      ok: true,
       sessionId: session.id,
-      err: err instanceof Error ? err.message : String(err),
+      state: decision.state,
+      dropped: true,
+      reason: decision.reason,
     });
   }
 
   return NextResponse.json({
     ok: true,
     sessionId: session.id,
-    state: newState,
+    state: decision.state,
   });
 }

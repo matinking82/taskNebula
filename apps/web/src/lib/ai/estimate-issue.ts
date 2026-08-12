@@ -1,5 +1,5 @@
 /**
- * AI-assisted hour estimate for an issue (task #10).
+ * AI-assisted hour estimate for an issue.
  *
  * Strategy (in order):
  *   1. If the issue has a stored embedding in `content_embeddings`, run a
@@ -11,20 +11,15 @@
  *   3. If even the project has no history, return a `null` estimate with a
  *      "not_enough_data" reason — the UI shows the manual entry field only.
  *
- * The actual embedding generation is delegated to whatever provider is wired
- * up in task #1's semantic-search pipeline. This module only **queries** the
+ * Embedding generation is delegated to the organization-safe semantic-search
+ * pipeline. This module only **queries** the
  * existing embedding row. When there is no embedding for the issue yet we skip
  * straight to the project-history fallback rather than calling an external
  * embedding API from inside the request handler.
  */
 
 import { sql, and, eq, isNotNull, desc } from 'drizzle-orm';
-import {
-  db,
-  issues,
-  workflowStatuses,
-  contentEmbeddings,
-} from '@tasknebula/db';
+import { db, issues, workflowStatuses, contentEmbeddings } from '@tasknebula/db';
 
 /**
  * Minimum number of neighbour issues we need before we trust the similarity
@@ -40,10 +35,7 @@ export interface NeighbourIssue {
   similarity: number; // 0..1, higher is closer
 }
 
-export type EstimateReason =
-  | 'similar_issues'
-  | 'project_median'
-  | 'not_enough_data';
+export type EstimateReason = 'similar_issues' | 'project_median' | 'not_enough_data';
 
 export interface AiEstimateResult {
   /** Median hours across the chosen sample, or null if no data. */
@@ -86,9 +78,7 @@ function round2(n: number | null): number | null {
  */
 function rationaleFromNeighbours(neighbours: NeighbourIssue[], median: number): string {
   const top = neighbours.slice(0, 3);
-  const parts = top
-    .map((n) => `${n.key} (${formatHours(n.actualHours)})`)
-    .join(', ');
+  const parts = top.map((n) => `${n.key} (${formatHours(n.actualHours)})`).join(', ');
   return `Similar to ${parts} — median ${formatHours(median)}.`;
 }
 
@@ -117,9 +107,7 @@ export interface EstimateOptions {
  * Compute the AI estimate suggestion. Pure-ish: branches on injected hooks for
  * tests, otherwise hits the DB.
  */
-export async function suggestEstimateForIssue(
-  opts: EstimateOptions,
-): Promise<AiEstimateResult> {
+export async function suggestEstimateForIssue(opts: EstimateOptions): Promise<AiEstimateResult> {
   const limit = opts.limit ?? 10;
 
   // ── Step 1: similar closed issues via pgvector ──────────────────────────
@@ -181,20 +169,12 @@ export async function suggestEstimateForIssue(
  * source issue to have an embedding row; without one we return an empty array
  * and let the caller fall back to project history.
  */
-async function fetchNeighboursFromDb(
-  issueId: string,
-  limit: number,
-): Promise<NeighbourIssue[]> {
+async function fetchNeighboursFromDb(issueId: string, limit: number): Promise<NeighbourIssue[]> {
   // Get the source embedding.
   const [src] = await db
     .select({ embedding: contentEmbeddings.embedding })
     .from(contentEmbeddings)
-    .where(
-      and(
-        eq(contentEmbeddings.contentType, 'issue'),
-        eq(contentEmbeddings.issueId, issueId),
-      ),
-    )
+    .where(and(eq(contentEmbeddings.contentType, 'issue'), eq(contentEmbeddings.issueId, issueId)))
     .limit(1);
 
   if (!src?.embedding) return [];
@@ -218,8 +198,8 @@ async function fetchNeighboursFromDb(
         eq(workflowStatuses.category, 'done'),
         isNotNull(issues.actualHours),
         sql`${issues.id} <> ${issueId}`,
-        sql`(${issues.actualHours})::numeric > 0`,
-      ),
+        sql`(${issues.actualHours})::numeric > 0`
+      )
     )
     .orderBy(sql`${contentEmbeddings.embedding} <=> ${src.embedding}::vector`)
     .limit(limit);
@@ -245,13 +225,11 @@ async function fetchProjectClosedHoursFromDb(projectId: string): Promise<number[
         eq(issues.projectId, projectId),
         eq(workflowStatuses.category, 'done'),
         isNotNull(issues.actualHours),
-        sql`(${issues.actualHours})::numeric > 0`,
-      ),
+        sql`(${issues.actualHours})::numeric > 0`
+      )
     )
     .orderBy(desc(issues.updatedAt))
     .limit(200); // Cap so a giant project doesn't dominate the median.
 
-  return rows
-    .map((r) => Number(r.actualHours ?? 0))
-    .filter((h) => Number.isFinite(h) && h > 0);
+  return rows.map((r) => Number(r.actualHours ?? 0)).filter((h) => Number.isFinite(h) && h > 0);
 }
