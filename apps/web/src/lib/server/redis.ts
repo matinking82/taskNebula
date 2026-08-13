@@ -1,4 +1,7 @@
 import Redis from 'ioredis';
+import { childLogger } from '@/lib/logger';
+
+const log = childLogger('server/redis');
 
 declare global {
   // eslint-disable-next-line no-var -- required for global augmentation
@@ -13,6 +16,14 @@ export function isRedisConfigured() {
   return Boolean(getRedisUrl());
 }
 
+function attachRedisErrorLogger(client: Redis, role: 'command' | 'subscriber') {
+  client.on('error', (error) => {
+    log.warn({ err: error, role }, 'redis connection error');
+  });
+
+  return client;
+}
+
 export function getRedisClient() {
   const redisUrl = getRedisUrl();
   if (!redisUrl) {
@@ -20,11 +31,14 @@ export function getRedisClient() {
   }
 
   if (!global.__tasknebulaRedis__) {
-    global.__tasknebulaRedis__ = new Redis(redisUrl, {
-      lazyConnect: true,
-      maxRetriesPerRequest: 2,
-      enableReadyCheck: false,
-    });
+    global.__tasknebulaRedis__ = attachRedisErrorLogger(
+      new Redis(redisUrl, {
+        lazyConnect: true,
+        maxRetriesPerRequest: 2,
+        enableReadyCheck: false,
+      }),
+      'command'
+    );
   }
 
   return global.__tasknebulaRedis__;
@@ -36,11 +50,14 @@ export async function createRedisSubscriber() {
     return null;
   }
 
-  const subscriber = baseClient.duplicate({
-    lazyConnect: true,
-    maxRetriesPerRequest: 2,
-    enableReadyCheck: false,
-  });
+  const subscriber = attachRedisErrorLogger(
+    baseClient.duplicate({
+      lazyConnect: true,
+      maxRetriesPerRequest: 2,
+      enableReadyCheck: false,
+    }),
+    'subscriber'
+  );
   await subscriber.connect();
   return subscriber;
 }
