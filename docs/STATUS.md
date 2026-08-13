@@ -17,7 +17,7 @@ The values below are a dated inventory, not agent instructions:
 | Drizzle `pgTable` definitions              |             120 |
 | Schema files excluding the re-export index |              55 |
 | Journaled SQL migrations                   |              64 |
-| Web Jest test files                        |             299 |
+| Web Jest test files                        |             300 |
 | Playwright spec files                      |               9 |
 | Locale catalogs                            |              30 |
 
