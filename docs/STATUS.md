@@ -1,6 +1,6 @@
 # TaskNebula project status
 
-**Verified:** 2026-08-12 · **Version:** 0.15.0 · **Lifecycle:** beta,
+**Verified:** 2026-08-13 · **Version:** 0.16.0 · **Lifecycle:** beta,
 self-hostable
 
 This is the only live capability snapshot. Future work belongs in
@@ -11,7 +11,7 @@ This is the only live capability snapshot. Future work belongs in
 
 The values below are a dated inventory, not agent instructions:
 
-| Surface                                    | 2026-08-12 tree |
+| Surface                                    | 2026-08-13 tree |
 | ------------------------------------------ | --------------: |
 | Next.js API `route.ts` files               |             283 |
 | Drizzle `pgTable` definitions              |             120 |

@@ -5168,7 +5168,7 @@
           },
           "pin": {
             "title": "Épinglez la version de confiance",
-            "body": "Définissez TASKNEBULA_IMAGE=neuraparse/tasknebula:0.15.0 pour verrouiller une release, ou suivez :latest pour la pointe."
+            "body": "Définissez TASKNEBULA_IMAGE=neuraparse/tasknebula:0.16.0 pour verrouiller une release, ou suivez :latest pour la pointe."
           }
         },
         "terminalTitle": "démarrage rapide — Docker Desktop ou tout hôte Docker (~2 min)",

@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-08-13
+
+### Added
+
+- A repository-enforced Workbench design contract covering route archetypes,
+  visual density, responsive composition, semantic tokens, RTL behavior,
+  interaction states, and bounded maker/checker review.
+- Application-level browser hardening with a self-host-safe Content Security
+  Policy, referrer and permissions policies, clickjacking protection, and
+  executable production/development header contracts.
+
+### Changed
+
+- Rebuilt public, authentication, application, project, issue, settings,
+  administration, chat, documentation, and loading surfaces around a compact
+  evidence-first Workbench shell while preserving product copy and domain
+  behavior.
+- Boards, backlogs, sprints, roadmaps, dashboards, settings, and administrative
+  views now prioritize work data over decorative chrome and recompose cleanly
+  across desktop, 390 px, 320 px, dark mode, reduced motion, and RTL locales.
+- Unified shared page frames, headers, metric strips, navigation rails,
+  dialogs, menus, alerts, and semantic accent tokens across all maintained
+  routes.
+
+### Fixed
+
+- Removed nested Kanban interactions, hover-only critical actions, physical
+  direction utilities, orphaned tab semantics, and small-screen overflow from
+  the redesigned work surfaces.
+- Improved heading hierarchy, keyboard focus, accessible scroll regions,
+  touch targets, loading/error/empty geometry, and theme-aware contrast across
+  the redesigned UI.
+
+### Removed
+
+- Deleted unused legacy mobile wrappers, obsolete UI primitives, redundant
+  image/font helpers, and their dead tests after import and production-build
+  verification.
+
 ## [0.15.0] - 2026-08-12
 
 ### Added
