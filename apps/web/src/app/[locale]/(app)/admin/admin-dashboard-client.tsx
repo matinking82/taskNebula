@@ -7,6 +7,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MetricStrip, type MetricStripItem } from '@/components/ui/metric-strip';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   Select,
   SelectContent,
@@ -199,7 +202,7 @@ const userStatusChipClass: Record<string, string> = {
 
 const ADMIN_TABLE_CLASS = 'w-full border-collapse text-sm';
 const ADMIN_TABLE_HEADER_CELL_CLASS =
-  'text-muted-foreground h-9 px-3 py-2 text-left align-middle text-[11px] font-medium uppercase tracking-wider whitespace-nowrap';
+  'text-muted-foreground h-9 px-3 py-2 text-start align-middle text-[11px] font-medium uppercase tracking-wider whitespace-nowrap';
 const ADMIN_TABLE_CELL_CLASS = 'px-3 py-3 align-middle';
 const ADMIN_TABLE_ROW_CLASS =
   'border-border/50 border-b transition-colors hover:bg-accent/60 last:border-b-0';
@@ -500,115 +503,110 @@ export function AdminDashboardClient() {
         onConfirm={handleConfirmDeleteFlag}
       />
 
-      <div className="flex h-full min-h-0">
-        <div className="animate-fade-up min-w-0 flex-1 space-y-6 overflow-y-auto p-6">
-          {/* Mobile nav */}
-          <div className="lg:hidden">
-            <Select value={activeTab} onValueChange={handleTabChange}>
-              <SelectTrigger aria-label={t(currentNav.labelKey)}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {visibleNav.map((item) => (
-                  <SelectItem key={item.key} value={item.key}>
-                    {t(item.labelKey)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Update-available banner (dismiss persists per release version) */}
-          {activeTab !== 'updates' && (
-            <VersionUpdateBanner onView={() => handleTabChange('updates')} />
-          )}
-
-          {/* Header */}
-          <div className="flex flex-col gap-1">
-            <span className="kicker">{t('header.kicker')}</span>
-            <h1 className="text-balance text-2xl font-semibold tracking-tight">
-              {t(currentNav.labelKey)}
-            </h1>
-            <p className="text-muted-foreground max-w-2xl text-sm">{t('header.subtitle')}</p>
-          </div>
-
-          {/* Section body */}
-          {activeTab === 'overview' && <OverviewSection stats={stats} loading={statsLoading} />}
-
-          {activeTab === 'organizations' && (
-            <OrganizationsSection
-              orgsData={orgsData}
-              orgsLoading={orgsLoading}
-              orgsError={orgsError}
-              orgSearch={orgSearch}
-              setOrgSearch={setOrgSearch}
-              orgStatus={orgStatus}
-              setOrgStatus={setOrgStatus}
-              orgPlan={orgPlan}
-              setOrgPlan={setOrgPlan}
-              onEdit={setEditOrgId}
-              onDelete={setDeleteOrg}
-            />
-          )}
-
-          {activeTab === 'users' && (
-            <UsersSection
-              usersData={usersData}
-              usersLoading={usersLoading}
-              usersError={usersError}
-              userSearch={userSearch}
-              setUserSearch={setUserSearch}
-              userStatus={userStatus}
-              setUserStatus={setUserStatus}
-              onEdit={setEditUserId}
-              onDelete={setDeleteUser}
-            />
-          )}
-
-          {activeTab === 'feature-flags' && (
-            <FeatureFlagsSection
-              flags={filteredFlags}
-              loading={flagsLoading}
-              error={flagsError}
-              search={flagSearch}
-              setSearch={setFlagSearch}
-              state={flagState}
-              setState={setFlagState}
-              onEdit={setEditFlagId}
-              onDelete={(flag) => setDeleteFlag({ id: flag.id, name: flag.name })}
-              onToggle={handleToggleFlag}
-              updatePending={updateFeatureFlag.isPending}
-            />
-          )}
-
-          {activeTab === 'agents' && <AgentOpsPanel />}
-
-          {activeTab === 'integrations' && <IntegrationsAdminPanel />}
-
-          {activeTab === 'system' && (
-            <div className="space-y-6">
-              <SystemCredentialsPanel />
-              <EmailPreviewPanel />
-            </div>
-          )}
-
-          {activeTab === 'updates' && <VersionPanel />}
-
-          {activeTab === 'realtime' && <RealtimeHealthPanel />}
-
-          {activeTab === 'audit' && (
-            <AuditSection
-              logs={auditData?.auditLogs || []}
-              loading={auditLoading}
-              error={auditError}
-              search={auditSearch}
-              setSearch={setAuditSearch}
-              resourceType={auditResourceType}
-              setResourceType={setAuditResourceType}
-            />
-          )}
+      <PageFrame contentClassName="max-w-none">
+        {/* Mobile nav */}
+        <div className="lg:hidden">
+          <Select value={activeTab} onValueChange={handleTabChange}>
+            <SelectTrigger aria-label={t(currentNav.labelKey)}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {visibleNav.map((item) => (
+                <SelectItem key={item.key} value={item.key}>
+                  {t(item.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </div>
+
+        {/* Update-available banner (dismiss persists per release version) */}
+        {activeTab !== 'updates' && (
+          <VersionUpdateBanner onView={() => handleTabChange('updates')} />
+        )}
+
+        <PageHeader
+          kicker={t('header.kicker')}
+          title={t(currentNav.labelKey)}
+          description={t('header.subtitle')}
+        />
+
+        {/* Section body */}
+        {activeTab === 'overview' && <OverviewSection stats={stats} loading={statsLoading} />}
+
+        {activeTab === 'organizations' && (
+          <OrganizationsSection
+            orgsData={orgsData}
+            orgsLoading={orgsLoading}
+            orgsError={orgsError}
+            orgSearch={orgSearch}
+            setOrgSearch={setOrgSearch}
+            orgStatus={orgStatus}
+            setOrgStatus={setOrgStatus}
+            orgPlan={orgPlan}
+            setOrgPlan={setOrgPlan}
+            onEdit={setEditOrgId}
+            onDelete={setDeleteOrg}
+          />
+        )}
+
+        {activeTab === 'users' && (
+          <UsersSection
+            usersData={usersData}
+            usersLoading={usersLoading}
+            usersError={usersError}
+            userSearch={userSearch}
+            setUserSearch={setUserSearch}
+            userStatus={userStatus}
+            setUserStatus={setUserStatus}
+            onEdit={setEditUserId}
+            onDelete={setDeleteUser}
+          />
+        )}
+
+        {activeTab === 'feature-flags' && (
+          <FeatureFlagsSection
+            flags={filteredFlags}
+            loading={flagsLoading}
+            error={flagsError}
+            search={flagSearch}
+            setSearch={setFlagSearch}
+            state={flagState}
+            setState={setFlagState}
+            onEdit={setEditFlagId}
+            onDelete={(flag) => setDeleteFlag({ id: flag.id, name: flag.name })}
+            onToggle={handleToggleFlag}
+            updatePending={updateFeatureFlag.isPending}
+          />
+        )}
+
+        {activeTab === 'agents' && <AgentOpsPanel />}
+
+        {activeTab === 'integrations' && <IntegrationsAdminPanel />}
+
+        {activeTab === 'system' && (
+          <div className="space-y-6">
+            <SystemCredentialsPanel />
+            <EmailPreviewPanel />
+          </div>
+        )}
+
+        {activeTab === 'updates' && <VersionPanel />}
+
+        {activeTab === 'realtime' && <RealtimeHealthPanel />}
+
+        {activeTab === 'audit' && (
+          <AuditSection
+            logs={auditData?.auditLogs || []}
+            loading={auditLoading}
+            error={auditError}
+            search={auditSearch}
+            setSearch={setAuditSearch}
+            resourceType={auditResourceType}
+            setResourceType={setAuditResourceType}
+          />
+        )}
+      </PageFrame>
     </>
   );
 }
@@ -627,7 +625,12 @@ function OrganizationActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 sm:h-8 sm:w-8"
+          aria-label={t('common.actions')}
+        >
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -635,7 +638,7 @@ function OrganizationActionsMenu({
         <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit(org.id)}>
-          <Edit className="mr-2 h-4 w-4" />
+          <Edit className="me-2 h-4 w-4" />
           {t('common.edit')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -643,7 +646,7 @@ function OrganizationActionsMenu({
           className="text-destructive focus:text-destructive"
           onClick={() => onDelete(org)}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash2 className="me-2 h-4 w-4" />
           {t('common.delete')}
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -665,7 +668,12 @@ function UserActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-7 w-7">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 sm:h-8 sm:w-8"
+          aria-label={t('common.actions')}
+        >
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -673,7 +681,7 @@ function UserActionsMenu({
         <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit(user.id)}>
-          <Edit className="mr-2 h-4 w-4" />
+          <Edit className="me-2 h-4 w-4" />
           {t('users.editUser')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -681,7 +689,7 @@ function UserActionsMenu({
           className="text-destructive focus:text-destructive"
           onClick={() => onDelete(user)}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash2 className="me-2 h-4 w-4" />
           {t('users.deleteUser')}
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -699,45 +707,32 @@ function OverviewSection({
   loading: boolean;
 }) {
   const t = useTranslations('pagesAdmin');
-  const tiles: Array<{
-    label: string;
-    value: number | string;
-    icon: ComponentType<{ className?: string }>;
-    tone: 'blue' | 'violet' | 'emerald' | 'amber';
-  }> = [
+  const metrics: MetricStripItem[] = [
     {
+      id: 'organizations',
       label: t('overview.organizations'),
       value: loading ? '—' : (stats?.overview?.totalOrganizations ?? 0),
-      icon: Building2,
-      tone: 'blue',
     },
     {
+      id: 'users',
       label: t('overview.users'),
       value: loading ? '—' : (stats?.overview?.totalUsers ?? 0),
-      icon: Users,
-      tone: 'violet',
     },
     {
+      id: 'active-users',
       label: t('overview.activeUsers'),
       value: loading ? '—' : (stats?.overview?.activeUsers ?? 0),
-      icon: Activity,
-      tone: 'emerald',
     },
     {
+      id: 'super-admins',
       label: t('overview.superAdmins'),
       value: loading ? '—' : (stats?.overview?.superAdmins ?? 0),
-      icon: Crown,
-      tone: 'amber',
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {tiles.map(({ label, value, icon: Icon, tone }) => (
-          <KpiTile key={label} label={label} value={value} icon={Icon} tone={tone} />
-        ))}
-      </div>
+      <MetricStrip items={metrics} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="surface-card space-y-3 p-6">
@@ -842,7 +837,7 @@ function OrganizationsSection({
         <CreateOrganizationAdminDialog />
       </div>
 
-      <div className="animate-blur-in grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
         <SearchInput
           value={orgSearch}
           onChange={setOrgSearch}
@@ -883,7 +878,7 @@ function OrganizationsSection({
         ) : orgs.length === 0 ? (
           <EmptyState icon={Building2} message={t('orgs.empty')} />
         ) : (
-          <ul className="stagger divide-border/50 divide-y">
+          <ul className="divide-border/50 divide-y">
             {orgs.map((org) => (
               <li key={org.id} className="px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
@@ -950,13 +945,13 @@ function OrganizationsSection({
                 <th className={ADMIN_TABLE_HEADER_CELL_CLASS}>{t('orgs.colStatus')}</th>
                 <th className={ADMIN_TABLE_HEADER_CELL_CLASS}>{t('orgs.colPlan')}</th>
                 <th className={ADMIN_TABLE_HEADER_CELL_CLASS}>{t('orgs.colOwner')}</th>
-                <th className={cn(ADMIN_TABLE_HEADER_CELL_CLASS, 'text-right')}>
+                <th className={cn(ADMIN_TABLE_HEADER_CELL_CLASS, 'text-end')}>
                   {t('orgs.colMembers')}
                 </th>
                 <th className={cn(ADMIN_TABLE_HEADER_CELL_CLASS, 'w-12')} />
               </tr>
             </thead>
-            <tbody className="stagger">
+            <tbody className="">
               {orgs.map((org) => (
                 <tr key={org.id} className={ADMIN_TABLE_ROW_CLASS}>
                   <td className={ADMIN_TABLE_CELL_CLASS}>
@@ -985,10 +980,10 @@ function OrganizationsSection({
                       )}
                     </p>
                   </td>
-                  <td className={cn(ADMIN_TABLE_CELL_CLASS, 'text-right tabular-nums')}>
+                  <td className={cn(ADMIN_TABLE_CELL_CLASS, 'text-end tabular-nums')}>
                     {org.stats?.members ?? 0}
                   </td>
-                  <td className={cn(ADMIN_TABLE_CELL_CLASS, 'px-2 text-right')}>
+                  <td className={cn(ADMIN_TABLE_CELL_CLASS, 'px-2 text-end')}>
                     <OrganizationActionsMenu org={org} onEdit={onEdit} onDelete={onDelete} />
                   </td>
                 </tr>
@@ -1169,7 +1164,7 @@ function UsersSection({
         <CreateUserDialog />
       </div>
 
-      <div className="animate-blur-in grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
         <SearchInput
           value={userSearch}
           onChange={setUserSearch}
@@ -1198,7 +1193,7 @@ function UsersSection({
         ) : users.length === 0 ? (
           <EmptyState icon={Users} message={t('users.empty')} />
         ) : (
-          <ul className="stagger divide-border/50 divide-y">
+          <ul className="divide-border/50 divide-y">
             {users.map((user) => (
               <li key={user.id} className="px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
@@ -1265,7 +1260,7 @@ function UsersSection({
                 <th className={cn(ADMIN_TABLE_HEADER_CELL_CLASS, 'px-2')} />
               </tr>
             </thead>
-            <tbody className="stagger">
+            <tbody className="">
               {users.map((user) => (
                 <tr key={user.id} className={ADMIN_TABLE_ROW_CLASS}>
                   <td className={ADMIN_TABLE_CELL_CLASS}>{renderUserIdentity(user)}</td>
@@ -1274,7 +1269,7 @@ function UsersSection({
                   <td className={ADMIN_TABLE_CELL_CLASS}>{renderProjectMemberships(user)}</td>
                   <td className={ADMIN_TABLE_CELL_CLASS}>{renderLastSeen(user)}</td>
                   <td className={ADMIN_TABLE_CELL_CLASS}>{renderLastActivity(user)}</td>
-                  <td className={cn(ADMIN_TABLE_CELL_CLASS, 'px-2 text-right')}>
+                  <td className={cn(ADMIN_TABLE_CELL_CLASS, 'px-2 text-end')}>
                     <UserActionsMenu user={user} onEdit={onEdit} onDelete={onDelete} />
                   </td>
                 </tr>
@@ -1327,7 +1322,7 @@ function FeatureFlagsSection({
         </div>
       </div>
 
-      <div className="animate-blur-in grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -1353,7 +1348,7 @@ function FeatureFlagsSection({
         ) : flags.length === 0 ? (
           <EmptyState icon={Flag} message={t('flags.empty')} />
         ) : (
-          <ul className="stagger divide-border/50 divide-y">
+          <ul className="divide-border/50 divide-y">
             {flags.map((flag) => (
               <li
                 key={flag.id}
@@ -1382,7 +1377,12 @@ function FeatureFlagsSection({
                   />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 sm:h-8 sm:w-8"
+                        aria-label={t('common.actions')}
+                      >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1390,7 +1390,7 @@ function FeatureFlagsSection({
                       <DropdownMenuLabel>{t('common.actions')}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => onEdit(flag.id)}>
-                        <Edit className="mr-2 h-4 w-4" />
+                        <Edit className="me-2 h-4 w-4" />
                         {t('common.edit')}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -1398,7 +1398,7 @@ function FeatureFlagsSection({
                         className="text-destructive focus:text-destructive"
                         onClick={() => onDelete(flag)}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="me-2 h-4 w-4" />
                         {t('common.delete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -1440,7 +1440,7 @@ function AuditSection({
         {t('audit.matchingCount', { count: logs.length })}
       </p>
 
-      <div className="animate-blur-in grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -1470,7 +1470,7 @@ function AuditSection({
         ) : logs.length === 0 ? (
           <EmptyState icon={Scroll} message={t('audit.empty')} />
         ) : (
-          <ul className="stagger divide-border/50 divide-y">
+          <ul className="divide-border/50 divide-y">
             {logs.map((log) => {
               const severity = auditSeverity(log.action);
               return (
@@ -1531,44 +1531,6 @@ function AuditSection({
 
 /* ------------------------------- UI Helpers ------------------------------- */
 
-function KpiTile({
-  label,
-  value,
-  icon: Icon,
-  trend,
-  tone = 'blue',
-}: {
-  label: string;
-  value: string | number;
-  icon: ComponentType<{ className?: string }>;
-  trend?: { direction: 'up' | 'down'; value: string };
-  tone?: 'blue' | 'violet' | 'emerald' | 'amber' | 'rose' | 'cyan';
-}) {
-  return (
-    <div className="surface-card flex max-h-[140px] flex-col justify-between gap-2 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="kicker truncate">{label}</p>
-        <span className={cn('icon-tile', `icon-tile-accent-${tone}`)}>
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-      </div>
-      <div className="flex items-end justify-between gap-2">
-        <p className="text-2xl font-semibold tabular-nums">{value}</p>
-        {trend ? (
-          <span
-            className={cn(
-              'text-xs font-medium',
-              trend.direction === 'up' ? 'text-accent-emerald' : 'text-accent-rose'
-            )}
-          >
-            {trend.direction === 'up' ? '↑' : '↓'} {trend.value}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function MetricRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center justify-between">
@@ -1589,9 +1551,9 @@ function SearchInput({
 }) {
   return (
     <div className="relative">
-      <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+      <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
       <Input
-        className="pl-9"
+        className="ps-9"
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}

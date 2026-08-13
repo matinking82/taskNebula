@@ -20,6 +20,39 @@
     "empty-or-unavailable",
     "error-or-recovery"
   ],
+  "reviewGraph": {
+    "entry": "inventory",
+    "terminal": "end",
+    "maxMakerCheckerCycles": 3,
+    "nodes": [
+      { "id": "inventory", "kind": "evidence" },
+      { "id": "contract", "kind": "decision" },
+      { "id": "owner", "kind": "implementation" },
+      { "id": "static-gates", "kind": "verification" },
+      { "id": "browser-check", "kind": "verification" },
+      { "id": "triage", "kind": "decision" },
+      { "id": "end", "kind": "terminal" }
+    ],
+    "edges": [
+      { "from": "inventory", "to": "contract", "when": "evidence-ready" },
+      { "from": "contract", "to": "owner", "when": "owner-selected" },
+      { "from": "owner", "to": "static-gates", "when": "change-ready" },
+      {
+        "from": "static-gates",
+        "to": "owner",
+        "when": "failed-and-cycle-remains"
+      },
+      { "from": "static-gates", "to": "browser-check", "when": "passed" },
+      {
+        "from": "browser-check",
+        "to": "owner",
+        "when": "actionable-finding-and-cycle-remains"
+      },
+      { "from": "browser-check", "to": "end", "when": "no-high-or-medium-finding" },
+      { "from": "browser-check", "to": "triage", "when": "cycle-limit-reached" },
+      { "from": "triage", "to": "end", "when": "structured-handoff-recorded" }
+    ]
+  },
   "routes": [
     {
       "source": "src/app/page.tsx",

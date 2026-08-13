@@ -202,7 +202,7 @@ export function AiQuickSetup({
               <button
                 type="button"
                 onClick={onManageProfiles}
-                className="text-primary text-[11px] hover:underline"
+                className="text-primary focus-visible:ring-ring rounded-sm text-[11px] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               >
                 {t('aiQuickSetup.manage_profiles')}
               </button>
@@ -267,9 +267,9 @@ export function AiQuickSetup({
             className="h-10 w-full md:w-auto"
           >
             {mutation.isPending ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="mr-1.5 h-4 w-4" />
+              <Sparkles className="me-1.5 h-4 w-4" />
             )}
             {assistantAlreadyOn ? t('aiQuickSetup.update') : t('aiQuickSetup.enable_button')}
           </Button>

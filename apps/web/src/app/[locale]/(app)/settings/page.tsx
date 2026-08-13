@@ -17,6 +17,8 @@ import { AiTransparencyClient } from './ai-transparency/ai-transparency-client';
 import { useOrganization } from '@/lib/hooks/use-organization';
 import { useAiFeature } from '@/lib/hooks/use-ai-feature';
 import { useOrganizationPermissions } from '@/lib/hooks/use-permissions';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 import type { Permission } from '@tasknebula/db';
 import {
   Palette,
@@ -169,18 +171,22 @@ export default function SettingsPage() {
     !perms.isLoading && activeTabRequires !== undefined && !perms.has(activeTabRequires);
 
   return (
-    <div className="animate-fade-in flex min-h-0 flex-1 flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       {/* Mobile tab bar — main sidebar already hosts the nav on desktop.
           Horizontally scrollable so every tab is reachable on narrow screens;
           scrollbar hidden, with trailing padding so the last tab clears the edge. */}
-      <div className="scrollbar-none border-border flex flex-nowrap gap-1 overflow-x-auto whitespace-nowrap border-b py-2 pl-4 lg:hidden">
+      <nav
+        aria-label={tNav('settings')}
+        className="scrollbar-none border-border flex min-h-12 flex-nowrap gap-1 overflow-x-auto whitespace-nowrap border-b py-1.5 ps-3 lg:hidden"
+      >
         {visibleNavItems.map(({ value, labelKey, icon: Icon }) => (
           <button
             key={value}
             type="button"
             onClick={() => handleTabChange(value)}
             data-active={activeTab === value ? 'true' : undefined}
-            className="row-interactive shrink-0 gap-1.5 px-3 py-1.5 text-sm"
+            aria-current={activeTab === value ? 'page' : undefined}
+            className="row-interactive focus-visible:ring-ring min-h-9 shrink-0 gap-1.5 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset"
           >
             <Icon className="h-3.5 w-3.5" />
             <span>{t(labelKey)}</span>
@@ -189,18 +195,18 @@ export default function SettingsPage() {
         {/* Trailing spacer: guarantees the last tab clears the right edge even
             though flex overflow containers can collapse trailing padding. */}
         <span aria-hidden className="w-4 shrink-0" />
-      </div>
+      </nav>
 
-      <div className="animate-fade-up flex-1 overflow-y-auto p-6 lg:p-8">
-        <div className="mx-auto w-full max-w-5xl" data-settings-tab={activeTab}>
-          <h1 className="mb-6 text-2xl font-semibold tracking-tight">{tNav('settings')}</h1>
+      <PageFrame className="flex-1" contentClassName="max-w-5xl">
+        <PageHeader title={tNav('settings')} />
+        <div className="min-w-0" data-settings-tab={activeTab}>
           {activeTabDenied ? (
             <NoAccessNotice />
           ) : (
             renderContent(activeTab, currentOrganizationId, aiEnabled)
           )}
         </div>
-      </div>
+      </PageFrame>
     </div>
   );
 }

@@ -132,7 +132,7 @@ function InboxRow({
       data-unread={!item.isRead || undefined}
     >
       {!item.isRead && (
-        <span aria-hidden="true" className="bg-primary absolute bottom-0 left-0 top-0 w-[2px]" />
+        <span aria-hidden="true" className="bg-primary absolute inset-y-0 start-0 w-[2px]" />
       )}
 
       <div className="shrink-0">
@@ -174,7 +174,7 @@ function InboxRow({
               {item.issue.key}
             </Link>
           )}
-          <span className="text-muted-foreground ml-auto text-[11px]">
+          <span className="text-muted-foreground ms-auto text-[11px] tabular-nums">
             {formatter.relativeTime(new Date(item.createdAt))}
           </span>
         </div>
@@ -205,7 +205,7 @@ function InboxRow({
             disabled={isPending}
             aria-label={t('inbox_mark_as_read')}
           >
-            <CheckCheck className="h-3.5 w-3.5 sm:mr-1" />
+            <CheckCheck className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('inbox_read')}</span>
           </Button>
         )}
@@ -219,13 +219,13 @@ function InboxRow({
             aria-expanded={snoozeOpen}
             aria-label={t('inbox_snooze')}
           >
-            <Clock className="h-3.5 w-3.5 sm:mr-1" />
+            <Clock className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('inbox_snooze')}</span>
           </Button>
           {snoozeOpen && (
             <div
               role="menu"
-              className="border-border bg-popover absolute right-0 z-10 mt-1 w-36 rounded-md border p-1 shadow-md"
+              className="border-border bg-popover absolute end-0 z-10 mt-1 w-36 rounded-md border p-1 shadow-sm"
             >
               {SNOOZE_PRESETS.map((preset) => (
                 <button
@@ -233,7 +233,7 @@ function InboxRow({
                   type="button"
                   role="menuitem"
                   onClick={() => handleSnoozeClick(preset.offsetMs)}
-                  className="hover:bg-accent block w-full rounded-sm px-2 py-1 text-left text-xs"
+                  className="hover:bg-accent focus-visible:ring-ring block min-h-8 w-full rounded-sm px-2 py-1 text-start text-xs focus-visible:ring-2 focus-visible:ring-inset"
                 >
                   {t(preset.labelKey)}
                 </button>
@@ -248,7 +248,7 @@ function InboxRow({
                       onSnooze(item.id, null);
                       setSnoozeOpen(false);
                     }}
-                    className="hover:bg-accent block w-full rounded-sm px-2 py-1 text-left text-xs"
+                    className="hover:bg-accent focus-visible:ring-ring block min-h-8 w-full rounded-sm px-2 py-1 text-start text-xs focus-visible:ring-2 focus-visible:ring-inset"
                   >
                     {t('inbox_unsnooze')}
                   </button>
@@ -361,7 +361,7 @@ export function InboxPageClient() {
             onClick={() => markAllRead.mutate(filters)}
             disabled={markAllRead.isPending || unreadVisible === 0}
           >
-            <CheckCheck className="mr-1 h-3.5 w-3.5" />
+            <CheckCheck className="me-1 h-3.5 w-3.5" />
             {t('inbox_mark_all_read')}
           </Button>
         }
@@ -376,7 +376,7 @@ export function InboxPageClient() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 min-w-28 justify-between">
               {t(activeActor?.labelKey ?? 'inbox_actor_all')}
-              <ChevronDown className="ml-2 h-3.5 w-3.5" aria-hidden="true" />
+              <ChevronDown className="ms-2 h-3.5 w-3.5" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
@@ -399,7 +399,7 @@ export function InboxPageClient() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 min-w-28 justify-between">
               {t(activeType?.labelKey ?? 'inbox_type_all')}
-              <ChevronDown className="ml-2 h-3.5 w-3.5" aria-hidden="true" />
+              <ChevronDown className="ms-2 h-3.5 w-3.5" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
@@ -445,7 +445,7 @@ export function InboxPageClient() {
       <div className="surface-card min-h-64 overflow-hidden shadow-none">
         {isLoading ? (
           <div className="text-muted-foreground flex min-h-64 items-center justify-center py-20">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="me-2 h-4 w-4 animate-spin" />
             {t('inbox_loading')}
           </div>
         ) : isError ? (

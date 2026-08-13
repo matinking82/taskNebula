@@ -45,9 +45,9 @@ export function MobileNav({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
   return (
     <nav
       aria-label={t('primaryNavAria')}
-      className="border-border bg-background/95 fixed bottom-0 left-0 right-0 z-50 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="border-border/80 bg-chrome/95 fixed bottom-0 left-0 right-0 z-50 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
-      <div className="flex h-14 items-center justify-around px-1">
+      <div className="flex h-14 items-center justify-around gap-1 px-2">
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -59,8 +59,10 @@ export function MobileNav({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
               href={item.href}
               data-active={isActive ? 'true' : undefined}
               className={cn(
-                'ease-snap relative flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 text-[10px] font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                'ease-snap relative flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 text-[10px] font-medium transition-[color,background-color,box-shadow,opacity] duration-150',
+                isActive
+                  ? 'bg-primary/[0.07] text-primary'
+                  : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
               )}
               aria-current={isActive ? 'page' : undefined}
             >
@@ -69,7 +71,7 @@ export function MobileNav({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
               {isActive ? (
                 <span
                   aria-hidden="true"
-                  className="bg-primary absolute bottom-1 h-1 w-1 rounded-full"
+                  className="bg-primary absolute inset-x-3 top-0 h-0.5 rounded-b-sm"
                 />
               ) : null}
             </Link>

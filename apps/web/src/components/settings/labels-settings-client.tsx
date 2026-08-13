@@ -3,6 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { useOrganization } from '@/lib/hooks/use-organization';
 import { LabelsManager } from './labels-manager';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 
 /**
  * Client shell for the standalone /settings/labels page. Resolves the active
@@ -15,16 +17,13 @@ export function LabelsSettingsClient() {
   const { currentOrganizationId } = useOrganization();
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">{t('subtitle')}</p>
-      </header>
+    <PageFrame contentClassName="max-w-5xl">
+      <PageHeader title={t('title')} description={t('subtitle')} />
       {currentOrganizationId ? (
         <LabelsManager organizationId={currentOrganizationId} />
       ) : (
         <p className="text-muted-foreground text-sm">{tCommon('loading')}</p>
       )}
-    </div>
+    </PageFrame>
   );
 }

@@ -145,7 +145,11 @@ describe('DashboardClient', () => {
       screen.queryByText('Completed work stays out of the action queue')
     ).not.toBeInTheDocument();
     expect(document.querySelector('.dashboard-carbon')).toHaveClass('min-w-0', 'overflow-hidden');
-    expect(screen.getByText('Ship dashboard refresh').closest('button')).toHaveClass('min-w-0');
+    expect(screen.getByText('Ship dashboard refresh').closest('button')).toHaveClass(
+      'min-w-0',
+      'text-start',
+      'focus-visible:ring-2'
+    );
     expect(screen.getByRole('link', { name: /my issues/i })).toHaveAttribute('href', '/my-issues');
   });
 

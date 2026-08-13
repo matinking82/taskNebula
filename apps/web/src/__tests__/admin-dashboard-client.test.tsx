@@ -269,6 +269,9 @@ describe('/admin route', () => {
       expect(screen.getByText('Organizations')).toBeInTheDocument();
       expect(screen.getByText('Users')).toBeInTheDocument();
       expect(screen.getByText('Super admins')).toBeInTheDocument();
+      const overviewMetric = screen.getByText('Super admins').closest('dt');
+      expect(overviewMetric?.parentElement?.parentElement?.tagName).toBe('DL');
+      expect(overviewMetric?.parentElement?.parentElement).toHaveClass('grid-cols-2');
     });
 
     it('renders the Users section when ?tab=users is present', async () => {

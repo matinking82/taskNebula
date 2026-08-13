@@ -135,7 +135,7 @@ export function ProjectGeneralSettings({ projectId }: ProjectGeneralSettingsProp
     formData.visibility !== ((project as { visibility?: string }).visibility || 'internal');
 
   return (
-    <div className="animate-fade-up stagger space-y-8">
+    <div className="space-y-8">
       <section className="space-y-4">
         <div className="space-y-1">
           <span className="kicker">{t('kicker')}</span>
@@ -287,7 +287,7 @@ export function ProjectGeneralSettings({ projectId }: ProjectGeneralSettingsProp
         </div>
       </section>
 
-      <section className="animate-fade-up space-y-4">
+      <section className="space-y-4">
         <div className="space-y-1">
           <span className="kicker text-destructive">{t('danger_zone')}</span>
           <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">

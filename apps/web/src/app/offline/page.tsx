@@ -11,32 +11,36 @@ export default function OfflinePage() {
   const tNotFound = useTranslations('errorPages.notFound');
 
   return (
-    <main className="bg-muted/30 text-foreground grid min-h-dvh place-items-center px-4 py-8">
+    <main className="bg-surface text-foreground grid min-h-dvh place-items-center px-4 py-8">
       <section
         aria-labelledby="offline-title"
-        className="animate-fade-up border-border bg-card shadow-xs w-full max-w-md rounded-lg border p-6 sm:p-8"
+        className="animate-fade-up border-border bg-background grid w-full max-w-3xl overflow-hidden rounded-lg border sm:grid-cols-[12rem_minmax(0,1fr)]"
       >
-        <div
-          className="bg-accent-amber/10 text-accent-amber mb-8 flex h-10 w-10 items-center justify-center rounded-md"
-          aria-hidden="true"
-        >
-          <WifiOff className="h-5 w-5" />
+        <div className="bg-rail text-rail-foreground flex flex-col justify-between gap-8 p-6 sm:p-8">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-md border border-white/15 text-white"
+            aria-hidden="true"
+          >
+            <WifiOff className="h-5 w-5" />
+          </div>
+          <p className="kicker text-rail-foreground">{tAuth('network_error')}</p>
         </div>
 
-        <div className="space-y-2">
-          <p className="kicker text-accent-amber">{tAuth('network_error')}</p>
-          <h1 id="offline-title" className="text-2xl font-semibold tracking-tight">
-            {t('offlineTitle')}
-          </h1>
-        </div>
+        <div className="p-6 sm:p-8">
+          <div role="status" aria-live="polite">
+            <h1 id="offline-title" className="text-balance text-2xl font-semibold tracking-tight">
+              {t('offlineTitle')}
+            </h1>
+          </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <Button onClick={() => window.location.reload()} size="xl" className="w-full text-sm">
-            {t('offlineRetry')}
-          </Button>
-          <Button asChild size="xl" variant="outline" className="w-full text-sm">
-            <Link href="/">{tNotFound('backToHome')}</Link>
-          </Button>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <Button onClick={() => window.location.reload()} size="xl" className="w-full text-sm">
+              {t('offlineRetry')}
+            </Button>
+            <Button asChild size="xl" variant="outline" className="w-full text-sm">
+              <Link href="/">{tNotFound('backToHome')}</Link>
+            </Button>
+          </div>
         </div>
       </section>
     </main>

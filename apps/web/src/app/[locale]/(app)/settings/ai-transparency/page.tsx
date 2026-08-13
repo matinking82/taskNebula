@@ -4,6 +4,7 @@ import { db, organizationMembers } from '@tasknebula/db';
 import { and, eq } from 'drizzle-orm';
 import { hasPermission } from '@/lib/auth/permissions';
 import { AiTransparencyClient } from './ai-transparency-client';
+import { PageFrame } from '@/components/ui/page-frame';
 
 export default async function AiTransparencyPage() {
   const session = await auth();
@@ -27,5 +28,9 @@ export default async function AiTransparencyPage() {
     redirect('/dashboard?error=insufficient-permission');
   }
 
-  return <AiTransparencyClient organizationId={primaryOrg.organizationId} />;
+  return (
+    <PageFrame contentClassName="max-w-5xl">
+      <AiTransparencyClient organizationId={primaryOrg.organizationId} />
+    </PageFrame>
+  );
 }

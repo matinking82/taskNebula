@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Circle, Clock, TrendingUp } from 'lucide-react';
 import { Sprint, SprintIssue } from '@/lib/hooks/use-sprints';
 import { differenceInDays } from 'date-fns';
 
@@ -55,22 +54,19 @@ export function SprintStats({ sprint, issues }: SprintStatsProps) {
         : t('status.planned');
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
+    <section className="border-border bg-card overflow-hidden rounded-lg border">
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
         <div className="min-w-0 space-y-0.5">
           <span className="kicker">{t('kicker')}</span>
           <h3 className="truncate text-sm font-semibold tracking-tight">{sprint.name}</h3>
         </div>
         <span className={statusChipClass}>{statusLabel}</span>
       </div>
-      <div className="stagger grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="bg-border grid gap-px sm:grid-cols-2 xl:grid-cols-4">
         {/* Completion */}
-        <div className="surface-card animate-scale-in space-y-2 p-4">
-          <div className="flex items-center justify-between">
-            <span className="kicker">{t('completion')}</span>
-            <CheckCircle2 className="text-accent-emerald h-4 w-4" />
-          </div>
-          <div className="text-foreground text-2xl font-semibold tabular-nums">
+        <div className="bg-card space-y-2 p-3 sm:p-4">
+          <span className="kicker">{t('completion')}</span>
+          <div className="text-foreground text-xl font-semibold tabular-nums">
             {Math.round(completionPercentage)}%
           </div>
           <Progress value={completionPercentage} className="h-1" />
@@ -80,12 +76,9 @@ export function SprintStats({ sprint, issues }: SprintStatsProps) {
         </div>
 
         {/* Time Progress */}
-        <div className="surface-card animate-scale-in space-y-2 p-4">
-          <div className="flex items-center justify-between">
-            <span className="kicker">{t('time')}</span>
-            <Clock className="text-accent-amber h-4 w-4" />
-          </div>
-          <div className="text-foreground text-2xl font-semibold tabular-nums">
+        <div className="bg-card space-y-2 p-3 sm:p-4">
+          <span className="kicker">{t('time')}</span>
+          <div className="text-foreground text-xl font-semibold tabular-nums">
             {Math.round(timePercentage)}%
           </div>
           <Progress value={timePercentage} className="h-1" />
@@ -95,12 +88,9 @@ export function SprintStats({ sprint, issues }: SprintStatsProps) {
         </div>
 
         {/* Story Points */}
-        <div className="surface-card animate-scale-in space-y-2 p-4">
-          <div className="flex items-center justify-between">
-            <span className="kicker">{t('storyPoints')}</span>
-            <TrendingUp className="text-primary h-4 w-4" />
-          </div>
-          <div className="text-foreground text-2xl font-semibold tabular-nums">
+        <div className="bg-card space-y-2 p-3 sm:p-4">
+          <span className="kicker">{t('storyPoints')}</span>
+          <div className="text-foreground text-xl font-semibold tabular-nums">
             {completedPoints}
             <span className="text-muted-foreground text-base font-normal"> / {totalPoints}</span>
           </div>
@@ -111,11 +101,8 @@ export function SprintStats({ sprint, issues }: SprintStatsProps) {
         </div>
 
         {/* Issue Breakdown */}
-        <div className="surface-card animate-scale-in space-y-2 p-4">
-          <div className="flex items-center justify-between">
-            <span className="kicker">{t('issues')}</span>
-            <Circle className="text-muted-foreground h-4 w-4" />
-          </div>
+        <div className="bg-card space-y-2 p-3 sm:p-4">
+          <span className="kicker">{t('issues')}</span>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1.5">
@@ -141,6 +128,6 @@ export function SprintStats({ sprint, issues }: SprintStatsProps) {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

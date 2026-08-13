@@ -82,7 +82,7 @@ export function CatchMeUpBanner() {
   const lastSeenDate = new Date(previousLastSeen);
 
   return (
-    <div className="surface-card animate-fade-up border-primary/20 bg-card p-4">
+    <div className="surface-card border-primary/20 bg-card p-4">
       <div className="flex items-start gap-3">
         <Sparkles className="text-primary mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -100,13 +100,13 @@ export function CatchMeUpBanner() {
           {!expanded ? (
             <div className="mt-3 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
               <Button size="sm" onClick={() => setExpanded(true)} className="w-full sm:w-auto">
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                <Sparkles className="me-1.5 h-3.5 w-3.5" />
                 {t('catchup.catch_me_up')}
               </Button>
               <Button asChild size="sm" variant="ghost" className="w-full sm:w-auto">
                 <Link href="/inbox">
                   {t('catchup.open_inbox')}
-                  <ArrowRight className="ml-1 h-3 w-3" />
+                  <ArrowRight className="ms-1 h-3 w-3 rtl:rotate-180" />
                 </Link>
               </Button>
             </div>
@@ -133,7 +133,7 @@ export function CatchMeUpBanner() {
                             <Link
                               href={action.link}
                               className={cn(
-                                'border-border bg-background hover:bg-muted/40 flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs transition-colors',
+                                'border-border bg-background hover:bg-muted/40 focus-visible:ring-ring flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                                 action.urgency === 'high' && 'border-accent-rose/30',
                                 action.urgency === 'medium' && 'border-accent-amber/30'
                               )}
@@ -141,7 +141,7 @@ export function CatchMeUpBanner() {
                               <span className="truncate">{action.title}</span>
                               <span
                                 className={cn(
-                                  'ml-2 rounded-sm px-1.5 py-0.5 text-[9px] font-medium uppercase',
+                                  'ms-2 rounded-sm px-1.5 py-0.5 text-[9px] font-medium uppercase',
                                   action.urgency === 'high' && 'bg-accent-rose/10 text-accent-rose',
                                   action.urgency === 'medium' &&
                                     'bg-accent-amber/10 text-accent-amber',
@@ -171,7 +171,7 @@ export function CatchMeUpBanner() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 shrink-0"
+          className="h-9 w-9 shrink-0 sm:h-8 sm:w-8"
           onClick={() => setDismissed(true)}
           aria-label={t('catchup.dismiss')}
         >

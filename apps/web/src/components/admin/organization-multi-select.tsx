@@ -88,7 +88,7 @@ export function OrganizationMultiSelect({
                 ? resolvedPlaceholder
                 : t('orgMultiSelect.selectedCount', { count: value.length })}
             </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -108,10 +108,10 @@ export function OrganizationMultiSelect({
                       onSelect={() => toggle(org.id)}
                     >
                       <Check
-                        className={cn('mr-2 h-4 w-4', selected ? 'opacity-100' : 'opacity-0')}
+                        className={cn('me-2 h-4 w-4', selected ? 'opacity-100' : 'opacity-0')}
                       />
                       <span className="truncate">{org.name}</span>
-                      <span className="text-muted-foreground ml-2 truncate font-mono text-xs">
+                      <span className="text-muted-foreground ms-2 truncate font-mono text-xs">
                         {org.slug}
                       </span>
                     </CommandItem>
@@ -133,7 +133,7 @@ export function OrganizationMultiSelect({
                 <button
                   type="button"
                   onClick={() => remove(id)}
-                  className="rounded p-0.5 opacity-60 hover:opacity-100"
+                  className="focus-visible:ring-ring rounded-sm p-1 opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                   aria-label={t('orgMultiSelect.remove', { name: org?.name ?? id })}
                 >
                   <X className="h-3 w-3" />

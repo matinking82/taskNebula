@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { Inbox, Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -154,43 +156,41 @@ export function MyIssuesClient() {
 
   return (
     <>
-      <div className="bg-background flex h-full min-h-0 flex-col">
-        {/* Header */}
-        <div className="border-border bg-background shrink-0 border-b px-8 py-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
-            <div className="space-y-1">
-              <span className="kicker">{t('my_issues_kicker')}</span>
-              <h1 className="whitespace-nowrap text-2xl font-semibold tracking-tight">
-                {tNav('my_issues')}
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                {t('my_issues_count', { count: filteredIssues.length })}
-              </p>
-            </div>
-            <div className="relative w-full max-w-full md:w-72 md:shrink-0">
-              <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+      <PageFrame contentClassName="max-w-6xl">
+        <PageHeader
+          kicker={t('my_issues_kicker')}
+          title={tNav('my_issues')}
+          description={t('my_issues_count', { count: filteredIssues.length })}
+          actions={
+            <div className="relative w-full sm:w-72">
+              <Search className="text-muted-foreground absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder={t('my_issues_search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 pl-9"
+                className="h-9 ps-9"
               />
             </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Filter toolbar: single simple scope switch */}
-        <div className="border-border bg-background shrink-0 border-b px-8 py-2.5">
-          <div className="scrollbar-none flex items-center gap-1 overflow-x-auto whitespace-nowrap">
+        <div className="surface-inset shrink-0 p-1">
+          <div
+            className="scrollbar-none flex items-center gap-1 overflow-x-auto whitespace-nowrap"
+            role="toolbar"
+            aria-label={tNav('my_issues')}
+          >
             {scopeOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
+                aria-pressed={scope === option.value}
                 onClick={() => handleScopeChange(option.value)}
                 className={cn(
-                  'ease-snap shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
+                  'ease-snap focus-visible:ring-ring min-h-9 shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-[color,background-color,box-shadow,opacity] duration-150 focus-visible:ring-2 focus-visible:ring-inset',
                   scope === option.value
-                    ? 'bg-primary/10 text-primary'
+                    ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                 )}
               >
@@ -201,7 +201,7 @@ export function MyIssuesClient() {
         </div>
 
         {/* Content */}
-        <div className="custom-scrollbar flex-1 overflow-y-auto px-8 py-6">
+        <div className="min-h-64">
           {filteredIssues.length === 0 ? (
             <div className="animate-fade-up flex h-full items-center justify-center">
               <div className="text-center">
@@ -231,7 +231,7 @@ export function MyIssuesClient() {
             </div>
           ) : (
             <div className="animate-fade-up">
-              <div className="surface-card overflow-hidden rounded-lg">
+              <div className="surface-card overflow-hidden shadow-none">
                 <ul className="stagger">
                   {filteredIssues.map((issue, idx) => (
                     <IssueRow
@@ -246,7 +246,7 @@ export function MyIssuesClient() {
             </div>
           )}
         </div>
-      </div>
+      </PageFrame>
 
       {selectedIssueId && (
         <IssueDetailModal
@@ -275,15 +275,15 @@ function IssueRow({
   return (
     <li className={cn('relative', !isLast && 'border-border/60 border-b')}>
       {/* Left-edge priority indicator */}
-      <span aria-hidden className={cn('absolute bottom-0 left-0 top-0 w-0.5', pClass)} />
+      <span aria-hidden className={cn('absolute inset-y-0 start-0 w-0.5', pClass)} />
       <button
         type="button"
         onClick={onClick}
-        className="row-interactive group flex min-h-[44px] w-full items-center gap-3 rounded-md pl-4 pr-4 text-left"
+        className="row-interactive group flex min-h-11 w-full items-center gap-3 rounded-none pe-4 ps-4 text-start focus-visible:ring-2 focus-visible:ring-inset"
       >
         {/* Title (with inline key) */}
         <p className="text-foreground flex-1 truncate text-sm">
-          <span className="text-muted-foreground mr-2 font-mono text-xs">{issue.key}</span>
+          <span className="text-muted-foreground me-2 font-mono text-xs">{issue.key}</span>
           {issue.title}
         </p>
 
@@ -292,7 +292,7 @@ function IssueRow({
 
         {/* Compact time */}
         {updated && (
-          <span className="text-muted-foreground hidden w-10 shrink-0 text-right font-mono text-[11px] sm:inline">
+          <span className="text-muted-foreground hidden w-10 shrink-0 text-end font-mono text-[11px] tabular-nums sm:inline">
             {updated}
           </span>
         )}

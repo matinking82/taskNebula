@@ -427,10 +427,7 @@ export function NotificationPreferences() {
       </header>
 
       {/* Channel controls */}
-      <section
-        aria-labelledby="channels-heading"
-        className="border-border/60 animate-fade-up border-b pb-6"
-      >
+      <section aria-labelledby="channels-heading" className="border-border/60 border-b pb-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h3 id="channels-heading" className="text-base font-semibold tracking-tight">
@@ -470,7 +467,7 @@ export function NotificationPreferences() {
       </section>
 
       {/* Per-event delivery matrix */}
-      <section aria-labelledby="events-heading" className="animate-fade-up">
+      <section aria-labelledby="events-heading" className="">
         <div className="mb-6 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
           <div>
             <h3 id="events-heading" className="text-base font-semibold tracking-tight">
@@ -570,10 +567,7 @@ export function NotificationPreferences() {
       </section>
 
       {/* Email digest */}
-      <section
-        aria-labelledby="digest-heading"
-        className="border-border/60 animate-fade-up border-t pt-6"
-      >
+      <section aria-labelledby="digest-heading" className="border-border/60 border-t pt-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto] md:items-center">
           <div className="space-y-1">
             <h3 id="digest-heading" className="text-base font-semibold tracking-tight">
@@ -601,10 +595,7 @@ export function NotificationPreferences() {
       </section>
 
       {/* Do not disturb */}
-      <section
-        aria-labelledby="dnd-heading"
-        className="border-border/60 animate-fade-up border-t pt-6"
-      >
+      <section aria-labelledby="dnd-heading" className="border-border/60 border-t pt-6">
         <div className="flex items-start gap-4">
           <div
             className="bg-muted/60 text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-md"
@@ -674,7 +665,7 @@ export function NotificationPreferences() {
                       onClick={() => toggleWeekday(day.key)}
                       aria-pressed={active}
                       className={cn(
-                        'rounded-sm px-3 py-1.5 text-xs font-medium transition-colors duration-150',
+                        'focus-visible:ring-ring rounded-sm px-3 py-1.5 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                         active
                           ? 'bg-primary text-primary-foreground'
                           : 'border-border bg-background text-muted-foreground hover:bg-accent/40 hover:text-foreground border'
@@ -696,7 +687,7 @@ export function NotificationPreferences() {
       </section>
 
       {/* Sticky save button on narrow screens */}
-      <div className="fixed bottom-4 right-4 z-30 md:hidden">
+      <div className="fixed bottom-4 end-4 z-30 md:hidden">
         <Button type="button" onClick={handleSaveNow} disabled={updatePreferences.isPending}>
           {updatePreferences.isPending
             ? t('notifications.working')

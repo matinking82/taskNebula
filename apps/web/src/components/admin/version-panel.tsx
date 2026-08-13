@@ -300,16 +300,16 @@ export function VersionPanel() {
               title={data.checkDisabled ? t('checksDisabledHint') : undefined}
             >
               {refresh.isPending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                <RefreshCw className="me-1.5 h-3.5 w-3.5" />
               )}
               {refresh.isPending ? t('checking') : t('checkNow')}
             </Button>
             {data.updateAvailable && isHttpsUrl(data.releaseUrl) ? (
               <Button size="sm" variant="outline" asChild>
                 <a href={data.releaseUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  <ExternalLink className="me-1.5 h-3.5 w-3.5" />
                   {t('viewRelease')}
                 </a>
               </Button>
@@ -317,7 +317,7 @@ export function VersionPanel() {
             {isHttpsUrl(data.image.latestTagUrl) ? (
               <Button size="sm" variant="outline" asChild>
                 <a href={data.image.latestTagUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  <ExternalLink className="me-1.5 h-3.5 w-3.5" />
                   {t('viewDockerTag')}
                 </a>
               </Button>
@@ -549,9 +549,9 @@ function SelfUpdateCard({
           </label>
           <Button size="sm" onClick={() => onStart(targetVersion)} disabled={!canStart}>
             {pending ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Rocket className="mr-1.5 h-3.5 w-3.5" />
+              <Rocket className="me-1.5 h-3.5 w-3.5" />
             )}
             {pending
               ? t('selfUpdate.starting')

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { getSecurityHeaders } from './src/lib/security/headers';
 
 // Wires next-intl's request config so `getRequestConfig` runs for every
 // request that hits the App Router. Path is relative to this file.
@@ -40,6 +41,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Enable compression
   compress: true,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: getSecurityHeaders(),
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

@@ -70,16 +70,16 @@ export function BoardFiltersBar({
   };
 
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
       {/* Search */}
       {searchOpen ? (
-        <div className="relative w-52">
-          <Search className="text-muted-foreground absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+        <div className="relative w-full min-w-0 sm:w-52">
+          <Search className="text-muted-foreground absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
           <Input
             placeholder={t('filters.searchPlaceholder')}
             value={filters.search}
             onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            className="border-border/60 bg-background h-8 rounded-md pl-8 text-xs shadow-none"
+            className="border-border/60 bg-background h-10 rounded-md ps-8 text-xs shadow-none sm:h-8"
             autoFocus
             onBlur={() => {
               if (!filters.search) setSearchOpen(false);
@@ -94,7 +94,7 @@ export function BoardFiltersBar({
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-foreground absolute right-0.5 top-1/2 h-6 w-6 -translate-y-1/2 rounded-md"
+            className="text-muted-foreground hover:text-foreground absolute end-0.5 top-1/2 h-9 w-9 -translate-y-1/2 rounded-md sm:h-7 sm:w-7"
             onClick={() => {
               onFiltersChange({ ...filters, search: '' });
               setSearchOpen(false);
@@ -108,7 +108,7 @@ export function BoardFiltersBar({
         <Button
           variant="ghost"
           size="icon"
-          className="text-muted-foreground hover:text-foreground h-8 w-8 rounded-md"
+          className="text-muted-foreground hover:text-foreground h-10 w-10 rounded-md sm:h-8 sm:w-8"
           onClick={() => setSearchOpen(true)}
           aria-label={t('filters.searchAria')}
         >
@@ -123,16 +123,16 @@ export function BoardFiltersBar({
             variant="ghost"
             size="sm"
             className={cn(
-              'text-muted-foreground h-8 gap-1.5 rounded-md px-2.5 text-xs transition-colors duration-200',
+              'text-muted-foreground h-10 gap-1.5 rounded-md px-2.5 text-xs transition-colors duration-150 sm:h-8',
               activeFilterCount > 0
-                ? 'chip-accent'
+                ? 'border-primary/30 bg-primary/10 text-primary'
                 : 'hover:border-primary/30 hover:text-foreground'
             )}
           >
             <Filter className="h-3.5 w-3.5" />
             {t('filters.filter')}
             {activeFilterCount > 0 && (
-              <span className="bg-primary/20 text-primary flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold">
+              <span className="bg-primary/15 text-primary flex h-4 min-w-4 items-center justify-center rounded-sm px-1 text-[9px] font-semibold tabular-nums">
                 {activeFilterCount}
               </span>
             )}
@@ -145,12 +145,14 @@ export function BoardFiltersBar({
               {PRIORITIES.map((priority) => (
                 <button
                   key={priority}
+                  type="button"
+                  aria-pressed={filters.priority.includes(priority)}
                   onClick={() => togglePriority(priority)}
                   className={cn(
-                    'transition-colors duration-200',
+                    'min-h-9 rounded-sm px-2.5 text-xs transition-colors duration-150',
                     filters.priority.includes(priority)
-                      ? 'chip-accent'
-                      : 'chip hover:border-primary/30'
+                      ? 'border-primary/30 bg-primary/10 text-primary border'
+                      : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground border bg-transparent'
                   )}
                 >
                   {t(`priority.${priority}`)}
@@ -176,7 +178,7 @@ export function BoardFiltersBar({
       </Popover>
 
       {/* Issue count */}
-      <span className="text-muted-foreground text-[11px] tabular-nums">
+      <span className="text-muted-foreground shrink-0 px-1 text-[11px] tabular-nums">
         {filteredCount !== issueCount
           ? `${filteredCount}/${issueCount}`
           : t('filters.issueCount', { count: issueCount })}
@@ -185,12 +187,13 @@ export function BoardFiltersBar({
       {/* Active filter pills */}
       {hasAnyFilter && (
         <>
-          <div className="bg-border h-3.5 w-px" />
+          <div className="bg-border hidden h-3.5 w-px sm:block" />
           {filters.search && (
-            <span className="chip gap-1">
+            <span className="border-border bg-muted/40 text-muted-foreground inline-flex min-h-8 max-w-full items-center gap-1 rounded-sm border px-2 text-[11px]">
               {`"${filters.search}"`}
               <button
-                className="hover:bg-muted ml-0.5 rounded-full p-0.5"
+                type="button"
+                className="hover:bg-muted -me-1 ms-0.5 rounded-sm p-1"
                 onClick={() => removeFilter('search', '')}
                 aria-label={t('filters.removeSearch')}
               >
@@ -199,10 +202,14 @@ export function BoardFiltersBar({
             </span>
           )}
           {filters.priority.map((priority) => (
-            <span key={priority} className="chip-accent gap-1">
+            <span
+              key={priority}
+              className="border-primary/20 bg-primary/10 text-primary inline-flex min-h-8 items-center gap-1 rounded-sm border px-2 text-[11px]"
+            >
               {t(`priority.${priority}`)}
               <button
-                className="hover:bg-primary/20 ml-0.5 rounded-full p-0.5"
+                type="button"
+                className="hover:bg-primary/20 -me-1 ms-0.5 rounded-sm p-1"
                 onClick={() => removeFilter('priority', priority)}
                 aria-label={t('filters.removePriority', { priority: t(`priority.${priority}`) })}
               >
@@ -211,7 +218,8 @@ export function BoardFiltersBar({
             </span>
           ))}
           <button
-            className="text-muted-foreground hover:text-foreground text-[11px] transition-colors duration-200"
+            type="button"
+            className="text-muted-foreground hover:text-foreground min-h-8 px-1 text-[11px] transition-colors duration-150"
             onClick={clearFilters}
           >
             {t('filters.clear')}

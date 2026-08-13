@@ -19,7 +19,7 @@ export function IssueDetailModal({ issueId, open, onOpenChange }: IssueDetailMod
   const t = useTranslations('issuePanels');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-border animate-fade-in !left-1/2 !top-1/2 flex h-[88vh] max-h-[920px] w-[92vw] max-w-6xl !-translate-x-1/2 !-translate-y-1/2 !transform flex-col gap-0 overflow-hidden rounded-lg p-0 shadow-lg">
+      <DialogContent className="border-border !left-1/2 !top-1/2 flex h-dvh max-h-none w-screen !max-w-none !-translate-x-1/2 !-translate-y-1/2 !transform flex-col gap-0 overflow-hidden rounded-none border-0 p-0 shadow-none sm:h-[88vh] sm:max-h-[920px] sm:w-[92vw] sm:!max-w-6xl sm:rounded-lg sm:border sm:shadow-lg">
         <VisuallyHidden>
           <DialogTitle>{t('modal.title')}</DialogTitle>
         </VisuallyHidden>

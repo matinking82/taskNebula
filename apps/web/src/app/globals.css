@@ -212,6 +212,17 @@
     --surface: 220 20% 98%;
     --surface-2: 220 18% 96%;
 
+    /* Authenticated workbench chrome. These layers describe ownership:
+       rail -> context -> command bar -> focused work canvas. */
+    --workbench-backdrop: 220 16% 93%;
+    --workbench-canvas: 0 0% 100%;
+    --chrome: 220 20% 98%;
+    --chrome-foreground: 224 22% 12%;
+    --context: 220 18% 96.5%;
+    --context-foreground: 224 18% 18%;
+    --rail: 225 26% 9%;
+    --rail-foreground: 220 14% 78%;
+
     /* Primary colors serve both as text and as solid control backgrounds.
        Keep the light-theme values dark enough for WCAG AA with white text. */
     --primary: 217 91% 45%;
@@ -275,6 +286,15 @@
     --popover-foreground: 220 16% 94%;
     --surface: 225 12% 10%;
     --surface-2: 225 12% 13%;
+
+    --workbench-backdrop: 225 14% 5%;
+    --workbench-canvas: 225 12% 8%;
+    --chrome: 225 12% 9.5%;
+    --chrome-foreground: 220 16% 94%;
+    --context: 225 12% 8%;
+    --context-foreground: 220 14% 90%;
+    --rail: 225 24% 3.5%;
+    --rail-foreground: 220 10% 70%;
 
     /* Primary — blue-400 (lighter for dark mode legibility) */
     --primary: 213 94% 68%;
@@ -344,9 +364,12 @@
   .font-mono {
     word-spacing: 0;
   }
-  /* Default focus ring (keyboard-first) */
+  /* Keyboard-first fallback. Component-level Radix/shadcn rings are more
+     specific and may replace this outline, while raw links and buttons never
+     lose visible focus. */
   :focus-visible {
-    outline: none;
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
   /* Selection */
   ::selection {
@@ -537,7 +560,7 @@
   /* Soft raised card */
   .surface-card {
     @apply border-border bg-card relative rounded-lg border;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-xs);
   }
   .surface-card-hover {
     transition:
@@ -547,14 +570,44 @@
   }
   .surface-card-hover:hover {
     border-color: hsl(var(--border-strong));
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
   }
   /* Muted inset surface */
   .surface-inset {
-    background: hsl(var(--surface));
+    background: hsl(var(--surface-2) / 0.72);
     border: 1px solid hsl(var(--border));
     border-radius: var(--radius);
+  }
+
+  /* Workbench composition. Desktop treats the page as a focus canvas inside
+     quieter application chrome; small screens return to edge-to-edge space. */
+  .app-workbench {
+    background: hsl(var(--workbench-backdrop));
+    color: hsl(var(--foreground));
+  }
+  .workbench-canvas {
+    background: hsl(var(--workbench-canvas));
+    border-color: hsl(var(--border-strong) / 0.72);
+    box-shadow: 0 1px 2px hsl(224 22% 10% / 0.04);
+  }
+  .workbench-commandbar {
+    background: hsl(var(--chrome));
+    color: hsl(var(--chrome-foreground));
+  }
+  .workbench-context {
+    background: hsl(var(--context));
+    color: hsl(var(--context-foreground));
+  }
+  .workbench-rail {
+    background: hsl(var(--rail));
+    color: hsl(var(--rail-foreground));
+  }
+  @media (max-width: 767px) {
+    .workbench-canvas {
+      border-color: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
   }
   /* Elevated glass-ish panel */
   .surface-glass {
@@ -754,15 +807,15 @@
      any CSS transform transition (including :hover translateY) fights the sortable
      reorder animation and makes cards snap to wrong positions. */
   .kanban-card {
-    @apply border-border bg-card relative overflow-hidden rounded-lg border px-3.5 py-3;
-    box-shadow: var(--shadow-xs);
+    @apply border-border bg-card relative overflow-hidden rounded-lg border px-3 py-2.5;
+    box-shadow: none;
     transition:
       box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1),
       border-color 0.15s ease;
   }
   .kanban-card:hover {
     border-color: hsl(var(--border-strong));
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-xs);
   }
   .kanban-card[data-dragging='true'] {
     cursor: grabbing;
@@ -770,8 +823,8 @@
     border-color: hsl(var(--primary) / 0.45);
   }
   .kanban-column {
-    @apply border-border bg-surface/60 rounded-xl border;
-    box-shadow: var(--shadow-xs);
+    @apply border-border bg-surface/60 rounded-lg border;
+    box-shadow: none;
   }
   .kanban-column-header {
     @apply border-border border-b px-3 py-2.5;
@@ -786,10 +839,10 @@
 
   /* Chip / badge system */
   .chip {
-    @apply border-border bg-surface text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium;
+    @apply border-border bg-surface text-muted-foreground inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-[11px] font-medium;
   }
   .chip-accent {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-[11px] font-medium;
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
     border: 1px solid hsl(var(--primary) / 0.18);
@@ -872,7 +925,7 @@
 
   /* Interactive row (hover-emphasized list item) */
   .row-interactive {
-    @apply flex min-w-0 cursor-pointer items-center gap-3 px-3 py-2;
+    @apply relative flex min-w-0 cursor-pointer items-center gap-3 px-3 py-2;
     border-radius: var(--radius);
     transition:
       background-color 0.15s ease,
@@ -882,8 +935,12 @@
     background: hsl(var(--accent) / 0.6);
   }
   .row-interactive[data-active='true'] {
-    background: hsl(var(--primary) / 0.1);
-    color: hsl(var(--primary));
+    background: hsl(var(--primary) / 0.075);
+    color: hsl(var(--foreground));
+    box-shadow: inset 2px 0 0 hsl(var(--primary));
+  }
+  [dir='rtl'] .row-interactive[data-active='true'] {
+    box-shadow: inset -2px 0 0 hsl(var(--primary));
   }
 
   /* Legacy icon tile compatibility helper; avoid for new ornamental UI. */
@@ -1172,8 +1229,8 @@ html:has(body > .landing-dark) {
   .font-\[450\] {
     font-weight: 450;
   }
-  :is(.docs-square-ui, .app-square-ui) [class~='rounded'],
-  :is(.docs-square-ui, .app-square-ui) [class*='rounded-']:not([class*='rounded-full']) {
+  .docs-square-ui [class~='rounded'],
+  .docs-square-ui [class*='rounded-']:not([class*='rounded-full']) {
     border-radius: calc(var(--radius) - 2px) !important;
   }
   .docs-square-ui .ProseMirror :is(pre, code, mark, img) {
@@ -1536,10 +1593,10 @@ html:has(body > .landing-dark) {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-fade-up {
-  animation: fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fade-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-fade-down {
   animation: fade-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -1562,7 +1619,7 @@ html:has(body > .landing-dark) {
 }
 /* Utility animations */
 .animate-blur-in {
-  animation: blur-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: blur-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-pop-in {
   animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -1571,13 +1628,13 @@ html:has(body > .landing-dark) {
   animation: alert-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-toast-in {
-  animation: toast-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: toast-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-dot-breathe {
   animation: dot-breathe 2.4s ease-in-out infinite;
 }
 .animate-page-enter {
-  animation: page-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: page-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Realtime indicator: use as span wrapper around a status dot */
@@ -1620,7 +1677,7 @@ html:has(body > .landing-dark) {
 /* Staggered children helper — wrap with .stagger and items get delayed enter */
 .stagger > * {
   opacity: 0;
-  animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fade-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .stagger > *:nth-child(1) {
   animation-delay: 0ms;

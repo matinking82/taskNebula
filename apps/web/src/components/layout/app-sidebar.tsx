@@ -417,7 +417,7 @@ function isHomeSectionPath(pathname: string | null | undefined): boolean {
 }
 
 const SIDEBAR_NAV_LINK_CLASS =
-  'row-interactive text-muted-foreground ease-snap border border-transparent hover:border-border-strong hover:bg-accent/70 hover:text-foreground data-[active=true]:border-primary/30 data-[active=true]:bg-primary/10 data-[active=true]:text-foreground min-h-8 w-full min-w-0 rounded-md text-[13px] font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150';
+  'row-interactive text-muted-foreground ease-snap hover:bg-accent/70 hover:text-foreground data-[active=true]:bg-primary/[0.07] data-[active=true]:text-foreground min-h-8 w-full min-w-0 rounded-md px-2.5 text-[13px] font-medium transition-[color,background-color,box-shadow,opacity] duration-150';
 const SIDEBAR_NAV_LABEL_CLASS = 'min-w-0 flex-1 truncate';
 
 export function AppSidebar({
@@ -572,16 +572,18 @@ export function AppSidebar({
   );
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-dvh">
       <AppRail hasWorkspaceAccess={hasWorkspaceAccess} isSuperAdmin={isSuperAdmin} />
-      <div className="border-border bg-background flex w-64 flex-col border-r">
-        <div className="bg-surface-dark border-border-strong flex h-12 items-center border-b px-3 text-white">
+      <div className="workbench-context border-border flex w-[248px] flex-col border-e">
+        <div className="border-border flex h-12 items-center border-b px-3">
           <div className="flex w-full items-center px-1 py-1.5 text-sm font-medium">
             <div className="flex items-center gap-2.5">
-              <div className="bg-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+              <div className="bg-primary shadow-xs flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white">
                 <TaskNebulaLogo compact className="h-5 w-5" />
               </div>
-              <span className="font-semibold tracking-tight text-white">TaskNebula</span>
+              <span className="text-context-foreground font-semibold tracking-tight">
+                TaskNebula
+              </span>
             </div>
           </div>
         </div>

@@ -197,7 +197,7 @@ export function EditOrganizationDialog({
                 {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {updateMutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                 {t('common.saveChanges')}
               </Button>
             </DialogFooter>

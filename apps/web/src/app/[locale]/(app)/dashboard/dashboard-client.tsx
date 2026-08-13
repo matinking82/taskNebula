@@ -199,7 +199,7 @@ export function DashboardClient() {
     <>
       <PageFrame className="dashboard-carbon">
         <PageHeader
-          className="animate-fade-up"
+          className=""
           kicker={tDash('kicker')}
           title={tDash('welcome_back', { name: firstName })}
           description={currentTeamId ? tDash('subtitle_team') : tDash('subtitle_personal')}
@@ -219,7 +219,7 @@ export function DashboardClient() {
           <div className="min-w-0 space-y-4">
             <section
               aria-labelledby="dashboard-action-queue"
-              className="surface-card animate-fade-up min-w-0 overflow-hidden shadow-none"
+              className="surface-card min-w-0 overflow-hidden shadow-none"
             >
               <div className="border-border flex min-h-11 items-center justify-between gap-3 border-b px-4 py-2.5">
                 <h2
@@ -230,7 +230,7 @@ export function DashboardClient() {
                 </h2>
                 <Link
                   href="/my-issues"
-                  className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 text-xs transition-colors duration-150"
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                 >
                   {tActions('view_all')}
                   <ArrowUpRight className="h-3 w-3" />
@@ -280,21 +280,21 @@ export function DashboardClient() {
         <DeliveryAnalysis organizationId={currentOrganizationId} projectId={firstProjectId} />
       </PageFrame>
 
-      {selectedIssueId && (
+      {selectedIssueId ? (
         <IssueDetailModal
           issueId={selectedIssueId}
           open={!!selectedIssueId}
           onOpenChange={(open) => !open && setSelectedIssueId(null)}
         />
-      )}
+      ) : null}
 
-      {firstProjectId && (
+      {firstProjectId ? (
         <CreateIssueModal
           open={isCreateIssueOpen}
           onOpenChange={setIsCreateIssueOpen}
           projectId={firstProjectId}
         />
-      )}
+      ) : null}
     </>
   );
 }
@@ -321,7 +321,7 @@ function IssueRow({ issue, onClick }: { issue: Issue; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="row-interactive hover:border-border-strong flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-2 rounded-none border border-transparent py-2.5 pl-2 pr-3 text-left transition-colors duration-150 sm:gap-3"
+      className="row-interactive hover:border-border-strong focus-visible:ring-ring flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-2 rounded-none border border-transparent py-2.5 pe-3 ps-2 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sm:gap-3"
     >
       <span className={cn('priority-indicator h-6 shrink-0', priorityCls)} />
 

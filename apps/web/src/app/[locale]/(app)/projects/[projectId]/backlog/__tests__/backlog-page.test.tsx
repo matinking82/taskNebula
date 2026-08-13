@@ -41,7 +41,9 @@ jest.mock('@/components/ai/ai-draft-issue-dialog', () => ({
 
 const mockUseIssues = useIssues as jest.MockedFunction<typeof useIssues>;
 const mockUseSprints = useSprints as jest.MockedFunction<typeof useSprints>;
-const mockUseAssignIssueToSprint = useAssignIssueToSprint as jest.MockedFunction<typeof useAssignIssueToSprint>;
+const mockUseAssignIssueToSprint = useAssignIssueToSprint as jest.MockedFunction<
+  typeof useAssignIssueToSprint
+>;
 const mockUseAiCapability = useAiCapability as jest.MockedFunction<typeof useAiCapability>;
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -139,6 +141,8 @@ describe('BacklogPage', () => {
     expect(screen.queryByText('Already in sprint')).not.toBeInTheDocument();
     // Header count should be "2 issues"
     expect(screen.getByText('2 issues')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: /backlog/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /title/i })).toBeInTheDocument();
   });
 
   it('renders the empty state when the backlog is empty', async () => {

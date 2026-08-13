@@ -16,13 +16,13 @@ export default async function SprintsLoading() {
           <Skeleton className="h-7 w-40" />
           <Skeleton className="h-4 w-64 max-w-full" />
         </div>
-        <Skeleton className="h-8 w-32 rounded-md" />
+        <Skeleton className="h-10 w-32 rounded-md sm:h-8" />
       </div>
 
-      <div className="space-y-3">
+      <div className="border-border bg-card divide-border divide-y overflow-hidden rounded-lg border">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="border-border bg-card rounded-lg border p-4 sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div key={index} className="p-3 sm:p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-5 w-44 max-w-[60%]" />

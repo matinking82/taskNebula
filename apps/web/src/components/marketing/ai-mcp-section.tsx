@@ -9,10 +9,13 @@ export function AiMcpSection() {
   const truth = useTranslations('publicPages.landing.productTruth');
 
   return (
-    <section id="ai-mcp" className="border-t border-[var(--landing-border)]">
-      <Shell className="py-20 sm:py-24">
-        <div className="grid gap-12 lg:grid-cols-[1.05fr_1fr] lg:items-center">
-          <div>
+    <section
+      id="ai-mcp"
+      className="border-t border-[var(--landing-border)] bg-[var(--landing-bg-elevated)]"
+    >
+      <Shell className="py-16 sm:py-20 lg:py-24">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.82fr)_minmax(28rem,1.18fr)] lg:items-start lg:gap-0">
+          <div className="lg:pe-12">
             <SectionHeader
               kicker={t('kicker')}
               kickerAccentVar="var(--landing-accent-violet)"
@@ -46,7 +49,9 @@ export function AiMcpSection() {
             </ol>
           </div>
 
-          <ToolCallMock />
+          <div className="lg:border-s lg:border-[var(--landing-border)] lg:ps-12">
+            <ToolCallMock />
+          </div>
         </div>
       </Shell>
     </section>
@@ -86,7 +91,7 @@ function ToolCallMock() {
           {t('planning')}
         </p>
 
-        <div className="border-l-2 border-[var(--landing-accent-cyan)] bg-[var(--landing-bg-surface)] py-2 pl-3 pr-2">
+        <div className="border-s-2 border-[var(--landing-accent-cyan)] bg-[var(--landing-bg-surface)] py-2 pe-2 ps-3">
           <p className="text-[var(--landing-text-muted)]">
             <span className="text-[var(--landing-accent-cyan)]">→ {t('call')}</span> search_issues
           </p>
@@ -95,7 +100,7 @@ function ToolCallMock() {
           </pre>
         </div>
 
-        <div className="border-l-2 border-[var(--landing-accent-emerald)] bg-[var(--landing-bg-surface)] py-2 pl-3 pr-2">
+        <div className="border-s-2 border-[var(--landing-accent-emerald)] bg-[var(--landing-bg-surface)] py-2 pe-2 ps-3">
           <p className="text-[var(--landing-text-muted)]">
             <span className="text-[var(--landing-accent-emerald)]">← {t('result')}</span>{' '}
             {t('issueCount')}
@@ -112,7 +117,7 @@ function ToolCallMock() {
           </div>
         </div>
 
-        <div className="border-l-2 border-[var(--landing-accent-cyan)] bg-[var(--landing-bg-surface)] py-2 pl-3 pr-2">
+        <div className="border-s-2 border-[var(--landing-accent-cyan)] bg-[var(--landing-bg-surface)] py-2 pe-2 ps-3">
           <p className="text-[var(--landing-text-muted)]">
             <span className="text-[var(--landing-accent-cyan)]">→ {t('call')}</span> update_issue
           </p>

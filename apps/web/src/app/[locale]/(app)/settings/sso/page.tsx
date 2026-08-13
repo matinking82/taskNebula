@@ -11,6 +11,8 @@ import { and, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { requirePermission } from '@/lib/auth/permissions';
 import { SsoSettingsClient } from '@/components/settings/sso-settings-client';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 
 export async function generateMetadata() {
   const t = await getTranslations('pagesSettings');
@@ -37,12 +39,9 @@ export default async function SsoSettingsPage() {
   const t = await getTranslations('pagesSettings');
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('sso.title')}</h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">{t('sso.subtitle')}</p>
-      </header>
+    <PageFrame contentClassName="max-w-5xl">
+      <PageHeader title={t('sso.title')} description={t('sso.subtitle')} />
       <SsoSettingsClient organizationId={primaryOrg.organizationId} />
-    </div>
+    </PageFrame>
   );
 }

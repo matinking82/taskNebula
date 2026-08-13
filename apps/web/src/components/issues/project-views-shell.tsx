@@ -472,7 +472,11 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
     const seen = new Set<string>();
 
     // Triage group sits at the top for any issue without a workflow status mapping.
-    orderedStatuses.push({ id: TRIAGE_GROUP_ID, name: t('shell.triage'), color: '#94a3b8' });
+    orderedStatuses.push({
+      id: TRIAGE_GROUP_ID,
+      name: t('shell.triage'),
+      color: 'hsl(var(--muted-foreground))',
+    });
     seen.add(TRIAGE_GROUP_ID);
 
     for (const status of workflowStatuses) {
@@ -541,17 +545,17 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
         className="bg-background flex h-full flex-col"
       >
         <h1 className="sr-only">{t('shell.views')}</h1>
-        <div className="border-border bg-background shrink-0 border-b px-4 py-1.5">
+        <div className="border-border bg-background shrink-0 border-b px-3 py-1.5 sm:px-4">
           {/* Compact toolbar: view-mode icons + filters + actions (icon-only) */}
           <div className="flex flex-wrap items-center gap-2">
-            <TabsList className="bg-muted/30 flex h-7 shrink-0 items-center gap-0.5 rounded-md p-0.5">
+            <TabsList className="bg-muted/30 flex h-10 shrink-0 items-center gap-0.5 rounded-md p-0.5 sm:h-8">
               {/* Icon-only on mobile/tablet (compact squares); icon + label on
                   desktop (lg+). aria-label keeps the icon-only state accessible. */}
               <TabsTrigger
                 value="list"
                 aria-label={t('shell.view_list')}
                 className={cn(
-                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  'inline-flex h-9 w-9 items-center justify-center gap-1.5 rounded-sm px-0 sm:h-7 sm:w-7 lg:w-auto lg:px-2',
                   activeViewType === 'list' && 'bg-card shadow-xs'
                 )}
               >
@@ -562,7 +566,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                 value="board"
                 aria-label={t('shell.view_board')}
                 className={cn(
-                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  'inline-flex h-9 w-9 items-center justify-center gap-1.5 rounded-sm px-0 sm:h-7 sm:w-7 lg:w-auto lg:px-2',
                   activeViewType === 'board' && 'bg-card shadow-xs'
                 )}
               >
@@ -575,7 +579,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                 value="timeline"
                 aria-label={t('shell.view_timeline')}
                 className={cn(
-                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  'inline-flex h-9 w-9 items-center justify-center gap-1.5 rounded-sm px-0 sm:h-7 sm:w-7 lg:w-auto lg:px-2',
                   activeViewType === 'timeline' && 'bg-card shadow-xs'
                 )}
               >
@@ -588,7 +592,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                 value="calendar"
                 aria-label={t('shell.view_calendar')}
                 className={cn(
-                  'inline-flex h-6 w-6 items-center justify-center gap-1.5 rounded-sm px-0 lg:w-auto lg:px-2',
+                  'inline-flex h-9 w-9 items-center justify-center gap-1.5 rounded-sm px-0 sm:h-7 sm:w-7 lg:w-auto lg:px-2',
                   activeViewType === 'calendar' && 'bg-card shadow-xs'
                 )}
               >
@@ -610,14 +614,14 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
               />
             </div>
 
-            <div className="ml-auto flex items-center gap-1 sm:ml-0">
+            <div className="ms-auto flex items-center gap-1 sm:ms-0">
               <Button
                 variant="ghost"
                 size="icon"
                 aria-label={t('shell.save_view')}
                 title={t('shell.save_view')}
                 onClick={() => setSaveViewOpen(true)}
-                className="h-7 w-7"
+                className="h-10 w-10 sm:h-8 sm:w-8"
               >
                 <Save className="h-4 w-4" />
               </Button>
@@ -627,7 +631,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                 aria-label={t('shell.new_issue')}
                 title={t('shell.new_issue')}
                 onClick={() => setCreateIssueOpen(true)}
-                className="h-7 w-7"
+                className="h-10 w-10 sm:h-8 sm:w-8"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -645,7 +649,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                     <div
                       key={view.id}
                       className={cn(
-                        'ease-snap inline-flex items-center gap-1 rounded-md border pr-1 text-xs transition-colors duration-150',
+                        'ease-snap inline-flex min-h-9 items-center gap-1 rounded-md border pe-1 text-xs transition-colors duration-150',
                         activeViewType === view.viewType
                           ? 'border-primary/20 bg-primary/10 text-primary'
                           : 'border-border text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -653,7 +657,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                     >
                       <button
                         onClick={() => applyView(view)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1"
+                        className="inline-flex min-h-9 items-center gap-1.5 px-2.5 py-1"
                       >
                         <span>{view.name}</span>
                         {view.isStarred ? <Star className="h-3 w-3 fill-current" /> : null}
@@ -667,7 +671,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 rounded-sm"
+                              className="h-9 w-9 rounded-sm sm:h-8 sm:w-8"
                               aria-label={t('shell.manage_view', { name: view.name })}
                             >
                               <MoreHorizontal className="h-3 w-3" />
@@ -675,11 +679,11 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => void handleTogglePinned(view)}>
-                              <Star className="mr-2 h-3.5 w-3.5" />
+                              <Star className="me-2 h-3.5 w-3.5" />
                               {view.isStarred ? t('shell.unpin_view') : t('shell.pin_view')}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => void handleToggleDefault(view)}>
-                              <Target className="mr-2 h-3.5 w-3.5" />
+                              <Target className="me-2 h-3.5 w-3.5" />
                               {view.isDefault
                                 ? t('shell.clear_default')
                                 : t('shell.set_as_default')}
@@ -689,7 +693,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                               onClick={() => void handleDeleteView(view)}
                               className="text-destructive focus:text-destructive"
                             >
-                              <Trash2 className="mr-2 h-3.5 w-3.5" />
+                              <Trash2 className="me-2 h-3.5 w-3.5" />
                               {t('shell.delete_view')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -710,8 +714,8 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
         </div>
 
         <TabsContent value="list" className="mt-0 min-h-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-auto px-5 py-4">
-            <div className="border-border bg-card animate-fade-up overflow-hidden rounded-lg border">
+          <div className="h-full overflow-auto px-0 py-3 sm:px-4 lg:px-5 lg:py-4">
+            <div className="border-border bg-card animate-fade-up overflow-hidden border-y sm:rounded-lg sm:border">
               {isLoading ? (
                 <div className="text-muted-foreground px-4 py-8 text-sm">
                   {t('shell.loading_issues')}
@@ -720,7 +724,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                 <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
                   <p className="text-muted-foreground text-sm">{t('shell.no_issues_match')}</p>
                   <Button size="sm" onClick={() => setCreateIssueOpen(true)}>
-                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    <Plus className="me-1.5 h-3.5 w-3.5" />
                     {t('shell.new_issue_button')}
                   </Button>
                 </div>
@@ -728,7 +732,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                 <div className="stagger">
                   {groupedListIssues.map((group) => {
                     const isCollapsed = !!collapsedGroups[group.status.id];
-                    const groupColor = group.status.color || '#94a3b8';
+                    const groupColor = group.status.color || 'hsl(var(--muted-foreground))';
 
                     return (
                       <section
@@ -739,13 +743,13 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                           type="button"
                           onClick={() => toggleGroup(group.status.id)}
                           className={cn(
-                            'border-border/60 bg-background sticky top-0 z-10 flex w-full items-center gap-2 border-b px-4 py-2 text-left',
+                            'border-border/60 bg-surface sticky top-0 z-10 flex min-h-10 w-full items-center gap-2 border-b px-3 py-1.5 text-start sm:px-4',
                             'hover:bg-accent/40 ease-snap transition-colors duration-150'
                           )}
                           aria-expanded={!isCollapsed}
                         >
                           {isCollapsed ? (
-                            <ChevronRight className="text-muted-foreground h-3.5 w-3.5" />
+                            <ChevronRight className="text-muted-foreground h-3.5 w-3.5 rtl:rotate-180" />
                           ) : (
                             <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
                           )}
@@ -790,13 +794,13 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                                     <span
                                       aria-hidden="true"
                                       className={cn(
-                                        'priority-indicator absolute bottom-0 left-0 top-0 h-full',
+                                        'priority-indicator absolute inset-y-0 start-0 h-full',
                                         `priority-${priorityKey}`
                                       )}
                                     />
                                     <button
                                       onClick={() => setSelectedIssueId(issue.id)}
-                                      className="ease-snap hover:bg-accent/50 group flex h-9 w-full items-center gap-3 rounded-md pl-4 pr-4 text-left transition-colors duration-150"
+                                      className="ease-snap hover:bg-accent/50 focus-visible:ring-ring group flex min-h-10 w-full items-center gap-2.5 px-3 ps-4 text-start outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset sm:px-4 sm:ps-4"
                                     >
                                       <span
                                         aria-hidden="true"
@@ -813,19 +817,19 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                                         {issue.title}
                                       </span>
 
-                                      <span className="ml-auto flex shrink-0 items-center gap-2">
+                                      <span className="ms-auto flex shrink-0 items-center gap-2">
                                         {labels.length > 0 ? (
                                           <span className="hidden items-center gap-1 md:flex">
                                             {labels.slice(0, 2).map((label) => (
                                               <span
                                                 key={label}
-                                                className="bg-muted/50 text-muted-foreground rounded-full px-2 py-0.5 text-xs"
+                                                className="bg-muted/50 text-muted-foreground rounded-sm px-1.5 py-0.5 text-[11px]"
                                               >
                                                 {label}
                                               </span>
                                             ))}
                                             {labels.length > 2 ? (
-                                              <span className="bg-muted/50 text-muted-foreground rounded-full px-2 py-0.5 text-xs">
+                                              <span className="bg-muted/50 text-muted-foreground rounded-sm px-1.5 py-0.5 text-[11px]">
                                                 +{labels.length - 2}
                                               </span>
                                             ) : null}
@@ -843,15 +847,15 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                                           aria-hidden="true"
                                           className={cn(
                                             'h-2 w-2 rounded-full',
-                                            priorityKey === 'critical' && 'bg-rose-500',
-                                            priorityKey === 'high' && 'bg-orange-500',
-                                            priorityKey === 'medium' && 'bg-amber-400',
+                                            priorityKey === 'critical' && 'bg-destructive',
+                                            priorityKey === 'high' && 'bg-accent-rose',
+                                            priorityKey === 'medium' && 'bg-accent-amber',
                                             priorityKey === 'low' && 'bg-muted-foreground/40'
                                           )}
-                                          title={t('shell.priority_tooltip', {
-                                            priority: priorityKey,
-                                          })}
                                         />
+                                        <span className="sr-only">
+                                          {t('shell.priority_tooltip', { priority: priorityKey })}
+                                        </span>
 
                                         {assignees.length > 0 ? (
                                           <AvatarStack max={3} size="xs">
@@ -890,11 +894,11 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
         </TabsContent>
 
         <TabsContent value="board" className="mt-0 min-h-0 flex-1 overflow-hidden">
-          <KanbanBoard projectId={projectId} filters={filters} />
+          <KanbanBoard projectId={projectId} filters={filters} ariaLabel={t('shell.view_board')} />
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-0 min-h-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-auto px-5 py-4">
+          <div className="h-full overflow-auto px-3 py-3 sm:px-5 sm:py-4">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
               <div className="animate-fade-up space-y-3">
                 <span className="kicker">{t('shell.scheduled')}</span>
@@ -916,13 +920,13 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                             <span
                               aria-hidden="true"
                               className={cn(
-                                'priority-indicator absolute bottom-0 left-0 top-0 h-full',
+                                'priority-indicator absolute inset-y-0 start-0 h-full',
                                 `priority-${priorityKey}`
                               )}
                             />
                             <button
                               onClick={() => setSelectedIssueId(issue.id)}
-                              className="row-interactive flex w-full items-center justify-between gap-4 rounded-md py-2.5 pl-4 pr-4 text-left"
+                              className="row-interactive flex w-full items-center justify-between gap-4 rounded-md px-4 py-2.5 text-start"
                             >
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-medium">{issue.title}</p>
@@ -963,7 +967,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                         <li key={issue.id}>
                           <button
                             onClick={() => setSelectedIssueId(issue.id)}
-                            className="row-interactive flex w-full items-center justify-between gap-3 rounded-md px-4 py-2.5 text-left"
+                            className="row-interactive flex w-full items-center justify-between gap-3 rounded-md px-4 py-2.5 text-start"
                           >
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium">{issue.title}</p>
@@ -981,8 +985,13 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-0 min-h-0 flex-1 overflow-hidden">
-          <div className="h-full overflow-auto px-5 py-4">
-            <div className="border-border bg-card animate-fade-up overflow-hidden rounded-lg border">
+          <div
+            className="custom-scrollbar focus-visible:ring-ring h-full overflow-auto px-0 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset sm:px-5 sm:py-4"
+            role="region"
+            aria-label={t('shell.view_calendar')}
+            tabIndex={0}
+          >
+            <div className="border-border bg-card animate-fade-up min-w-[44rem] overflow-hidden border-y sm:rounded-lg sm:border">
               <div className="border-border flex items-center justify-between border-b px-4 py-3">
                 <h2 className="text-sm font-semibold">
                   {formatter.dateTime(calendarMonth, {
@@ -998,7 +1007,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                     onClick={() => setCalendarMonth((value) => subMonths(value, 1))}
                     aria-label={t('shell.previous_month')}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -1007,7 +1016,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                     onClick={() => setCalendarMonth((value) => addMonths(value, 1))}
                     aria-label={t('shell.next_month')}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4 rtl:rotate-180" />
                   </Button>
                 </div>
               </div>
@@ -1032,7 +1041,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                     <div
                       key={key}
                       className={cn(
-                        'border-border/60 min-h-32 border-b border-r px-2 py-2 last:border-r-0',
+                        'border-border/60 min-h-32 border-b border-e px-2 py-2 last:border-e-0',
                         !isSameMonth(day, calendarMonth) && 'bg-muted/30 text-muted-foreground/60'
                       )}
                     >
@@ -1056,7 +1065,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
                           <button
                             key={issue.id}
                             onClick={() => setSelectedIssueId(issue.id)}
-                            className="ease-snap hover:bg-accent/60 w-full rounded-sm px-1.5 py-0.5 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
+                            className="ease-snap hover:bg-accent/60 w-full rounded-sm px-1.5 py-0.5 text-start transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                           >
                             <p className="truncate text-[11px] font-medium">{issue.title}</p>
                             <p className="text-muted-foreground truncate font-mono text-[10px]">

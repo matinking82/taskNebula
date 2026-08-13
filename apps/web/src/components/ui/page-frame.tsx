@@ -11,14 +11,14 @@ export function PageFrame({ children, className, contentClassName }: PageFramePr
   return (
     <div
       className={cn(
-        'bg-background flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
+        'bg-workbench-canvas flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
         className
       )}
     >
       <div className="custom-scrollbar min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div
           className={cn(
-            'mx-auto w-full min-w-0 max-w-[1520px] space-y-4 p-3 sm:p-4 lg:p-5',
+            'mx-auto w-full min-w-0 max-w-[1600px] space-y-5 p-3.5 sm:p-4 lg:p-5 xl:p-6',
             contentClassName
           )}
         >

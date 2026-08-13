@@ -57,7 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 {t('skipToContent')}
               </a>
               <div
-                className="app-square-ui bg-surface text-foreground flex h-dvh overflow-hidden"
+                className="app-workbench text-foreground flex h-dvh overflow-hidden"
                 style={appCarbonStyle}
               >
                 <div className="hidden md:flex">
@@ -67,21 +67,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   />
                 </div>
 
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  {/* Rendered async; returns null when the user is verified. */}
-                  <EmailVerificationBanner />
-                  <div className="hidden md:block">
-                    <AppHeader hasWorkspaceAccess={hasWorkspaceAccess} />
-                  </div>
-                  {isSuperAdminUser ? <GlobalVersionUpdateBanner /> : null}
+                <div className="flex min-w-0 flex-1 overflow-hidden md:py-2 md:pe-2">
+                  <div className="workbench-canvas flex min-w-0 flex-1 flex-col overflow-hidden border-0 md:rounded-lg md:border">
+                    {/* Rendered async; returns null when the user is verified. */}
+                    <EmailVerificationBanner />
+                    <div className="hidden md:block">
+                      <AppHeader hasWorkspaceAccess={hasWorkspaceAccess} />
+                    </div>
+                    {isSuperAdminUser ? <GlobalVersionUpdateBanner /> : null}
 
-                  <main
-                    id="main-content"
-                    tabIndex={-1}
-                    className="flex-1 overflow-auto pb-16 focus:outline-none md:pb-0"
-                  >
-                    <RouteTransition>{children}</RouteTransition>
-                  </main>
+                    <main
+                      id="main-content"
+                      tabIndex={-1}
+                      className="bg-background min-w-0 flex-1 overflow-auto pb-16 focus:outline-none md:pb-0"
+                    >
+                      <RouteTransition>{children}</RouteTransition>
+                    </main>
+                  </div>
                 </div>
                 <MobileNav hasWorkspaceAccess={hasWorkspaceAccess} />
               </div>

@@ -6,6 +6,7 @@ import type { IntakeFieldDefinition } from '@tasknebula/db';
 import { getTranslations } from 'next-intl/server';
 import { IntakeFormEditor } from '@/components/intake/intake-form-editor';
 import { hasPermission } from '@/lib/auth/permissions';
+import { PageFrame } from '@/components/ui/page-frame';
 
 export async function generateMetadata() {
   const t = await getTranslations('pagesSettings');
@@ -40,7 +41,7 @@ export default async function EditIntakeFormPage({ params }: { params: Promise<{
     .limit(50);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8 lg:px-8">
+    <PageFrame contentClassName="max-w-4xl">
       <IntakeFormEditor
         form={{
           id: form.id,
@@ -57,6 +58,6 @@ export default async function EditIntakeFormPage({ params }: { params: Promise<{
           createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : String(s.createdAt),
         }))}
       />
-    </div>
+    </PageFrame>
   );
 }

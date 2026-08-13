@@ -84,10 +84,7 @@ export function StandupWidget() {
   const hasBlockers = !!(data?.blockersMd && data.blockersMd.trim().length > 0);
 
   return (
-    <div
-      className="surface-card animate-fade-up flex flex-col gap-3 p-4"
-      data-testid="standup-widget"
-    >
+    <div className="surface-card flex flex-col gap-3 p-4" data-testid="standup-widget">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-2">
           <Sparkles className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />
@@ -102,7 +99,7 @@ export function StandupWidget() {
               className="h-7 min-w-0 flex-1 px-2 text-xs sm:flex-none"
               data-testid="standup-copy"
             >
-              {copied ? <Check className="mr-1 h-3 w-3" /> : <Copy className="mr-1 h-3 w-3" />}
+              {copied ? <Check className="me-1 h-3 w-3" /> : <Copy className="me-1 h-3 w-3" />}
               {copied ? t('standup.copied') : t('standup.copy_to_slack')}
             </Button>
           )}
@@ -115,9 +112,9 @@ export function StandupWidget() {
             data-testid="standup-refresh"
           >
             {previewMutation.isPending ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              <Loader2 className="me-1 h-3 w-3 animate-spin" />
             ) : (
-              <Sparkles className="mr-1 h-3 w-3" />
+              <Sparkles className="me-1 h-3 w-3" />
             )}
             {data ? t('standup.refresh') : t('standup.generate')}
           </Button>
@@ -126,7 +123,7 @@ export function StandupWidget() {
 
       {isLoading ? (
         <div className="text-muted-foreground flex items-center text-xs">
-          <Loader2 className="mr-2 h-3 w-3 animate-spin" /> {t('standup.loading')}
+          <Loader2 className="me-2 h-3 w-3 animate-spin" /> {t('standup.loading')}
         </div>
       ) : data ? (
         <div className="flex flex-col gap-2">

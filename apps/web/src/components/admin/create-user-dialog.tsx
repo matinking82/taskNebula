@@ -80,7 +80,7 @@ export function CreateUserDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="mr-1.5 h-4 w-4" />
+          <Plus className="me-1.5 h-4 w-4" />
           {t('createUser.trigger')}
         </Button>
       </DialogTrigger>
@@ -137,7 +137,7 @@ export function CreateUserDialog() {
               {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={createUserMutation.isPending}>
-              {createUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {createUserMutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('createUser.submit')}
             </Button>
           </DialogFooter>

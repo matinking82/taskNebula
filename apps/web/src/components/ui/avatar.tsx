@@ -114,7 +114,7 @@ const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
             size: element.props.size ?? size,
             className: cn(
               'ring-2 ring-background',
-              index > 0 && '-ml-1.5',
+              index > 0 && '-ms-1.5',
               element.props.className
             ),
           });
@@ -123,7 +123,7 @@ const AvatarStack = React.forwardRef<HTMLDivElement, AvatarStackProps>(
           <div
             className={cn(
               avatarVariants({ size }),
-              'ring-background bg-muted text-muted-foreground -ml-1.5 flex items-center justify-center font-medium ring-2'
+              'ring-background bg-muted text-muted-foreground -ms-1.5 flex items-center justify-center font-medium ring-2'
             )}
             aria-label={t('avatarOverflow', { count: overflow })}
           >

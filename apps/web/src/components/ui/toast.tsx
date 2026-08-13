@@ -15,7 +15,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      'fixed bottom-0 right-0 z-[100] flex max-h-screen w-full flex-col gap-2 p-4 sm:flex-col md:max-w-[380px]',
+      'fixed bottom-0 end-0 z-[100] flex max-h-screen w-full flex-col gap-2 p-4 sm:flex-col md:max-w-[380px]',
       className
     )}
     {...props}
@@ -26,9 +26,9 @@ ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 const toastVariants = cva(
   [
     // Compact, opaque feedback surface with one semantic state marker.
-    'group pointer-events-auto relative flex w-full max-w-[380px] items-start gap-3 overflow-hidden rounded-lg border border-border/70 p-4 pr-10 pl-5',
+    'group pointer-events-auto relative flex w-full max-w-[380px] items-start gap-3 overflow-hidden rounded-lg border border-border/70 p-4 pe-10 ps-5',
     'bg-popover text-popover-foreground shadow-md',
-    "before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-[var(--toast-stripe)] before:content-['']",
+    "before:pointer-events-none before:absolute before:inset-y-0 before:start-0 before:w-[3px] before:bg-[var(--toast-stripe)] before:content-['']",
     // motion
     'transition-[opacity,transform] duration-200 ease-snap',
     'data-[swipe=cancel]:translate-x-0',
@@ -36,9 +36,9 @@ const toastVariants = cva(
     'data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)]',
     'data-[swipe=move]:transition-none',
     // enter: slide from right + fade/scale in
-    'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-right-6 data-[state=open]:zoom-in-95',
+    'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-right-6 data-[state=open]:zoom-in-95 rtl:data-[state=open]:slide-in-from-left-6',
     // exit: fade + scale + slide
-    'data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-right-full',
+    'data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-right-full rtl:data-[state=closed]:slide-out-to-left-full',
     'data-[swipe=end]:animate-out',
   ].join(' '),
   {
@@ -126,7 +126,7 @@ const ToastClose = React.forwardRef<
     <ToastPrimitives.Close
       ref={ref}
       className={cn(
-        'text-muted-foreground absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-[color,background-color,opacity] duration-150',
+        'text-muted-foreground absolute end-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-[color,background-color,opacity] duration-150',
         'hover:bg-muted/60 hover:text-foreground',
         'focus-visible:ring-accent-indigo focus-visible:ring-offset-background focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
         'group-hover:opacity-100',

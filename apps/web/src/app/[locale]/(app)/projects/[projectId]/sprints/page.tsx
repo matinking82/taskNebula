@@ -48,21 +48,21 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
       case 'active':
         return (
           <Badge className="bg-accent-emerald/10 text-accent-emerald border-accent-emerald/20 hover:bg-accent-emerald/20 rounded-sm">
-            <span className="status-dot status-live mr-1.5" />
+            <span className="status-dot status-live me-1.5" />
             {t('statusActive')}
           </Badge>
         );
       case 'completed':
         return (
           <Badge className="bg-accent-blue/10 text-accent-blue border-accent-blue/20 rounded-sm">
-            <CheckCircle2 className="mr-1 h-3 w-3" />
+            <CheckCircle2 className="me-1 h-3 w-3" />
             {t('statusCompleted')}
           </Badge>
         );
       default:
         return (
           <Badge variant="outline" className="text-muted-foreground rounded-sm">
-            <Calendar className="mr-1 h-3 w-3" />
+            <Calendar className="me-1 h-3 w-3" />
             {t('statusPlanned')}
           </Badge>
         );
@@ -106,7 +106,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
             permissions.canManageSprints ? (
               <Button
                 size="sm"
-                className="h-8 w-full gap-1.5 text-xs sm:w-auto"
+                className="h-10 w-full gap-1.5 text-xs sm:h-8 sm:w-auto"
                 onClick={() => setIsCreateModalOpen(true)}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -118,7 +118,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
 
         {/* Sprint List */}
         {sprints && sprints.length > 0 ? (
-          <div className="stagger space-y-3">
+          <div className="border-border bg-card stagger divide-border divide-y overflow-hidden rounded-lg border">
             {sprints.map((sprint) => {
               const startDate = new Date(sprint.startDate);
               const endDate = new Date(sprint.endDate);
@@ -145,21 +145,21 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
                     : 0;
 
               return (
-                <div
+                <article
                   key={sprint.id}
                   className={cn(
-                    'surface-card surface-card-hover ease-snap group rounded-lg transition-[border-color,background-color] duration-150',
-                    sprint.status === 'active' && 'border-accent-emerald/20'
+                    'ease-snap hover:bg-accent/30 group transition-colors duration-150',
+                    sprint.status === 'active' && 'bg-accent-emerald/[0.03]'
                   )}
                 >
-                  <div className="p-4 sm:p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       {/* Left */}
                       <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex items-center gap-2.5">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
                           <Link
                             href={`/projects/${projectId}/sprints/${sprint.id}`}
-                            className="hover:text-primary text-base font-semibold transition-colors"
+                            className="hover:text-primary focus-visible:ring-ring rounded-sm text-sm font-semibold outline-none transition-colors focus-visible:ring-2 sm:text-base"
                           >
                             {sprint.name}
                           </Link>
@@ -167,7 +167,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
                         </div>
 
                         {sprint.goal && (
-                          <p className="text-muted-foreground mb-3 flex items-start gap-1.5 text-sm">
+                          <p className="text-muted-foreground mb-2 flex items-start gap-1.5 text-sm">
                             <Target className="text-muted-foreground/50 mt-0.5 h-3.5 w-3.5 shrink-0" />
                             {sprint.goal}
                           </p>
@@ -202,7 +202,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
                         </div>
 
                         {sprint.status === 'active' && (
-                          <div className="mt-3 flex items-center gap-3">
+                          <div className="mt-2.5 flex items-center gap-3">
                             <div className="bg-primary/10 h-1.5 flex-1 overflow-hidden rounded-sm">
                               <div
                                 className="bg-primary ease-snap h-full rounded-sm transition-[width] duration-150"
@@ -218,7 +218,12 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
 
                       {/* Right actions */}
                       <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
-                        <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          className="h-10 gap-1.5 text-xs sm:h-8"
+                        >
                           <Link href={`/projects/${projectId}/sprints/${sprint.id}`}>
                             {t('view')}
                             <ArrowRight className="h-3 w-3" />
@@ -228,7 +233,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:text-destructive h-8 w-8 opacity-100 transition-opacity focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                            className="text-muted-foreground hover:text-destructive h-10 w-10 opacity-100 transition-opacity focus-visible:opacity-100 sm:h-8 sm:w-8 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
                             aria-label={tActions('delete')}
                             onClick={() => handleDeleteSprint(sprint.id)}
                             disabled={deleteSprint.isPending}
@@ -239,7 +244,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
                       </div>
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
@@ -251,7 +256,7 @@ export default function SprintsPage({ params }: { params: Promise<{ projectId: s
             </p>
             {permissions.canManageSprints && (
               <Button size="sm" variant="outline" onClick={() => setIsCreateModalOpen(true)}>
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                <Plus className="me-1.5 h-3.5 w-3.5" />
                 {t('createSprint')}
               </Button>
             )}

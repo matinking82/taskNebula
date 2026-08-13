@@ -83,9 +83,9 @@ export function AppRail({
     <TooltipProvider delayDuration={150}>
       <nav
         aria-label={tLayout('workspaceRail')}
-        className="bg-surface-dark border-border-strong flex h-screen w-14 shrink-0 flex-col items-center border-r py-2 text-white"
+        className="workbench-rail flex h-dvh w-[52px] shrink-0 flex-col items-center border-e border-white/10 py-2"
       >
-        <ul className="flex flex-1 flex-col items-center gap-1">
+        <ul className="flex flex-1 flex-col items-center gap-1.5">
           {visibleRailItems.map((item) => {
             const label = tNav(item.key);
             const isActive =
@@ -110,24 +110,28 @@ export function AppRail({
                       aria-label={showInboxBadge ? `${label} · ${unreadLabel}` : label}
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'ease-snap group relative mx-auto flex h-[50px] w-12 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 text-white/60 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:bg-white/10 hover:text-white',
+                        'ease-snap text-rail-foreground group relative mx-auto flex h-10 w-10 items-center justify-center rounded-md transition-[color,background-color,border-color,box-shadow,opacity] duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45',
                         isActive &&
-                          'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-none'
+                          'bg-white/[0.11] text-white hover:bg-white/[0.14] hover:text-white'
                       )}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
+                      {isActive ? (
+                        <span
+                          aria-hidden="true"
+                          className="bg-primary absolute inset-y-2 start-[-6px] w-0.5 rounded-e-sm"
+                        />
+                      ) : null}
+                      <Icon className="h-[18px] w-[18px] shrink-0" />
                       {showInboxBadge && (
                         <span
                           aria-hidden="true"
                           data-testid="inbox-unread-badge"
-                          className="bg-primary text-primary-foreground absolute right-1 top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-semibold ring-1 ring-white/20"
+                          className="bg-primary text-primary-foreground absolute end-0.5 top-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-semibold ring-1 ring-white/20"
                         >
                           {unreadInboxCount > 9 ? '9+' : unreadInboxCount}
                         </span>
                       )}
-                      <span className="group-data-[active=true]:text-primary-foreground/90 line-clamp-2 h-5 w-full break-normal text-center text-[9px] leading-[10px] text-white/60 group-hover:text-white">
-                        {label}
-                      </span>
+                      <span className="sr-only">{label}</span>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -149,15 +153,19 @@ export function AppRail({
                   data-active={normalizedPathname.startsWith('/admin') ? 'true' : undefined}
                   aria-label={tNav('admin')}
                   className={cn(
-                    'ease-snap group mx-auto flex h-[50px] w-12 flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 text-white/60 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:bg-white/10 hover:text-white',
+                    'ease-snap text-rail-foreground group relative mx-auto flex h-10 w-10 items-center justify-center rounded-md transition-[color,background-color,border-color,box-shadow,opacity] duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45',
                     normalizedPathname.startsWith('/admin') &&
-                      'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-none'
+                      'bg-white/[0.11] text-white hover:bg-white/[0.14] hover:text-white'
                   )}
                 >
-                  <Shield className="h-4 w-4 shrink-0" />
-                  <span className="group-data-[active=true]:text-primary-foreground/90 line-clamp-2 h-5 w-full break-normal text-center text-[9px] leading-[10px] text-white/60 group-hover:text-white">
-                    {tNav('admin')}
-                  </span>
+                  {normalizedPathname.startsWith('/admin') ? (
+                    <span
+                      aria-hidden="true"
+                      className="bg-primary absolute inset-y-2 start-[-6px] w-0.5 rounded-e-sm"
+                    />
+                  ) : null}
+                  <Shield className="h-[18px] w-[18px] shrink-0" />
+                  <span className="sr-only">{tNav('admin')}</span>
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right">{tNav('admin')}</TooltipContent>
@@ -167,8 +175,8 @@ export function AppRail({
           <UserProfileDropdown
             side="right"
             align="end"
-            triggerClassName="group mx-auto h-9 w-9 rounded-full border-0 bg-transparent p-0 text-white ring-0 hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-0"
-            avatarClassName="h-9 w-9 rounded-full ring-1 ring-white/20 transition-colors duration-150 group-hover:ring-white/45"
+            triggerClassName="group mx-auto h-8 w-8 rounded-full border-0 bg-transparent p-0 text-white ring-0 hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-0"
+            avatarClassName="h-8 w-8 rounded-full ring-1 ring-white/20 transition-colors duration-150 group-hover:ring-white/45"
             fallbackClassName="rounded-full bg-white/10 text-[11px] font-semibold text-white/90 ring-0 group-hover:bg-white/15 group-hover:text-white"
           />
         </div>

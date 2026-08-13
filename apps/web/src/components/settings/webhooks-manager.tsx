@@ -275,7 +275,7 @@ export function WebhooksManager({ organizationId, projectId }: WebhooksManagerPr
   }
 
   return (
-    <section className="animate-fade-up space-y-4">
+    <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <span className="kicker">{t('webhooks.kicker')}</span>
@@ -289,7 +289,7 @@ export function WebhooksManager({ organizationId, projectId }: WebhooksManagerPr
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" onClick={openCreateDialog}>
-              <Plus className="mr-1.5 h-4 w-4" />
+              <Plus className="me-1.5 h-4 w-4" />
               {t('webhooks.create_webhook')}
             </Button>
           </DialogTrigger>
@@ -431,7 +431,7 @@ export function WebhooksManager({ organizationId, projectId }: WebhooksManagerPr
                   disabled={testingId === webhook.id}
                   aria-label={t('webhooks.send_test_aria')}
                 >
-                  <Send className="mr-1.5 h-3.5 w-3.5" />
+                  <Send className="me-1.5 h-3.5 w-3.5" />
                   {testingId === webhook.id ? t('webhooks.sending') : t('webhooks.send_test')}
                 </Button>
                 <Button

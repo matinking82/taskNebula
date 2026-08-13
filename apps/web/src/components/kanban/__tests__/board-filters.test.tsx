@@ -58,6 +58,24 @@ describe('BoardFiltersBar', () => {
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
+  it('reports each priority toggle state to assistive technology', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <BoardFiltersBar
+        filters={baseFilters({ priority: ['high'] })}
+        onFiltersChange={jest.fn()}
+        issueCount={5}
+        filteredCount={2}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Filter(?: \d+)?$/i }));
+
+    expect(screen.getByRole('button', { name: 'High' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Low' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('clears all filters when Clear text button is clicked', async () => {
     const user = userEvent.setup();
     const onChange = jest.fn();

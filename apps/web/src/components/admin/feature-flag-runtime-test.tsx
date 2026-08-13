@@ -77,7 +77,7 @@ export function FeatureFlagRuntimeTest({ defaultKey = '' }: FeatureFlagRuntimeTe
       }}
     >
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Zap className="mr-1.5 h-4 w-4" />
+        <Zap className="me-1.5 h-4 w-4" />
         {t('flagTest.runtimeTest')}
       </Button>
       <DialogContent className="max-w-md">

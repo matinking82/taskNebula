@@ -74,7 +74,7 @@ export function VersionUpdateBanner({
   return (
     <div
       className={cn(
-        'panel-warn animate-fade-up flex flex-wrap items-center gap-3 px-4 py-3',
+        'panel-warn animate-alert-in flex flex-wrap items-center gap-3 px-4 py-3',
         className
       )}
     >

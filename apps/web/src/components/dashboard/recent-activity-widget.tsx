@@ -122,7 +122,7 @@ export function RecentActivityWidget() {
         </h2>
         <Link
           href="/activity"
-          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors duration-150"
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           {tActions('view_all')}
           <ArrowUpRight className="h-3 w-3" />
@@ -156,7 +156,10 @@ export function RecentActivityWidget() {
                           {t(`activity.verbs.${item.verbKey}`)}
                         </span>{' '}
                         {item.href ? (
-                          <Link href={item.href} className="font-mono text-xs hover:underline">
+                          <Link
+                            href={item.href}
+                            className="focus-visible:ring-ring rounded-sm font-mono text-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                          >
                             {target}
                           </Link>
                         ) : (

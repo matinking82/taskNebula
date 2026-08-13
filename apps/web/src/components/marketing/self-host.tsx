@@ -15,9 +15,9 @@ export function SelfHost() {
 
   return (
     <section id="self-host" className="border-t border-[var(--landing-border)]">
-      <Shell className="py-20 sm:py-24">
-        <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr] lg:items-start">
-          <div>
+      <Shell className="py-16 sm:py-20 lg:py-24">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.78fr)_minmax(28rem,1.22fr)] lg:items-start lg:gap-0">
+          <div className="lg:pe-12">
             <SectionHeader
               kicker={t('kicker')}
               kickerAccentVar="var(--landing-accent-cyan)"
@@ -42,7 +42,7 @@ export function SelfHost() {
             </ul>
           </div>
 
-          <div className="landing-terminal overflow-hidden">
+          <div className="landing-terminal overflow-hidden lg:ms-12">
             <div className="flex items-center justify-between gap-3 border-b border-[var(--landing-border)] px-4 py-3">
               <span className="font-mono text-[11px] text-[var(--landing-text-subtle)]">
                 {t('terminalTitle')}

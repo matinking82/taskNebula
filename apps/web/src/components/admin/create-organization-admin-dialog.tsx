@@ -111,7 +111,7 @@ export function CreateOrganizationAdminDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="mr-1.5 h-4 w-4" />
+          <Plus className="me-1.5 h-4 w-4" />
           {t('createOrg.trigger')}
         </Button>
       </DialogTrigger>
@@ -191,7 +191,7 @@ export function CreateOrganizationAdminDialog() {
               {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={createOrgMutation.isPending}>
-              {createOrgMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {createOrgMutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('createOrg.submit')}
             </Button>
           </DialogFooter>

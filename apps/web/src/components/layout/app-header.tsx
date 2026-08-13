@@ -15,9 +15,9 @@ export function AppHeader({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
   const { open: openPalette } = useCommandPalette();
 
   return (
-    <header className="bg-surface-dark border-border-strong sticky top-0 z-30 flex h-12 items-center justify-between border-b px-4 text-white shadow-none">
+    <header className="workbench-commandbar border-border sticky top-0 z-30 flex h-12 items-center justify-between border-b px-3 shadow-none">
       {/* Workspace + search trigger */}
-      <div className="flex flex-1 items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         {hasWorkspaceAccess ? (
           <>
             <OrganizationSwitcher />
@@ -25,11 +25,11 @@ export function AppHeader({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
               type="button"
               onClick={openPalette}
               aria-label={tActions('open_command_palette')}
-              className="bg-surface-elevated border-subtle ease-snap focus-visible:ring-ring group relative flex h-8 w-full max-w-xl items-center rounded-md border pe-2 ps-9 text-start text-[13px] text-white/65 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:border-white/20 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2"
+              className="border-border bg-background text-muted-foreground ease-snap focus-visible:border-ring focus-visible:ring-ring hover:border-border-strong hover:text-foreground group relative flex h-8 w-full max-w-xl items-center rounded-md border pe-2 ps-9 text-start text-[13px] transition-[color,background-color,border-color,box-shadow,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
             >
-              <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
+              <Search className="text-muted-foreground absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <span className="truncate">{tNav('search_placeholder')}</span>
-              <kbd className="pointer-events-none ms-auto inline-flex shrink-0 select-none items-center gap-1 rounded-sm border border-white/15 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/75">
+              <kbd className="border-border bg-muted text-muted-foreground pointer-events-none ms-auto inline-flex shrink-0 select-none items-center gap-1 rounded-sm border px-1.5 py-0.5 font-mono text-[10px]">
                 <Command className="h-3 w-3" />
                 {'K'}
               </kbd>
@@ -46,7 +46,7 @@ export function AppHeader({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
           asChild
           variant="ghost"
           size="icon"
-          className="ease-snap h-8 w-8 text-white/70 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 hover:bg-white/10 hover:text-white"
+          className="text-muted-foreground ease-snap hover:text-foreground h-8 w-8 transition-[color,background-color,border-color,box-shadow,opacity] duration-150"
         >
           <Link href="/api-docs" aria-label={tActions('help')}>
             <HelpCircle className="h-4 w-4" />

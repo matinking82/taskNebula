@@ -3,8 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { useRealtimeHealth } from '@/lib/hooks/use-chat';
 import { cn } from '@/lib/utils';
-import { Activity, MessagesSquare, Radio, Users, Wifi } from 'lucide-react';
-import type { ComponentType } from 'react';
+import { Wifi } from 'lucide-react';
+import { MetricStrip, type MetricStripItem } from '@/components/ui/metric-strip';
 
 type ServiceTone = 'live' | 'warn' | 'danger';
 
@@ -53,83 +53,42 @@ export function RealtimeHealthPanel() {
           }),
     },
   ];
+  const metrics: MetricStripItem[] = [
+    {
+      id: 'channels',
+      label: t('realtimeHealth.channels'),
+      value: data.stats.channels,
+    },
+    {
+      id: 'rooms',
+      label: t('realtimeHealth.rooms'),
+      value: data.stats.rooms,
+    },
+    {
+      id: 'active-calls',
+      label: t('realtimeHealth.activeCalls'),
+      value: data.stats.activeCalls,
+      hint: data.stats.activeCalls > 0 ? t('realtimeHealth.live') : undefined,
+    },
+    {
+      id: 'read-states',
+      label: t('realtimeHealth.readStates'),
+      value: data.stats.readStates,
+    },
+  ];
 
   return (
-    <div className="animate-fade-up space-y-6">
-      {/* KPI tiles */}
-      <div className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <HealthTile
-          label={t('realtimeHealth.channels')}
-          value={data.stats.channels}
-          icon={MessagesSquare}
-          tone="blue"
-        />
-        <HealthTile
-          label={t('realtimeHealth.rooms')}
-          value={data.stats.rooms}
-          icon={Users}
-          tone="violet"
-        />
-        <HealthTile
-          label={t('realtimeHealth.activeCalls')}
-          value={data.stats.activeCalls}
-          icon={Radio}
-          tone="emerald"
-          live
-        />
-        <HealthTile
-          label={t('realtimeHealth.readStates')}
-          value={data.stats.readStates}
-          icon={Activity}
-          tone="cyan"
-        />
-      </div>
+    <div className="space-y-6">
+      <MetricStrip items={metrics} />
 
       {/* Service status grid */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">{t('realtimeHealth.services')}</h3>
-        <div className="stagger grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {services.map((service) => (
             <ServiceCard key={service.name} {...service} />
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function HealthTile({
-  label,
-  value,
-  icon: Icon,
-  live,
-  tone = 'blue',
-}: {
-  label: string;
-  value: number;
-  icon: ComponentType<{ className?: string }>;
-  live?: boolean;
-  tone?: 'blue' | 'violet' | 'emerald' | 'amber' | 'rose' | 'cyan';
-}) {
-  const t = useTranslations('adminPanels');
-  return (
-    <div className="surface-card flex max-h-[140px] flex-col justify-between gap-2 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="kicker truncate">{label}</p>
-        <span className={cn('icon-tile', `icon-tile-accent-${tone}`)}>
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-      </div>
-      <div className="flex items-end justify-between gap-2">
-        <p className="text-2xl font-semibold tabular-nums">{value}</p>
-        {live && value > 0 ? (
-          <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <span className="realtime-ping">
-              <span className="status-dot status-live" />
-            </span>
-            {t('realtimeHealth.live')}
-          </span>
-        ) : null}
       </div>
     </div>
   );

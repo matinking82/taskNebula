@@ -70,7 +70,7 @@ export default async function HomePage() {
   } as const;
 
   return (
-    <div className="landing-dark min-h-screen overflow-x-hidden bg-[var(--landing-bg)] text-[var(--landing-text)] antialiased">
+    <div className="landing-dark relative isolate min-h-screen overflow-x-hidden bg-[var(--landing-bg)] text-[var(--landing-text)] antialiased">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-[var(--landing-bg-elevated)] focus:px-3 focus:py-2 focus:text-sm focus:text-[var(--landing-text-dark)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--landing-accent-blue)]"
@@ -80,7 +80,7 @@ export default async function HomePage() {
 
       <MarketingNav />
 
-      <main id="main-content">
+      <main id="main-content" className="relative">
         <Hero />
         <HeroShowcase />
         <AiMcpSection />

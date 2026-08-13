@@ -127,24 +127,26 @@ export default function SprintDetailPage({
   return (
     <div className="animate-fade-in flex h-full flex-col overflow-hidden">
       {/* Sprint Header */}
-      <div className="animate-blur-in border-border bg-background shrink-0 border-b px-6 py-4">
-        <div className="space-y-3">
+      <div className="border-border bg-background shrink-0 border-b px-3 py-2.5 sm:px-5 sm:py-3">
+        <div className="space-y-2.5">
           {/* Back Button */}
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="h-10 sm:h-8">
             <Link href={`/projects/${projectId}/sprints`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="me-2 h-4 w-4 rtl:rotate-180" />
               {t('backToSprints')}
             </Link>
           </Button>
 
           {/* Sprint Info */}
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">{sprint.name}</h1>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="min-w-0 text-xl font-semibold tracking-tight sm:text-2xl">
+                  {sprint.name}
+                </h1>
                 {sprint.status === 'active' && (
                   <Badge className="bg-accent-emerald/10 text-accent-emerald border-accent-emerald/20">
-                    <span className="status-dot status-live mr-1.5" />
+                    <span className="status-dot status-live me-1.5" />
                     {t('statusActive')}
                   </Badge>
                 )}
@@ -165,7 +167,7 @@ export default function SprintDetailPage({
                 </div>
               )}
 
-              <div className="text-muted-foreground flex items-center gap-4 text-sm">
+              <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   <span>
@@ -195,13 +197,17 @@ export default function SprintDetailPage({
             </div>
 
             {/* Actions - Show based on granular permissions */}
-            <div className="flex gap-2">
+            <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
               {sprint.status === 'planned' && permissions.canStartSprint && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button onClick={handleStartSprint} disabled={updateSprint.isPending}>
-                        <PlayCircle className="mr-2 h-4 w-4" />
+                      <Button
+                        className="h-10 flex-1 sm:h-9 sm:flex-none"
+                        onClick={handleStartSprint}
+                        disabled={updateSprint.isPending}
+                      >
+                        <PlayCircle className="me-2 h-4 w-4" />
                         {t('startSprint')}
                       </Button>
                     </TooltipTrigger>
@@ -215,8 +221,12 @@ export default function SprintDetailPage({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button onClick={handleCompleteSprint} disabled={updateSprint.isPending}>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                      <Button
+                        className="h-10 flex-1 sm:h-9 sm:flex-none"
+                        onClick={handleCompleteSprint}
+                        disabled={updateSprint.isPending}
+                      >
+                        <CheckCircle2 className="me-2 h-4 w-4" />
                         {t('completeSprint')}
                       </Button>
                     </TooltipTrigger>
@@ -233,20 +243,22 @@ export default function SprintDetailPage({
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="space-y-6 p-6">
+        <div className="space-y-4 p-3 sm:p-5">
           {/* Sprint Stats */}
           {issues && issues.length > 0 && <SprintStats sprint={sprint} issues={issues} />}
 
           {/* Burndown Chart */}
           {burndownData && sprint.status === 'active' && (
-            <div className="surface-card rounded-lg p-5">
-              <h2 className="mb-4 text-sm font-semibold">{t('sprintBurndown')}</h2>
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold">{t('sprintBurndown')}</h2>
               <BurndownChart data={burndownData} />
-            </div>
+            </section>
           )}
 
           {/* Sprint Board */}
-          <KanbanBoard projectId={projectId} sprintId={sprintId} />
+          <div className="min-h-[32rem] overflow-hidden">
+            <KanbanBoard projectId={projectId} sprintId={sprintId} ariaLabel={t('tabBoard')} />
+          </div>
         </div>
       </div>
     </div>

@@ -215,21 +215,21 @@ function CredentialRow({
           }}
           disabled={value.trim().length < 20 || isSaving}
         >
-          {isSaving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+          {isSaving && <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />}
           {stored ? t('platformAi.rotate') : t('platformAi.save')}
         </Button>
         {stored && (
           <Button size="sm" variant="outline" onClick={() => onDelete()} disabled={isDeleting}>
             {isDeleting ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              <Trash2 className="me-1.5 h-3.5 w-3.5" />
             )}
             {t('platformAi.remove')}
           </Button>
         )}
         {stored?.updatedAt && (
-          <span className="text-muted-foreground ml-auto text-[11px]">
+          <span className="text-muted-foreground ms-auto text-[11px]">
             {t('platformAi.updated', {
               date: formatter.dateTime(new Date(stored.updatedAt), { dateStyle: 'medium' }),
             })}

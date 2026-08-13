@@ -104,15 +104,15 @@ export function DraftsList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="bg-muted text-muted-foreground inline-flex h-9 w-full items-center justify-center rounded-md p-1 sm:w-auto">
+      <div className="surface-inset flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="scrollbar-none text-muted-foreground flex min-h-10 w-full items-center overflow-x-auto rounded-md sm:w-auto">
           <button
             type="button"
             aria-pressed={filter === 'all'}
             onClick={() => setFilter('all')}
             className={cn(
-              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
-              filter === 'all' && 'bg-background text-foreground shadow-sm'
+              'focus-visible:ring-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-inset',
+              filter === 'all' && 'bg-background text-foreground shadow-xs'
             )}
           >
             {t('drafts.tabs.all')}
@@ -125,8 +125,8 @@ export function DraftsList() {
             aria-pressed={filter === 'work_item'}
             onClick={() => setFilter('work_item')}
             className={cn(
-              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
-              filter === 'work_item' && 'bg-background text-foreground shadow-sm'
+              'focus-visible:ring-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-inset',
+              filter === 'work_item' && 'bg-background text-foreground shadow-xs'
             )}
           >
             {t('drafts.tabs.work_item')}
@@ -139,8 +139,8 @@ export function DraftsList() {
             aria-pressed={filter === 'page'}
             onClick={() => setFilter('page')}
             className={cn(
-              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
-              filter === 'page' && 'bg-background text-foreground shadow-sm'
+              'focus-visible:ring-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-inset',
+              filter === 'page' && 'bg-background text-foreground shadow-xs'
             )}
           >
             {t('drafts.tabs.page')}
@@ -153,8 +153,8 @@ export function DraftsList() {
             aria-pressed={filter === 'comment'}
             onClick={() => setFilter('comment')}
             className={cn(
-              'inline-flex h-7 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors',
-              filter === 'comment' && 'bg-background text-foreground shadow-sm'
+              'focus-visible:ring-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-inset',
+              filter === 'comment' && 'bg-background text-foreground shadow-xs'
             )}
           >
             {t('drafts.tabs.comment')}
@@ -164,19 +164,22 @@ export function DraftsList() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="text-muted-foreground absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
+        <div className="flex min-w-0 flex-col gap-2 min-[390px]:flex-row min-[390px]:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search className="text-muted-foreground absolute start-2.5 top-1/2 size-4 -translate-y-1/2" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('drafts.searchPlaceholder')}
-              className="w-full pl-8 sm:w-64"
+              className="w-full ps-8 min-[390px]:w-52 sm:w-64"
               aria-label={t('drafts.searchAria')}
             />
           </div>
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-            <SelectTrigger className="w-[140px]" aria-label={t('drafts.sortAria')}>
+            <SelectTrigger
+              className="w-full min-[390px]:w-[140px]"
+              aria-label={t('drafts.sortAria')}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -198,7 +201,7 @@ export function DraftsList() {
           onCreate={() => setIsCreateOpen(true)}
         />
       ) : (
-        <ul className="bg-card divide-y rounded-md border">
+        <ul className="surface-card divide-y overflow-hidden shadow-none">
           {visible.map((draft) => {
             const meta = TYPE_META[draft.type];
             const Icon = meta.icon;
@@ -315,7 +318,7 @@ function LoadingState() {
   const t = useTranslations('workspaceTools');
   return (
     <ul
-      className="bg-card divide-y rounded-md border"
+      className="surface-card divide-y overflow-hidden shadow-none"
       aria-busy="true"
       aria-label={t('drafts.loadingAria')}
     >

@@ -98,7 +98,7 @@ export function HeroShowcase() {
             title={showcase('board.title')}
             description={showcase('board.description')}
           />
-          <p className="landing-body max-w-lg border-l border-[var(--landing-border-strong)] pl-4 text-[13px] text-[var(--landing-text-subtle)] sm:text-[14px]">
+          <p className="landing-body max-w-lg border-s border-[var(--landing-border-strong)] ps-4 text-[13px] text-[var(--landing-text-subtle)] sm:text-[14px]">
             {workflow('description')}
           </p>
         </div>
@@ -128,8 +128,8 @@ export function HeroShowcase() {
             </span>
           </div>
 
-          <div className="grid lg:grid-cols-[minmax(14rem,0.48fr)_minmax(0,1.52fr)]">
-            <div className="border-b border-[var(--landing-border)] bg-[var(--landing-bg-surface)] p-4 sm:p-5 lg:border-b-0 lg:border-r">
+          <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+            <div className="border-b border-[var(--landing-border)] bg-[var(--landing-bg-surface)] p-4 sm:p-5 lg:border-b-0 lg:border-e">
               <p className="landing-kicker text-[var(--landing-text-subtle)]">
                 {workflow('kicker')}
               </p>
@@ -152,7 +152,7 @@ export function HeroShowcase() {
                       </span>
                       {index < topology.length - 1 ? (
                         <span
-                          className="absolute bottom-[-1.25rem] top-7 border-l border-[var(--landing-border-strong)]"
+                          className="absolute bottom-[-1.25rem] top-7 border-s border-[var(--landing-border-strong)]"
                           aria-hidden="true"
                         />
                       ) : null}
@@ -167,7 +167,7 @@ export function HeroShowcase() {
                           {label}
                         </p>
                       </div>
-                      <p className="mt-0.5 pl-[1.375rem] text-[10px] leading-4 text-[var(--landing-text-subtle)]">
+                      <p className="mt-0.5 ps-[1.375rem] text-[10px] leading-4 text-[var(--landing-text-subtle)]">
                         {state}
                       </p>
                     </div>
@@ -178,7 +178,7 @@ export function HeroShowcase() {
 
             <div className="min-w-0">
               <div className="grid min-w-0 xl:grid-cols-[minmax(0,1.35fr)_minmax(15rem,0.65fr)]">
-                <article className="min-w-0 p-4 sm:p-6 xl:border-r xl:border-[var(--landing-border)]">
+                <article className="min-w-0 p-4 sm:p-6 xl:border-e xl:border-[var(--landing-border)]">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <CircleDot
@@ -202,7 +202,7 @@ export function HeroShowcase() {
                   </p>
 
                   <dl className="mt-6 grid border-y border-[var(--landing-border)] sm:grid-cols-3">
-                    <div className="py-3 sm:pr-4">
+                    <div className="py-3 sm:pe-4">
                       <dt className="text-[9px] uppercase tracking-[0.14em] text-[var(--landing-text-subtle)]">
                         {showcase('board.columns.inReview')}
                       </dt>
@@ -210,7 +210,7 @@ export function HeroShowcase() {
                         {showcase('workflow.rules.reviewApproved')}
                       </dd>
                     </div>
-                    <div className="border-t border-[var(--landing-border)] py-3 sm:border-l sm:border-t-0 sm:px-4">
+                    <div className="border-t border-[var(--landing-border)] py-3 sm:border-s sm:border-t-0 sm:px-4">
                       <dt className="text-[9px] uppercase tracking-[0.14em] text-[var(--landing-text-subtle)]">
                         {showcase('team.members')}
                       </dt>
@@ -218,7 +218,7 @@ export function HeroShowcase() {
                         SK
                       </dd>
                     </div>
-                    <div className="border-t border-[var(--landing-border)] py-3 sm:border-l sm:border-t-0 sm:pl-4">
+                    <div className="border-t border-[var(--landing-border)] py-3 sm:border-s sm:border-t-0 sm:ps-4">
                       <dt className="text-[9px] uppercase tracking-[0.14em] text-[var(--landing-text-subtle)]">
                         {showcase('workflow.transitionRules')}
                       </dt>
@@ -297,7 +297,7 @@ export function HeroShowcase() {
                     ))}
                   </ol>
 
-                  <div className="mt-6 border-l-2 border-[var(--landing-accent-blue)] pl-3">
+                  <div className="mt-6 border-s-2 border-[var(--landing-accent-blue)] ps-3">
                     <p className="font-mono text-[10px] text-[var(--landing-text-subtle)]">
                       v1.4.0
                     </p>

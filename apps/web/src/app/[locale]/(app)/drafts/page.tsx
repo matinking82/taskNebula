@@ -2,6 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { WorkspaceRequiredNotice } from '@/components/layout/workspace-required-notice';
 import { DraftsList } from '@/components/drafts/drafts-list';
 import { currentUserHasWorkspaceAccess } from '@/lib/auth/workspace-access';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 
 export async function generateMetadata() {
   const t = await getTranslations('pagesHome');
@@ -20,12 +22,9 @@ export default async function DraftsPage() {
 
   const t = await getTranslations('pagesHome');
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:px-8">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('drafts_title')}</h1>
-        <p className="text-muted-foreground mt-1 text-sm">{t('drafts_subtitle')}</p>
-      </header>
+    <PageFrame contentClassName="max-w-7xl">
+      <PageHeader title={t('drafts_title')} description={t('drafts_subtitle')} />
       <DraftsList />
-    </div>
+    </PageFrame>
   );
 }

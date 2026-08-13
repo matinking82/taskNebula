@@ -199,8 +199,7 @@ export function IssueLinks({ issueId, projectId }: IssueLinksProps) {
                     key={link.id}
                     className={cn(
                       'row-interactive group flex flex-col items-stretch gap-2 rounded-md px-2 py-1.5 sm:flex-row sm:items-center sm:justify-between',
-                      group.blocked &&
-                        'border-l-2 border-[hsl(var(--accent-rose))] bg-[hsl(var(--accent-rose)/0.04)]'
+                      group.blocked && 'border-accent-rose bg-accent-rose/5 border-s-2'
                     )}
                   >
                     <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:flex-1">

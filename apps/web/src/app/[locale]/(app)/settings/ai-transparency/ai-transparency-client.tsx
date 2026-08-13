@@ -30,6 +30,7 @@ import {
   type AiFeatureId,
 } from '@/config/ai-model-cards';
 import type { AgentCapabilityKey, AiOversightMode } from '@/lib/agents/config';
+import { PageHeader } from '@/components/ui/page-header';
 
 const FEATURE_SETTING_MAP: Partial<
   Record<AiFeatureId, { type: 'assistant' } | { type: 'capability'; key: AgentCapabilityKey }>
@@ -105,28 +106,28 @@ export function AiTransparencyClient({
     return workspaceSettings.capabilities[mapping.key] ?? false;
   }
 
-  const Heading = headingLevel === 1 ? 'h1' : 'h2';
   const header = (
-    <div>
-      <Heading className="flex items-center gap-2 text-xl font-semibold">
-        <Sparkles className="text-primary h-5 w-5" />
-        {t('aiTransparency.title')}
-      </Heading>
-      <p className="text-muted-foreground mt-1 text-sm">
-        {t.rich('aiTransparency.subtitle', {
-          link: (chunks) => (
-            <Link
-              href="/ai-model-cards"
-              className="hover:text-foreground inline-flex items-center gap-0.5 underline"
-              target="_blank"
-            >
-              {chunks}
-              <ExternalLink className="h-3 w-3" />
-            </Link>
-          ),
-        })}
-      </p>
-    </div>
+    <PageHeader
+      headingLevel={headingLevel}
+      title={
+        <span className="inline-flex items-center gap-2">
+          <Sparkles className="text-primary h-5 w-5" />
+          {t('aiTransparency.title')}
+        </span>
+      }
+      description={t.rich('aiTransparency.subtitle', {
+        link: (chunks) => (
+          <Link
+            href="/ai-model-cards"
+            className="hover:text-foreground inline-flex items-center gap-0.5 underline"
+            target="_blank"
+          >
+            {chunks}
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        ),
+      })}
+    />
   );
 
   if (isLoading) {

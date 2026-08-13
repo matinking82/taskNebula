@@ -104,7 +104,7 @@ export function DeliveryAnalysis({ organizationId, projectId }: DeliveryAnalysis
         ) : null}
 
         <div className="border-border grid min-w-0 border-b lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-          <section className="border-border min-w-0 p-4 lg:border-r">
+          <section className="border-border min-w-0 p-4 lg:border-e">
             <div className="mb-3">
               <span className="kicker">{t('analytics.kicker_delivery')}</span>
               <h3 className="text-foreground mt-1 text-base font-semibold">
@@ -158,7 +158,7 @@ export function DeliveryAnalysis({ organizationId, projectId }: DeliveryAnalysis
                   {t('analytics.forecast_description')}
                 </p>
               </div>
-              <dl className="grid w-full grid-cols-3 gap-3 text-left text-xs sm:w-auto sm:min-w-64 sm:text-right">
+              <dl className="grid w-full grid-cols-3 gap-3 text-start text-xs sm:w-auto sm:min-w-64 sm:text-end">
                 <div>
                   <dt className="text-muted-foreground">{'p50'}</dt>
                   <dd className="text-foreground truncate font-semibold tabular-nums">

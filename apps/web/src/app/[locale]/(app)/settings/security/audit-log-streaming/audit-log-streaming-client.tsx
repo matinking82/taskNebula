@@ -255,7 +255,7 @@ export function AuditLogStreamingClient({ organizationId }: { organizationId: st
           </code>
           <button
             type="button"
-            className="text-muted-foreground mt-3 text-xs underline"
+            className="text-muted-foreground focus-visible:ring-ring mt-3 rounded-sm text-xs underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             onClick={() => setRevealedSecret(null)}
           >
             {t('audit.dismiss')}
@@ -270,7 +270,7 @@ export function AuditLogStreamingClient({ organizationId }: { organizationId: st
         <button
           type="button"
           onClick={() => setShowForm((s) => !s)}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-3 text-sm font-medium"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring inline-flex h-9 items-center rounded-md px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           {showForm ? t('common.cancel') : t('audit.addSink')}
         </button>
@@ -331,14 +331,14 @@ export function AuditLogStreamingClient({ organizationId }: { organizationId: st
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="hover:bg-muted/40 inline-flex h-9 items-center rounded-md border px-3 text-sm"
+              className="hover:bg-muted/40 focus-visible:ring-ring inline-flex h-9 items-center rounded-md border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={creating || !form.name.trim()}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-3 text-sm font-medium disabled:opacity-60"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring inline-flex h-9 items-center rounded-md px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60"
             >
               {creating ? t('audit.creating') : t('audit.createSink')}
             </button>
@@ -393,21 +393,21 @@ export function AuditLogStreamingClient({ organizationId }: { organizationId: st
                 <button
                   type="button"
                   onClick={() => handleTest(sink)}
-                  className="hover:bg-muted/40 inline-flex h-8 items-center rounded-md border px-3 text-xs"
+                  className="hover:bg-muted/40 focus-visible:ring-ring inline-flex h-9 items-center rounded-md border px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                 >
                   {t('audit.test')}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleToggle(sink)}
-                  className="hover:bg-muted/40 inline-flex h-8 items-center rounded-md border px-3 text-xs"
+                  className="hover:bg-muted/40 focus-visible:ring-ring inline-flex h-9 items-center rounded-md border px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                 >
                   {sink.enabled ? t('audit.disable') : t('audit.enable')}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(sink)}
-                  className="border-destructive/30 text-destructive hover:bg-destructive/5 inline-flex h-8 items-center rounded-md border px-3 text-xs"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/5 focus-visible:ring-ring inline-flex h-9 items-center rounded-md border px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                 >
                   {t('common.delete')}
                 </button>

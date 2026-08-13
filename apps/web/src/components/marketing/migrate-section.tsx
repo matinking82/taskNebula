@@ -50,21 +50,31 @@ export function MigrateSection() {
           compact
         />
 
-        <div className="stagger mt-10 grid gap-3 sm:grid-cols-2">
-          {sources.map(({ icon: Icon, tone, key }) => (
+        <div className="stagger mt-10 grid border-t border-[var(--landing-border)] sm:grid-cols-2">
+          {sources.map(({ icon: Icon, tone, key }, index) => (
             <div
               key={key}
-              className="rounded-md border border-[var(--landing-border)] bg-[var(--landing-bg-surface)] p-5"
+              className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-4 border-b border-[var(--landing-border)] py-5 sm:px-5 sm:odd:border-e"
             >
-              <div className={`icon-tile icon-tile-accent-${tone} h-9 w-9`}>
-                <Icon className="h-4 w-4" aria-hidden="true" />
+              <div className="relative">
+                <div className={`icon-tile icon-tile-accent-${tone} h-9 w-9`}>
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <span
+                  className="mt-2 block text-center font-mono text-[9px] tabular-nums text-[var(--landing-text-muted)]"
+                  aria-hidden="true"
+                >
+                  {String(index + 1).padStart(2, '0')}
+                </span>
               </div>
-              <p className="mt-3 text-[14px] font-[500] text-[var(--landing-text-dark)]">
-                {importT(`source.${key}.label`)}
-              </p>
-              <p className="mt-1.5 text-[13px] leading-6 text-[var(--landing-text-subtle)]">
-                {importT(`source.${key}.description`)}
-              </p>
+              <div>
+                <p className="text-[14px] font-[500] text-[var(--landing-text-dark)]">
+                  {importT(`source.${key}.label`)}
+                </p>
+                <p className="mt-1.5 text-[13px] leading-6 text-[var(--landing-text-subtle)]">
+                  {importT(`source.${key}.description`)}
+                </p>
+              </div>
             </div>
           ))}
         </div>

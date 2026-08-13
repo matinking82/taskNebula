@@ -167,7 +167,7 @@ export function EmailPreviewPanel() {
                 {TEMPLATES.map((tpl) => (
                   <SelectItem key={tpl.value} value={tpl.value}>
                     {templateLabel(tpl.value)}
-                    <span className="text-muted-foreground ml-2 text-xs">{tpl.value}</span>
+                    <span className="text-muted-foreground ms-2 text-xs">{tpl.value}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -181,7 +181,7 @@ export function EmailPreviewPanel() {
               size="sm"
               onClick={() => window.open(previewUrl, '_blank', 'noopener')}
             >
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              <ExternalLink className="me-1.5 h-3.5 w-3.5" />
               {t('emailPreview.openInNewTab')}
             </Button>
             <Button
@@ -192,9 +192,9 @@ export function EmailPreviewPanel() {
               title={t('emailPreview.sendSmtpTestTitle')}
             >
               {sending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Send className="mr-1.5 h-3.5 w-3.5" />
+                <Send className="me-1.5 h-3.5 w-3.5" />
               )}
               {t('emailPreview.sendSmtpTest')}
             </Button>

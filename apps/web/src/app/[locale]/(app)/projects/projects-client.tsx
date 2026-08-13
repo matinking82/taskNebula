@@ -24,6 +24,7 @@ import { FolderKanban, Layers3, Plus, X } from 'lucide-react';
 import { ViewTransition } from '@/components/ui/view-transition';
 import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Organization {
   id: string;
@@ -90,20 +91,37 @@ export function ProjectsClient() {
           actions={
             canCreateProject ? (
               <Button className="w-full sm:w-auto" onClick={() => setShowDialog(true)}>
-                <Plus className="mr-1.5 h-4 w-4" />
+                <Plus className="me-1.5 h-4 w-4" />
                 {t('createProject')}
               </Button>
             ) : null
           }
         />
 
-        {projects.length === 0 && !isProjectListLoading ? (
+        {isProjectListLoading ? (
+          <div
+            className="border-border bg-card divide-border w-full divide-y overflow-hidden rounded-lg border"
+            aria-busy="true"
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="grid min-h-[72px] grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+              >
+                <Skeleton className="h-9 w-9 rounded-md" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40 max-w-full" />
+                  <Skeleton className="h-3 w-64 max-w-[80%]" />
+                </div>
+                <Skeleton className="col-start-2 h-3 w-32 sm:col-auto" />
+              </div>
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
           /* FEAT-31 dashboard empty state. Keep one honest primary action until
              AI project scaffolding has a complete, reviewable workflow. */
           <div className="surface-card animate-fade-up mx-auto flex max-w-md flex-col items-center gap-4 border-dashed p-10 text-center shadow-none">
-            <div className="icon-tile icon-tile-accent-blue flex h-14 w-14 items-center justify-center">
-              <FolderKanban className="text-foreground/80 h-7 w-7" />
-            </div>
+            <FolderKanban className="text-muted-foreground h-8 w-8" />
             <div className="space-y-1">
               <p className="text-foreground text-base font-semibold">
                 {!canCreateProject
@@ -118,7 +136,7 @@ export function ProjectsClient() {
             </div>
             {canCreateProject ? (
               <Button onClick={() => setShowDialog(true)}>
-                <Plus className="mr-1.5 h-4 w-4" />
+                <Plus className="me-1.5 h-4 w-4" />
                 {t('createProject')}
               </Button>
             ) : null}
@@ -141,7 +159,7 @@ export function ProjectsClient() {
                 <ViewTransition key={project.id} name={`project-${project.id}`}>
                   <Link
                     href={`/projects/${project.key.toLowerCase()}/views`}
-                    className="hover:bg-surface/60 focus-visible:bg-surface group grid min-h-[72px] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors duration-150 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+                    className="hover:bg-surface/60 focus-visible:bg-surface focus-visible:ring-ring group grid min-h-[72px] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset sm:grid-cols-[auto_minmax(0,1fr)_auto]"
                   >
                     <span className="border-border bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-md border font-mono text-xs font-semibold">
                       {initials}
@@ -296,7 +314,7 @@ function CreateProjectDialog({
           <button
             type="button"
             onClick={onClose}
-            className="hover:bg-muted rounded-md p-1 transition-colors"
+            className="hover:bg-muted focus-visible:ring-ring flex h-10 w-10 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 sm:h-8 sm:w-8"
             aria-label={t('closeDialog')}
           >
             <X className="h-4 w-4" />

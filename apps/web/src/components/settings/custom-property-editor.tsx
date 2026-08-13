@@ -185,7 +185,7 @@ export function CustomPropertyEditor({ property, onChange, onRemove }: CustomPro
               className="h-7 px-2 text-xs"
               onClick={handleAddOption}
             >
-              <Plus className="mr-1 h-3 w-3" />
+              <Plus className="me-1 h-3 w-3" />
               {t('add_option')}
             </Button>
           </div>

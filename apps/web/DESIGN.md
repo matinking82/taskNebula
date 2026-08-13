@@ -45,6 +45,29 @@ The recurring visual signature is:
 - Thin orthogonal connectors only when they explain a dependency or sequence.
 - Monospaced text for identifiers and machine evidence, not entire interfaces.
 
+## Workbench 2026 direction
+
+The application shell is a workbench, not a marketing frame. It separates
+three layers without making them compete:
+
+1. **Global rail** — quiet, icon-led access to the workspace-level tools a
+   person uses repeatedly.
+2. **Context panel** — the current workspace, project, team, saved view, or
+   settings scope and its local navigation.
+3. **Work canvas** — the only visually dominant surface; headers, view controls,
+   data, detail, and evidence align to one content grid.
+
+The rail may be dark so it remains a stable location cue. The context panel and
+command bar use the same neutral surface family as the canvas and must not form
+a second competing application. Navigation labels, counts, and controls recede
+until they are active, focused, or needed.
+
+This direction synthesizes current product-management interaction principles;
+it is not a visual copy of another product. TaskNebula keeps IBM Plex,
+square-ish geometry, the single action blue, and its accountable work-topology
+signature. Competitor assets, wording, proprietary icons, brand color systems,
+and one-to-one shell anatomy are never implementation references.
+
 ## Audience and decisions
 
 The default user is an operator on a desktop or laptop asking a 60-second
@@ -185,6 +208,71 @@ Use these structural defaults:
 - Icons come from Lucide, share a consistent size in a row, and are removed when
   the label already carries the meaning.
 
+## Global shell and scope contract
+
+- Global, organization, teamspace, project, and personal scope are visibly
+  distinct. A create, search, agent, or settings action must expose the scope it
+  will affect whenever ambiguity could cause a wrong write.
+- The global rail contains destinations, not miniature labels. Accessible names
+  and tooltips carry the full destination; the context panel carries readable
+  local navigation.
+- Project navigation has one canonical location. Do not repeat the same target
+  in the rail, context panel, page header, and content as equally prominent
+  controls.
+- Search, navigation, create, and contextual actions share the command surface.
+  Keyboard, pointer, and touch users reach the same authorized actions.
+- The work canvas may be inset from desktop chrome to clarify ownership, but it
+  becomes edge-to-edge on small screens. Chrome must never reduce the usable
+  mobile width below the route's content contract.
+
+## View-state contract
+
+List and board are the primary work-item views. Timeline is added where time or
+dependencies are the actual decision. All supported views share one vocabulary
+for filter, grouping, ordering, visible fields, and density:
+
+- State that should survive refresh, Back, or sharing lives in the URL.
+- Personal display preferences may override a view default without silently
+  changing the shared view for everyone.
+- Sticky group headers preserve scope while scrolling. Counts and estimates are
+  secondary evidence, not decorative badges.
+- Compact mode removes optional card metadata before reducing target size or
+  hiding state. A preview or detail surface carries the complete record.
+- Empty groups, completed work, and secondary fields are explicit display
+  choices; they are not inconsistently hidden by individual routes.
+
+## Detail reveal contract
+
+One record may be revealed at three depths without becoming three unrelated
+implementations:
+
+1. **Preview** — a keyboard- and pointer-triggered glance that never contains a
+   critical action available nowhere else.
+2. **Context detail** — a side sheet or split pane that preserves the current
+   list/board position for triage and editing.
+3. **Canonical page** — the durable URL for long editing, audit history,
+   collaboration, and deep linking.
+
+The same validation, permissions, fields, and mutation contracts apply at every
+depth. Focus returns to the invoking row/card after context detail closes. On
+mobile, context detail recomposes as a full-screen surface rather than a narrow
+desktop drawer.
+
+## Responsive recomposition matrix
+
+| Surface        | Desktop                            | Tablet / narrow desktop                           | 320–390px mobile                                                 |
+| -------------- | ---------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------- |
+| Global shell   | rail + context panel + canvas      | collapsible context panel                         | compact top/bottom navigation + edge-to-edge canvas              |
+| List/table     | persistent key columns and toolbar | lower-priority columns collapse                   | stacked rows or intentional horizontal region with a visible cue |
+| Board/timeline | multi-column working surface       | fewer visible lanes, controlled horizontal scroll | list fallback or touch-safe horizontal surface; no clipped cards |
+| Context detail | side sheet or split pane           | wider overlay sheet                               | full-screen surface with explicit back/close                     |
+| Actions        | inline toolbar                     | overflow menu after primary action                | 44px primary touch targets; no hover-only action                 |
+
+Every shell or layout change is checked at 320px and 390px, 200% zoom, a
+relevant RTL locale, light and dark color modes, keyboard input, and reduced
+motion. Responsive work means recomposition, not shrinking the desktop until it
+technically fits.
+
 ## Premium behavior bar
 
 Polish is not an effect layer. The interface earns a premium feel when location,
@@ -253,6 +341,25 @@ scope and policy
 - Research output distinguishes retrieved sources, cited claims, unresolved
   claims, and human review. Workspace RAG must not be labeled deep research
   unless it has the complete multi-step provenance flow.
+
+### AI proposal and run surface
+
+AI is presented as an attributable work object, not a decorative chat layer.
+Where the runtime provides the information, a proposal or run exposes scope,
+source coverage, model/config revision, budget, rationale, effects, approval,
+apply/revert state, cancellation/resume, and audit history. The UI must not
+invent confidence or imply an effect was applied before the durable runtime
+confirms it.
+
+The TaskNebula-specific representation is the evidence path:
+
+```text
+request -> evidence -> plan -> proposed effect -> review -> apply -> release
+```
+
+Each node is addressable and each transition has a real state. A loop back to
+evidence, planning, retry, or review is visible and bounded rather than rendered
+as an endless spinner.
 
 The runtime maturity and termination contract live in
 [`docs/AGENT_RUNTIME.md`](../../docs/AGENT_RUNTIME.md). Product surfaces must
@@ -326,6 +433,12 @@ time:
 8. Verify URL, persistence, focus return, and recovery behavior.
 9. Compare screenshots and record any accepted minor issue.
 
+The loop is bounded to three maker/checker cycles per surface batch. Each cycle
+fixes the highest-severity unresolved problem at the smallest owning node, then
+restarts the hard gates. End only when no high/medium finding remains. If a
+product decision or design-system conflict remains after the third cycle, stop
+with structured evidence instead of silently changing the acceptance bar.
+
 Use a maker/checker split for broad work: the implementing agent must not be
 the only reviewer of its screenshots or acceptance-bar result. The checker
 returns route, state, viewport, evidence, severity, and confidence—not a single
@@ -370,6 +483,26 @@ and responsive composition cannot be proven by source scanning alone.
   [“Harness engineering”](https://openai.com/index/harness-engineering/)
   (2026): repository-local intent, custom linters, browser legibility, and
   recurring garbage collection turn taste into a compounding system.
+- Vercel,
+  [“Teaching agents product design at Vercel”](https://vercel.com/blog/teaching-agents-product-design-at-vercel)
+  (June 2026): durable product judgment, executable rules, and evidence intake
+  make design decisions legible to agents instead of leaving taste in chat.
+- Atlassian,
+  [June](https://confluence.atlassian.com/cloud/blog/2026/06/atlassian-cloud-changes-jun-1-to-jun-8-2026)
+  and [July](https://confluence.atlassian.com/cloud/blog/2026/07/atlassian-cloud-changes-jul-6-to-jul-13-2026)
+  2026 Jira changes: customizable collapsible navigation, harmonized board
+  layouts, and a work-item field refresh prioritize orientation and less visual
+  clutter.
+- Plane,
+  [Navigation 2.0](https://plane.so/blog/introducing-plane-navigation-2) and
+  [July 2026 releases](https://plane.so/changelog?category=cloud): global versus
+  project context, a unified command surface, and work-aware AI inform scope
+  clarity without supplying a visual template.
+- GitHub,
+  [Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
+  and [June 2026 adjustable row heights](https://github.blog/changelog/2026-06-25-saved-views-for-repository-issues-and-adjustable-row-heights-in-projects/):
+  the same data supports table, board, roadmap, saved views, and user-selected
+  density.
 - Google Labs,
   [“Introducing DESIGN.md”](https://blog.google/innovation-and-ai/models-and-research/google-labs/stitch-design-md/)
   (2026): explicit visual intent makes implementation constraints portable

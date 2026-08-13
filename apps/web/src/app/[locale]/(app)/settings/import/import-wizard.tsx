@@ -237,7 +237,7 @@ export function ImportWizard({
             type="button"
             key={s.key}
             onClick={() => setSource(s.key)}
-            className="border-border bg-card hover:border-foreground/30 rounded-lg border p-4 text-left transition hover:shadow-sm"
+            className="border-border bg-card hover:border-foreground/30 focus-visible:ring-ring rounded-lg border p-4 text-start transition hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">{t(`import.source.${s.key}.label`)}</span>
@@ -418,23 +418,23 @@ export function ImportWizard({
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="text-muted-foreground text-left">
+              <thead className="text-muted-foreground text-start">
                 <tr>
-                  <th className="py-1 pr-2">{t('import.col.key')}</th>
-                  <th className="py-1 pr-2">{t('import.col.title')}</th>
-                  <th className="py-1 pr-2">{t('import.col.status')}</th>
-                  <th className="py-1 pr-2">{t('import.col.priority')}</th>
-                  <th className="py-1 pr-2">{t('import.col.assignee')}</th>
+                  <th className="py-1 pe-2">{t('import.col.key')}</th>
+                  <th className="py-1 pe-2">{t('import.col.title')}</th>
+                  <th className="py-1 pe-2">{t('import.col.status')}</th>
+                  <th className="py-1 pe-2">{t('import.col.priority')}</th>
+                  <th className="py-1 pe-2">{t('import.col.assignee')}</th>
                 </tr>
               </thead>
               <tbody>
                 {preview.map((r) => (
                   <tr key={r.key} className="border-border/60 border-t">
-                    <td className="py-1 pr-2 font-mono text-[11px]">{r.key}</td>
-                    <td className="py-1 pr-2">{r.title}</td>
-                    <td className="py-1 pr-2">{r.status ?? '—'}</td>
-                    <td className="py-1 pr-2">{r.priority ?? '—'}</td>
-                    <td className="py-1 pr-2">{r.assigneeEmail ?? '—'}</td>
+                    <td className="py-1 pe-2 font-mono text-[11px]">{r.key}</td>
+                    <td className="py-1 pe-2">{r.title}</td>
+                    <td className="py-1 pe-2">{r.status ?? '—'}</td>
+                    <td className="py-1 pe-2">{r.priority ?? '—'}</td>
+                    <td className="py-1 pe-2">{r.assigneeEmail ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

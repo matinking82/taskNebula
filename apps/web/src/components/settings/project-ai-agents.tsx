@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MetricStrip } from '@/components/ui/metric-strip';
 import { Progress } from '@/components/ui/progress';
 import {
   Select,
@@ -48,12 +49,9 @@ import {
   Activity,
   ArrowRight,
   Bot,
-  Clock3,
-  Cpu,
   Loader2,
   Play,
   Radar,
-  ShieldCheck,
   Sparkles,
   Wand2,
   Wifi,
@@ -327,7 +325,7 @@ export function ProjectAiAgents({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="animate-fade-up space-y-6">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -431,48 +429,44 @@ export function ProjectAiAgents({ projectId }: { projectId: string }) {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <RuntimeStatCard
-              icon={Activity}
-              label={t('projectAi.stat_running_now')}
-              value={String(data.runtimeSummary.runningRuns)}
-              detail={t('projectAi.stat_running_now_detail')}
-            />
-            <RuntimeStatCard
-              icon={Cpu}
-              label={t('projectAi.stat_provider')}
-              value={data.effectiveSettings.provider}
-              detail={
-                data.providerStatus.ready ? t('projectAi.runnable_now') : t('projectAi.blocked')
-              }
-            />
-            <RuntimeStatCard
-              icon={Clock3}
-              label={t('projectAi.stat_last_completed')}
-              value={
-                data.runtimeSummary.lastCompletedAt
+          <MetricStrip
+            items={[
+              {
+                id: 'running-now',
+                label: t('projectAi.stat_running_now'),
+                value: String(data.runtimeSummary.runningRuns),
+                hint: t('projectAi.stat_running_now_detail'),
+              },
+              {
+                id: 'provider',
+                label: t('projectAi.stat_provider'),
+                value: data.effectiveSettings.provider,
+                hint: data.providerStatus.ready
+                  ? t('projectAi.runnable_now')
+                  : t('projectAi.blocked'),
+              },
+              {
+                id: 'last-completed',
+                label: t('projectAi.stat_last_completed'),
+                value: data.runtimeSummary.lastCompletedAt
                   ? formatter.relativeTime(new Date(data.runtimeSummary.lastCompletedAt))
-                  : t('projectAi.none_yet')
-              }
-              detail={t('projectAi.stat_last_completed_detail')}
-            />
-            <RuntimeStatCard
-              icon={ShieldCheck}
-              label={t('projectAi.stat_write_mode')}
-              value={
-                data.effectiveSettings.allowWriteActions
+                  : t('projectAi.none_yet'),
+                hint: t('projectAi.stat_last_completed_detail'),
+              },
+              {
+                id: 'write-mode',
+                label: t('projectAi.stat_write_mode'),
+                value: data.effectiveSettings.allowWriteActions
                   ? t('projectAi.enabled')
-                  : t('projectAi.preview')
-              }
-              detail={
-                data.effectiveSettings.allowWriteActions
+                  : t('projectAi.preview'),
+                hint: data.effectiveSettings.allowWriteActions
                   ? data.effectiveSettings.requireApprovalForWrites
                     ? t('projectAi.approval_required')
                     : t('projectAi.live_writes_available')
-                  : t('projectAi.writes_forced_preview')
-              }
-            />
-          </div>
+                  : t('projectAi.writes_forced_preview'),
+              },
+            ]}
+          />
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <Card className="border-border/60">
@@ -1037,12 +1031,12 @@ export function ProjectAiAgents({ projectId }: { projectId: string }) {
                   >
                     {updateAgents.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="me-2 h-4 w-4 animate-spin" />
                         {t('projectAi.saving')}
                       </>
                     ) : (
                       <>
-                        <Sparkles className="mr-2 h-4 w-4" />
+                        <Sparkles className="me-2 h-4 w-4" />
                         {t('projectAi.save_project_policy')}
                       </>
                     )}
@@ -1207,7 +1201,7 @@ function RunCard({
       {reason ? <p className="text-muted-foreground mt-3 text-xs">{reason}</p> : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={onPreview} disabled={disabled}>
-          <Play className="mr-2 h-3.5 w-3.5" />
+          <Play className="me-2 h-3.5 w-3.5" />
           {resolvedPreviewLabel}
         </Button>
         {onLive ? (
@@ -1224,30 +1218,7 @@ function MetricRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="border-border/60 flex items-center justify-between gap-4 rounded-lg border px-3 py-2">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
-    </div>
-  );
-}
-
-function RuntimeStatCard({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: typeof Activity;
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="border-border/60 rounded-lg border p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-muted-foreground text-xs uppercase tracking-[0.16em]">{label}</p>
-        <Icon className="text-muted-foreground h-4 w-4" />
-      </div>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-      <p className="text-muted-foreground mt-1 text-sm">{detail}</p>
+      <span className="text-end font-medium">{value}</span>
     </div>
   );
 }

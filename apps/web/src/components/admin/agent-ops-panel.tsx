@@ -6,6 +6,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MetricStrip, type MetricStripItem } from '@/components/ui/metric-strip';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
@@ -22,9 +23,7 @@ import { useOrganization } from '@/lib/hooks/use-organization';
 import { cn } from '@/lib/utils';
 import { formatAgentRunKind } from '@/lib/agents/run-kind-labels';
 import { formatAgentRunDisplayText, formatAgentRunStatus } from '@/lib/agents/i18n';
-import type { ComponentType } from 'react';
 import {
-  Bot,
   Cpu,
   ExternalLink,
   Loader2,
@@ -33,7 +32,6 @@ import {
   TerminalSquare,
   Wifi,
   WifiOff,
-  Zap,
 } from 'lucide-react';
 
 type AgentControlForm = {
@@ -176,57 +174,32 @@ export function AgentOpsPanel() {
     return t('agentOps.serviceStatus.items.unknown.detail');
   }
 
-  const kpis: Array<{
-    label: string;
-    value: number;
-    icon: ComponentType<{ className?: string }>;
-    tone: 'blue' | 'violet' | 'emerald' | 'amber' | 'rose';
-  }> = [
+  const metrics: MetricStripItem[] = [
     {
+      id: 'enabled-workspaces',
       label: t('agentOps.kpi.enabledWorkspaces'),
       value: data.stats.enabledWorkspaceCount,
-      icon: Bot,
-      tone: 'blue',
     },
     {
+      id: 'enabled-projects',
       label: t('agentOps.kpi.enabledProjects'),
       value: data.stats.enabledProjectCount,
-      icon: Sparkles,
-      tone: 'violet',
     },
     {
+      id: 'running-now',
       label: t('agentOps.kpi.runningNow'),
       value: data.stats.runningRuns,
-      icon: Zap,
-      tone: 'emerald',
     },
     {
+      id: 'recent-failures',
       label: t('agentOps.kpi.recentFailures'),
       value: data.stats.failedRuns,
-      icon: Shield,
-      tone: 'rose',
     },
   ];
 
   return (
-    <div className="animate-fade-up space-y-6">
-      {/* KPIs */}
-      <div className="stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map(({ label, value, icon: Icon, tone }) => (
-          <div
-            key={label}
-            className="surface-card flex max-h-[140px] flex-col justify-between gap-2 p-4"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="kicker truncate">{label}</p>
-              <span className={cn('icon-tile', `icon-tile-accent-${tone}`)}>
-                <Icon className="h-3.5 w-3.5" />
-              </span>
-            </div>
-            <p className="text-2xl font-semibold tabular-nums">{value}</p>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-6">
+      <MetricStrip items={metrics} />
 
       {/* Global guardrails (primary section) */}
       <section className="space-y-3">
@@ -311,7 +284,7 @@ export function AgentOpsPanel() {
               >
                 {updateControl.isPending ? (
                   <>
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
                     {t('agentOps.saving')}
                   </>
                 ) : (
@@ -358,9 +331,10 @@ export function AgentOpsPanel() {
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="icon-tile icon-tile-accent-blue">
-                            <TerminalSquare className="h-3.5 w-3.5" />
-                          </span>
+                          <TerminalSquare
+                            className="text-muted-foreground h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                          />
                           <span className="text-sm font-medium">
                             {t(`agentOps.localRunners.providers.${runner.provider}`)}
                           </span>
@@ -424,7 +398,7 @@ export function AgentOpsPanel() {
             description={t('agentOps.serviceStatus.description')}
             inline
           />
-          <ul className="stagger divide-border/50 divide-y">
+          <ul className="divide-border/50 divide-y">
             {data.serviceStatus.map((service) => (
               <li key={service.key} className="flex items-start justify-between gap-3 py-2.5">
                 <div className="min-w-0 flex-1 space-y-0.5">
@@ -477,7 +451,7 @@ export function AgentOpsPanel() {
               {t('agentOps.providerCoverage.noData')}
             </p>
           ) : (
-            <ul className="stagger border-border/50 space-y-1 border-t pt-2">
+            <ul className="border-border/50 space-y-1 border-t pt-2">
               {Object.entries(data.providerBreakdown).map(([provider, item]) => (
                 <li
                   key={provider}
@@ -519,7 +493,7 @@ export function AgentOpsPanel() {
               {t('agentOps.workspaceCoverage.noData')}
             </p>
           ) : (
-            <ul className="stagger divide-border/50 divide-y">
+            <ul className="divide-border/50 divide-y">
               {data.workspaceCoverage.map((workspace) => (
                 <li key={workspace.organizationId} className="space-y-1 px-1 py-3">
                   <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
@@ -552,7 +526,7 @@ export function AgentOpsPanel() {
                         })}
                       </p>
                     </div>
-                    <div className="text-muted-foreground shrink-0 space-y-0.5 text-xs lg:text-right">
+                    <div className="text-muted-foreground shrink-0 space-y-0.5 text-xs lg:text-end">
                       <p>{t(credentialSourceKey(workspace.providerStatus.source))}</p>
                       <p>
                         {workspace.lastRunAt
@@ -587,7 +561,7 @@ export function AgentOpsPanel() {
           description={t('agentOps.manage.description')}
         />
         <div className="surface-card p-4">
-          <ul className="stagger divide-border/50 divide-y">
+          <ul className="divide-border/50 divide-y">
             {[
               {
                 icon: Shield,
@@ -620,7 +594,7 @@ export function AgentOpsPanel() {
                   <Button asChild variant="ghost" size="sm" className="shrink-0">
                     <Link href={link}>
                       {t('agentOps.open')}
-                      <ExternalLink className="ml-1 h-3 w-3" />
+                      <ExternalLink className="ms-1 h-3 w-3" />
                     </Link>
                   </Button>
                 )}
@@ -770,7 +744,7 @@ export function AgentOpsPanel() {
               {t('agentOps.recentRuns.noData')}
             </p>
           ) : (
-            <ul className="stagger divide-border/50 divide-y">
+            <ul className="divide-border/50 divide-y">
               {data.recentRuns.map((run) => (
                 <li
                   key={run.id}

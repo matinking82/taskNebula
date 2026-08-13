@@ -43,7 +43,7 @@ export function MobileMenu({ items }: { items: ReadonlyArray<{ label: string; hr
       {open && (
         <div
           id="marketing-mobile-menu"
-          className="absolute inset-x-0 top-14 z-50 border-b border-[var(--landing-border)] bg-[var(--landing-bg)] shadow-lg lg:hidden"
+          className="absolute inset-x-0 top-16 z-50 border-b border-[var(--landing-border)] bg-[var(--landing-bg)] shadow-lg lg:hidden"
         >
           <div className="mx-auto flex w-full max-w-screen-xl flex-col px-4 py-3 sm:px-8">
             {items.map((item) => (

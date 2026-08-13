@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import tailwindcssAnimate from 'tailwindcss-animate';
 
 const config: Config = {
   darkMode: ['class'],
@@ -22,8 +23,24 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        sans: [
+          'var(--font-sans)',
+          'system-ui',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
+        mono: [
+          'var(--font-mono)',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          'monospace',
+        ],
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -38,14 +55,30 @@ const config: Config = {
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        workbench: {
+          backdrop: 'hsl(var(--workbench-backdrop))',
+          canvas: 'hsl(var(--workbench-canvas))',
+        },
+        chrome: {
+          DEFAULT: 'hsl(var(--chrome))',
+          foreground: 'hsl(var(--chrome-foreground))',
+        },
+        context: {
+          DEFAULT: 'hsl(var(--context))',
+          foreground: 'hsl(var(--context-foreground))',
+        },
+        rail: {
+          DEFAULT: 'hsl(var(--rail))',
+          foreground: 'hsl(var(--rail-foreground))',
+        },
         surface: {
           DEFAULT: 'hsl(var(--surface))',
           2: 'hsl(var(--surface-2))',
           // FEAT-31 dark surfaces — zinc-950 base, zinc-900 elevated. Used by
           // glassmorphism panels + modernized cards. Light theme can still
           // override via the existing `--surface` HSL token.
-          dark: 'rgb(9 9 11)',         // zinc-950
-          elevated: 'rgb(24 24 27)',   // zinc-900
+          dark: 'rgb(9 9 11)', // zinc-950
+          elevated: 'rgb(24 24 27)', // zinc-900
         },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
@@ -223,7 +256,7 @@ const config: Config = {
         'accordion-up': 'accordion-up 0.2s cubic-bezier(0.4, 0, 0.6, 1)',
         'fade-in': 'fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'fade-out': 'fade-out 0.2s cubic-bezier(0.4, 0, 0.6, 1)',
-        'fade-up': 'fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'fade-up': 'fade-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'fade-down': 'fade-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'slide-in-from-top': 'slide-in-from-top 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         'slide-in-from-bottom': 'slide-in-from-bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -234,18 +267,17 @@ const config: Config = {
         'pulse-ring': 'pulse-ring 2s cubic-bezier(0.16, 1, 0.3, 1) infinite',
         shimmer: 'shimmer 1.6s ease-in-out infinite',
         'gradient-pan': 'gradient-pan 10s ease-in-out infinite',
-        'blur-in': 'blur-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'blur-in': 'blur-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'pop-in': 'pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'alert-in': 'alert-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'toast-in': 'toast-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'toast-in': 'toast-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'dot-breathe': 'dot-breathe 2.4s ease-in-out infinite',
-        'page-enter': 'page-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'page-enter': 'page-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       },
       transitionDuration: {
         '150': '150ms',
         '250': '250ms',
         '350': '350ms',
-        '450': '450ms',
       },
       transitionTimingFunction: {
         smooth: 'cubic-bezier(0.16, 1, 0.3, 1)',
@@ -255,7 +287,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

@@ -140,7 +140,7 @@ function FeatureCell({
 }) {
   return (
     <article
-      className={`ease-smooth flex h-full flex-col rounded-lg border border-[var(--landing-border)] bg-[var(--landing-bg-card)] p-6 transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${className}`}
+      className={`flex h-full flex-col rounded-lg border border-[var(--landing-border)] bg-[var(--landing-bg-card)] p-6 transition-colors duration-200 hover:border-[var(--landing-border-strong)] ${className}`}
     >
       <div className="flex items-center justify-between gap-3">
         <div className={`icon-tile icon-tile-accent-${tone} h-10 w-10`}>

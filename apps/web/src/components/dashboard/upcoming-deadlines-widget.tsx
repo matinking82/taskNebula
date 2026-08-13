@@ -69,7 +69,7 @@ export function UpcomingDeadlinesWidget() {
         </h2>
         <Link
           href="/my-issues"
-          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors duration-150"
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           {tActions('view_all')}
           <ArrowUpRight className="h-3 w-3" />
@@ -102,7 +102,7 @@ export function UpcomingDeadlinesWidget() {
               <Link
                 key={issue.id}
                 href={`/issues/${issue.id}`}
-                className="row-interactive flex min-h-10 min-w-0 items-center gap-2 rounded-md px-2 py-2 text-left transition-colors duration-150 sm:gap-3"
+                className="row-interactive focus-visible:ring-ring flex min-h-10 min-w-0 items-center gap-2 rounded-md px-2 py-2 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sm:gap-3"
               >
                 <span
                   className={cn(

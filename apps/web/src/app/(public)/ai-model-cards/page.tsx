@@ -27,8 +27,8 @@ export default async function AiModelCardsPage() {
   const t = await getTranslations('aiModelCards');
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-      <header className="grid gap-6 border-b pb-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-12">
+    <main className="border-border bg-background mx-auto min-h-[calc(100dvh-4rem)] max-w-[1200px] border-x px-4 py-10 sm:px-6 sm:py-14 lg:px-10">
+      <header className="border-border grid gap-8 border-b pb-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16 lg:pb-14">
         <div>
           <p className="text-muted-foreground text-xs font-medium uppercase tracking-[0.14em]">
             {t('disclosureBadge')}
@@ -49,8 +49,8 @@ export default async function AiModelCardsPage() {
         </div>
       </header>
 
-      <div className="grid gap-10 py-10 lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-12">
-        <nav aria-label={t('onThisPage')} className="lg:sticky lg:top-6 lg:self-start">
+      <div className="grid gap-10 py-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16 lg:py-12">
+        <nav aria-label={t('onThisPage')} className="lg:sticky lg:top-24 lg:self-start">
           <p className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-[0.14em]">
             {t('onThisPage')}
           </p>
@@ -73,7 +73,7 @@ export default async function AiModelCardsPage() {
             <section
               key={card.id}
               id={card.id}
-              className="grid scroll-mt-20 gap-5 py-10 sm:grid-cols-[2rem_minmax(0,1fr)]"
+              className="grid scroll-mt-32 gap-5 py-10 sm:grid-cols-[2rem_minmax(0,1fr)] lg:py-12"
               data-testid={`model-card-${card.id}`}
             >
               <span className="text-muted-foreground font-mono text-xs" aria-hidden="true">
@@ -91,7 +91,7 @@ export default async function AiModelCardsPage() {
                 </header>
 
                 <dl className="border-border divide-border my-6 grid border-y text-xs sm:grid-cols-3 sm:divide-x">
-                  <div className="py-3 sm:px-4 sm:first:pl-0">
+                  <div className="py-3 sm:px-4 sm:first:ps-0">
                     <dt className="text-muted-foreground mb-1 uppercase tracking-wider">
                       {t('model')}
                     </dt>
@@ -103,7 +103,7 @@ export default async function AiModelCardsPage() {
                     </dt>
                     <dd className="font-mono">{card.defaultProvider}</dd>
                   </div>
-                  <div className="border-border border-t py-3 sm:border-t-0 sm:px-4 sm:last:pr-0">
+                  <div className="border-border border-t py-3 sm:border-t-0 sm:px-4 sm:last:pe-0">
                     <dt className="text-muted-foreground mb-1 uppercase tracking-wider">
                       {t('oversightDefault')}
                     </dt>

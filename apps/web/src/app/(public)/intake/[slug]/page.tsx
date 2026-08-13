@@ -40,10 +40,10 @@ export default async function PublicIntakePage({ params }: { params: Promise<{ s
   const fields = (form.fields as IntakeFieldDefinition[]) ?? [];
 
   return (
-    <main className="bg-background min-h-dvh">
-      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="surface-card space-y-6 rounded-lg p-6 sm:p-10">
-          <header className="space-y-3">
+    <main className="bg-surface min-h-[calc(100dvh-4rem)]">
+      <div className="border-border bg-background mx-auto min-h-[calc(100dvh-4rem)] max-w-[1000px] border-x px-4 py-10 sm:px-6 sm:py-14 lg:px-10 lg:py-16">
+        <div className="grid gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
+          <header className="border-border space-y-3 border-b pb-8 lg:border-b-0 lg:border-e lg:pe-10">
             <h1 className="text-foreground text-3xl font-semibold tracking-tight sm:text-4xl">
               {form.title}
             </h1>
@@ -52,11 +52,13 @@ export default async function PublicIntakePage({ params }: { params: Promise<{ s
             ) : null}
           </header>
 
-          <PublicIntakeForm
-            slug={form.slug}
-            fields={fields}
-            requiresCaptcha={form.requiresCaptcha}
-          />
+          <div className="min-w-0 lg:ps-2">
+            <PublicIntakeForm
+              slug={form.slug}
+              fields={fields}
+              requiresCaptcha={form.requiresCaptcha}
+            />
+          </div>
         </div>
       </div>
     </main>

@@ -100,7 +100,7 @@ export function PinnedItemsWidget() {
                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                 <Link
                   href={item.href}
-                  className="text-foreground min-w-0 flex-1 truncate text-sm hover:underline"
+                  className="text-foreground focus-visible:ring-ring min-w-0 flex-1 truncate rounded-sm text-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                 >
                   {item.title}
                 </Link>
@@ -109,7 +109,7 @@ export function PinnedItemsWidget() {
                   aria-label={t('pinned.unpin_aria', { title: item.title })}
                   onClick={() => unpinMutation.mutate(item.id)}
                   disabled={unpinMutation.isPending}
-                  className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 text-[11px] opacity-100 transition-opacity duration-150 focus-visible:opacity-100 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex min-h-9 shrink-0 items-center gap-1 rounded-sm px-1 text-[11px] opacity-100 transition-opacity duration-150 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 sm:min-h-8 sm:opacity-0 sm:group-hover:opacity-100"
                 >
                   <PinOff className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">{t('pinned.unpin')}</span>

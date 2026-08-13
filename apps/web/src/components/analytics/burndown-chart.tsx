@@ -2,7 +2,6 @@
 
 import { BurndownData } from '@/lib/hooks/use-analytics';
 import { useFormatter, useTranslations } from 'next-intl';
-import { CheckCircle2, Clock, Hash, Target } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -84,33 +83,13 @@ function BurndownTooltip({ active, payload, label, formatter }: BurndownTooltipP
   );
 }
 
-type Tone = 'blue' | 'emerald' | 'amber' | 'violet' | 'cyan' | 'rose';
-
-function StatTile({
-  tone,
-  icon,
-  label,
-  value,
-  trend,
-}: {
-  tone: Tone;
-  icon: React.ReactNode;
-  label: string;
-  value: number | string;
-  trend?: { value: string; tone: Tone };
-}) {
+function StatTile({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="animate-scale-in flex items-start gap-2.5">
-      <span className={`icon-tile icon-tile-accent-${tone}`}>{icon}</span>
-      <div className="min-w-0 flex-1">
-        <div className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-          {label}
-        </div>
-        <div className="mt-0.5 flex items-baseline gap-1.5">
-          <span className="text-foreground text-xl font-semibold tabular-nums">{value}</span>
-          {trend ? <span className={`chip-${trend.tone} text-[10px]`}>{trend.value}</span> : null}
-        </div>
+    <div className="bg-card min-w-0 space-y-1 px-3 py-2.5 sm:px-4">
+      <div className="text-muted-foreground text-[10px] font-medium uppercase tracking-[0.08em]">
+        {label}
       </div>
+      <div className="text-foreground text-xl font-semibold tabular-nums">{value}</div>
     </div>
   );
 }
@@ -138,31 +117,11 @@ export function BurndownChart({ data }: BurndownChartProps) {
       </div>
 
       {/* Stat tiles */}
-      <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile
-          tone="blue"
-          icon={<Target className="h-3.5 w-3.5" />}
-          label={t('totalPoints')}
-          value={data.totalPoints}
-        />
-        <StatTile
-          tone="emerald"
-          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-          label={t('completed')}
-          value={data.completedPoints}
-        />
-        <StatTile
-          tone="amber"
-          icon={<Clock className="h-3.5 w-3.5" />}
-          label={t('remaining')}
-          value={data.remainingPoints}
-        />
-        <StatTile
-          tone="violet"
-          icon={<Hash className="h-3.5 w-3.5" />}
-          label={t('totalIssues')}
-          value={data.totalIssues}
-        />
+      <div className="bg-border border-border grid grid-cols-2 gap-px overflow-hidden border-y sm:grid-cols-4">
+        <StatTile label={t('totalPoints')} value={data.totalPoints} />
+        <StatTile label={t('completed')} value={data.completedPoints} />
+        <StatTile label={t('remaining')} value={data.remainingPoints} />
+        <StatTile label={t('totalIssues')} value={data.totalIssues} />
       </div>
 
       {/* Legend */}

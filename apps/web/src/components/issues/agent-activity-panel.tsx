@@ -61,12 +61,11 @@ function runnerStatusKey(status: string) {
 
 function statusTone(state: string) {
   if (state === 'complete')
-    return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    return 'border-accent-emerald/30 bg-accent-emerald/10 text-accent-emerald';
   if (state === 'error') return 'border-destructive/30 bg-destructive/10 text-destructive';
-  if (state === 'active')
-    return 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300';
+  if (state === 'active') return 'border-accent-blue/30 bg-accent-blue/10 text-accent-blue';
   if (state === 'awaitingInput')
-    return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    return 'border-accent-amber/30 bg-accent-amber/10 text-accent-amber';
   return 'border-border bg-muted/50 text-muted-foreground';
 }
 
@@ -206,7 +205,7 @@ export function AgentActivityPanel({
           </div>
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
             <span className="text-muted-foreground">{t('agent.runner')}</span>
-            <span className="max-w-full truncate font-mono text-[11px] sm:max-w-[60%] sm:text-right">
+            <span className="max-w-full truncate font-mono text-[11px] sm:max-w-[60%] sm:text-end">
               {latestLocalRun?.command
                 ? t('agent.localRunner', { command: latestLocalRun.command })
                 : t('agent.webhookRunner')}

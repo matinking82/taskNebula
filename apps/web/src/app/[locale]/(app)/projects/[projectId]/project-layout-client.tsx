@@ -118,21 +118,27 @@ export function ProjectLayoutClient({
     <TooltipProvider delayDuration={80}>
       <div className="flex h-full flex-col">
         <div className="bg-surface-dark border-border-strong shrink-0 border-b text-white shadow-none">
-          <div className="flex items-center gap-3 px-4 py-1.5">
+          <div className="flex items-center gap-1.5 px-3 py-1 sm:gap-2 sm:px-4">
             <nav aria-label={t('breadcrumb')} className="flex min-w-0 items-center gap-1 text-xs">
-              <Link href="/projects" className="text-white/60 transition-colors hover:text-white">
+              <Link
+                href="/projects"
+                className="inline-flex min-h-10 items-center text-white/80 transition-colors hover:text-white sm:min-h-8"
+              >
                 {t('title')}
               </Link>
-              <ChevronRight className="h-3 w-3 shrink-0 text-white/35" />
+              <ChevronRight
+                aria-hidden="true"
+                className="h-3 w-3 shrink-0 text-white/55 rtl:rotate-180"
+              />
             </nav>
             <span className="min-w-0 truncate text-xs font-medium text-white">{projectName}</span>
             {project?.key ? (
-              <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-white/45 sm:inline">
+              <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-white/75 sm:inline">
                 {project.key}
               </span>
             ) : null}
 
-            <div className="h-4 w-px bg-white/15" aria-hidden="true" />
+            <div className="h-4 w-px bg-white/25" aria-hidden="true" />
 
             <nav
               aria-label={t('sections')}
@@ -151,7 +157,7 @@ export function ProjectLayoutClient({
                           aria-label={tabLabel}
                           aria-current={isActive ? 'page' : undefined}
                           className={cn(
-                            'inline-flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-0 text-white/65 transition-colors hover:bg-white/10 hover:text-white lg:w-auto lg:px-2.5',
+                            'inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-md px-0 text-white/80 transition-colors hover:bg-white/10 hover:text-white sm:h-8 sm:w-8 lg:w-auto lg:px-2.5',
                             isActive && 'bg-primary text-primary-foreground'
                           )}
                         >
@@ -168,15 +174,15 @@ export function ProjectLayoutClient({
               </div>
             </nav>
 
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="ms-auto flex shrink-0 items-center gap-1.5">
               {activeSprint ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link
                       href={`/projects/${projectId}/sprints/${activeSprint.id}`}
-                      className="live-pill live-pill-on-dark inline-flex items-center gap-1 text-[10px]"
+                      className="live-pill live-pill-on-dark inline-flex min-h-10 max-w-24 items-center gap-1 text-[10px] sm:min-h-8 sm:max-w-40"
                     >
-                      <span className="font-medium">{activeSprint.name}</span>
+                      <span className="truncate font-medium">{activeSprint.name}</span>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
@@ -194,7 +200,7 @@ export function ProjectLayoutClient({
                       size="icon"
                       aria-label={t('projectSettings')}
                       onClick={() => setIsSettingsOpen(true)}
-                      className="h-7 w-7 text-white/65 hover:bg-white/10 hover:text-white"
+                      className="h-10 w-10 text-white/80 hover:bg-white/10 hover:text-white sm:h-8 sm:w-8"
                     >
                       <Settings className="h-4 w-4" />
                     </Button>

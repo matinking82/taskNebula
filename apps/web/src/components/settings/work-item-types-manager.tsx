@@ -110,7 +110,7 @@ export function WorkItemTypesManager({ projectId }: WorkItemTypesManagerProps) {
   };
 
   return (
-    <section className="animate-fade-up space-y-4">
+    <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <span className="kicker">{t('wit_kicker')}</span>
@@ -118,7 +118,7 @@ export function WorkItemTypesManager({ projectId }: WorkItemTypesManagerProps) {
           <p className="text-muted-foreground max-w-prose text-sm">{t('wit_description')}</p>
         </div>
         <Button onClick={handleCreateType} size="sm" disabled={!isHydrated}>
-          <Plus className="mr-1.5 h-4 w-4" />
+          <Plus className="me-1.5 h-4 w-4" />
           {t('wit_new_type')}
         </Button>
       </div>
@@ -134,7 +134,7 @@ export function WorkItemTypesManager({ projectId }: WorkItemTypesManagerProps) {
               <button
                 type="button"
                 onClick={() => setEditingId(isEditing ? null : type.id)}
-                className="hover:bg-muted/40 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
+                className="hover:bg-muted/40 focus-visible:ring-ring flex w-full items-center gap-3 px-4 py-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 aria-expanded={isEditing}
               >
                 <span
@@ -273,7 +273,7 @@ function TypeEditor({
                     key={emoji}
                     type="button"
                     onClick={() => onUpdate({ icon: emoji })}
-                    className={`hover:bg-muted flex h-8 w-8 items-center justify-center rounded text-lg transition-colors ${
+                    className={`hover:bg-muted focus-visible:ring-ring flex h-9 w-9 items-center justify-center rounded-sm text-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                       emoji === type.icon ? 'bg-muted ring-primary ring-1' : ''
                     }`}
                     aria-label={t('wit_select_emoji', { emoji })}
@@ -295,7 +295,7 @@ function TypeEditor({
                 type="button"
                 onClick={() => onUpdate({ color: swatch.value })}
                 aria-label={t('wit_set_color', { color: t(swatch.i18nKey) })}
-                className={`h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                className={`focus-visible:ring-ring h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                   type.color === swatch.value ? 'border-foreground' : 'border-border'
                 }`}
                 style={{ backgroundColor: swatch.value }}
@@ -341,7 +341,7 @@ function TypeEditor({
             </p>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={onAddProperty}>
-            <Plus className="mr-1 h-3.5 w-3.5" />
+            <Plus className="me-1 h-3.5 w-3.5" />
             {t('wit_add_property')}
           </Button>
         </div>

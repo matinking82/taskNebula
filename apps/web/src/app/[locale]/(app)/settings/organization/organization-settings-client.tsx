@@ -242,7 +242,7 @@ export function OrganizationSettingsClient() {
             >
               {deleteOrgMutation.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   {t('org.deleting')}
                 </>
               ) : (
@@ -253,7 +253,7 @@ export function OrganizationSettingsClient() {
         </DialogContent>
       </Dialog>
 
-      <div className="animate-fade-up space-y-8">
+      <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
@@ -403,10 +403,10 @@ export function OrganizationSettingsClient() {
                     <p className="text-muted-foreground text-xs">{t('org.verifiedDomainHint')}</p>
                   </div>
                   <div className="relative">
-                    <Globe className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                    <Globe className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                     <Input
                       id="org-domain"
-                      className="ease-snap pl-9 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
+                      className="ease-snap ps-9 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       placeholder={t('org.domainPlaceholder')}
                       value={formData.domain}
                       onChange={(event) =>
@@ -434,12 +434,12 @@ export function OrganizationSettingsClient() {
                   >
                     {updateOrgMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="me-2 h-4 w-4 animate-spin" />
                         {t('org.saving')}
                       </>
                     ) : (
                       <>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="me-2 h-4 w-4" />
                         {t('org.saveChanges')}
                       </>
                     )}
@@ -457,7 +457,7 @@ export function OrganizationSettingsClient() {
           </TabsContent>
 
           <TabsContent value="danger">
-            <section className="animate-fade-up space-y-4">
+            <section className="space-y-4">
               <div className="space-y-1">
                 <span className="kicker text-destructive">{t('org.dangerKicker')}</span>
                 <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">

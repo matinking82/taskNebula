@@ -23,7 +23,7 @@ wins silently.
 
 ## Core language
 
-TaskNebula is square-ish, calm, dense, and architectural.
+TaskNebula Workbench is square-ish, calm, dense, and architectural.
 
 - Typography and spacing establish hierarchy before color or shadow.
 - One primary blue communicates action. Semantic color communicates real
@@ -34,6 +34,21 @@ TaskNebula is square-ish, calm, dense, and architectural.
 - Gradients, glass, dot grids, glows, and ornamental icon tiles are not product
   decoration. A public hero may earn a restrained exception through
   `DESIGN.md` evidence.
+
+### Workbench shell
+
+- The global rail is the darkest and quietest layer. It uses icon-only
+  destinations with accessible names; tiny multi-line labels are not navigation.
+- The context panel uses neutral surfaces and readable local labels. Its active
+  row is expressed with position, contrast, and a restrained action accent—not
+  a large saturated tile.
+- The desktop work canvas is an accountable inset surface with one perimeter,
+  one command bar, and one content grid. It becomes edge-to-edge below the
+  desktop breakpoint.
+- Page headers and view toolbars align with the primary data surface. Avoid a
+  page header floating at one width above a table or board at another width.
+- Global search, create, and quick actions live in the command bar. Route-local
+  filters and view controls live beside the data they affect.
 
 ## Tokens
 
@@ -118,6 +133,10 @@ Use the primitives in `src/components/ui` before writing custom markup.
 - The existing user-selectable glass appearance is legacy compatibility. New
   components must remain legible without relying on blur and should not add
   new glass-only treatment.
+- Workbench surfaces use quiet tonal separation: page canvas, primary data
+  surface, then inset/selected state. Do not give every widget its own shadow.
+- Dense cards and rows show identity and state first. Optional metadata yields
+  before titles truncate or action targets become too small.
 
 ### Badges and status
 
@@ -127,6 +146,8 @@ text when that is clearer. Never encode state by color alone.
 ### Typography and numbers
 
 - Use size and weight before color for hierarchy.
+- IBM Plex Sans/Mono remains the authenticated-workbench signature. Base UI
+  text is 14/20; 12/16 is reserved for metadata and navigation support.
 - Identifiers and machine evidence may use the mono family; prose does not.
 - Comparisons, metrics, times, and aligned counts use `tabular-nums`.
 - Long-form text keeps a readable measure.
@@ -159,17 +180,20 @@ props manually.
 
 ## Replacement guide
 
-| Avoid                                | Use                                          |
-| ------------------------------------ | -------------------------------------------- |
-| arbitrary gray/hex utilities         | semantic surface/text tokens                 |
-| heavy nested shadows and borders     | spacing plus one accountable surface         |
-| generic `transition-all`             | property-specific transition                 |
-| `rounded-xl/2xl` generic cards       | `rounded-lg`                                 |
-| non-circular `rounded-full` controls | `rounded-md` or `rounded-sm`                 |
-| decorative gradient/glass/icon tile  | hierarchy or real work topology              |
-| mixed icon sizes in one row          | one consistent Lucide size                   |
-| simulated success                    | persisted success or explicit retry/recovery |
-| hardcoded visible copy               | `next-intl` key in all catalogs              |
+| Avoid                                | Use                                           |
+| ------------------------------------ | --------------------------------------------- |
+| arbitrary gray/hex utilities         | semantic surface/text tokens                  |
+| heavy nested shadows and borders     | spacing plus one accountable surface          |
+| generic `transition-all`             | property-specific transition                  |
+| `rounded-xl/2xl` generic cards       | `rounded-lg`                                  |
+| non-circular `rounded-full` controls | `rounded-md` or `rounded-sm`                  |
+| decorative gradient/glass/icon tile  | hierarchy or real work topology               |
+| mixed icon sizes in one row          | one consistent Lucide size                    |
+| simulated success                    | persisted success or explicit retry/recovery  |
+| hardcoded visible copy               | `next-intl` key in all catalogs               |
+| icon rail with 9px wrapped labels    | icon destination + tooltip/accessibility name |
+| duplicated global and local action   | one scoped command/action surface             |
+| desktop drawer squeezed onto mobile  | full-screen mobile detail                     |
 
 ## Change and verification
 

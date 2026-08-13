@@ -207,7 +207,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
           <Link href="/my-issues" className="hover:text-foreground min-w-0 truncate">
             {t('breadcrumb')}
           </Link>
-          <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />
+          <ChevronRight className="h-3 w-3 shrink-0 opacity-60 rtl:rotate-180" />
           <span className="text-foreground min-w-0 truncate font-medium">{projectPrefix}</span>
         </nav>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
@@ -260,7 +260,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
               size="sm"
               aria-label={t('editTitle')}
               onClick={startEditingTitle}
-              className="text-muted-foreground ease-snap hover:text-foreground mt-1 h-6 w-6 shrink-0 rounded-md p-0 opacity-0 transition-opacity duration-150 focus-visible:opacity-100 group-hover/title:opacity-100"
+              className="text-muted-foreground ease-snap hover:text-foreground mt-0.5 h-9 w-9 shrink-0 rounded-md p-0 opacity-100 transition-opacity duration-150 focus-visible:opacity-100 sm:mt-1 sm:h-7 sm:w-7 sm:opacity-0 sm:group-focus-within/title:opacity-100 sm:group-hover/title:opacity-100"
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -275,7 +275,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
           variant="ghost"
           size="sm"
           className={cn(
-            'ease-snap gap-1.5 rounded-md transition-colors duration-150',
+            'ease-snap min-h-10 min-w-10 gap-1.5 rounded-md transition-colors duration-150 sm:min-h-8 sm:min-w-8',
             star.isStarred && 'text-accent-amber'
           )}
           onClick={star.toggle}
@@ -290,7 +290,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
           variant="ghost"
           size="sm"
           className={cn(
-            'ease-snap gap-1.5 rounded-md transition-colors duration-150',
+            'ease-snap min-h-10 min-w-10 gap-1.5 rounded-md transition-colors duration-150 sm:min-h-8 sm:min-w-8',
             watch.isWatching && 'text-accent-blue'
           )}
           onClick={watch.toggle}
@@ -304,7 +304,7 @@ export function IssueHeader({ issue }: IssueHeaderProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground hover:text-foreground ease-snap gap-1.5 rounded-md transition-colors duration-150"
+          className="text-muted-foreground hover:text-foreground ease-snap min-h-10 min-w-10 gap-1.5 rounded-md transition-colors duration-150 sm:min-h-8 sm:min-w-8"
           onClick={handleCopyLink}
           aria-label={copied ? t('copied') : t('copyLink')}
         >

@@ -255,7 +255,7 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
 
   return (
     <>
-      <div className="surface-card animate-fade-up space-y-5 p-5">
+      <div className="surface-card space-y-5 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <span className="kicker">{t('kicker')}</span>
@@ -263,7 +263,7 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
             <p className="text-muted-foreground text-xs">{t('subtitle')}</p>
           </div>
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             {t('new_version')}
           </Button>
         </div>
@@ -273,7 +273,7 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
             <Rocket className="text-muted-foreground/40 mx-auto h-8 w-8" />
             <p className="text-muted-foreground text-sm">{t('empty')}</p>
             <Button size="sm" variant="outline" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               {t('create_first')}
             </Button>
           </div>
@@ -287,7 +287,7 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
                     {group.versions.length}
                   </span>
                 </h4>
-                <div className="stagger divide-border/60 -mx-1 divide-y">
+                <div className="divide-border/60 -mx-1 divide-y">
                   {group.versions.map((version) => {
                     const progressValue =
                       version.issueCount > 0
@@ -326,7 +326,7 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
                           {version.issueCount > 0 ? (
                             <>
                               <Progress value={progressValue} className="h-1.5 w-24" />
-                              <span className="text-muted-foreground w-24 text-right text-xs tabular-nums">
+                              <span className="text-muted-foreground w-24 text-end text-xs tabular-nums">
                                 {t('progress', {
                                   done: version.doneIssueCount,
                                   total: version.issueCount,
@@ -351,12 +351,12 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setEditingVersion(version)}>
-                              <Pencil className="mr-2 h-3.5 w-3.5" />
+                              <Pencil className="me-2 h-3.5 w-3.5" />
                               {t('action_edit')}
                             </DropdownMenuItem>
                             {version.status === 'unreleased' && (
                               <DropdownMenuItem onClick={() => setReleasingVersion(version)}>
-                                <Rocket className="mr-2 h-3.5 w-3.5" />
+                                <Rocket className="me-2 h-3.5 w-3.5" />
                                 {t('action_release')}
                               </DropdownMenuItem>
                             )}
@@ -364,14 +364,14 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(version, 'archived')}
                               >
-                                <Archive className="mr-2 h-3.5 w-3.5" />
+                                <Archive className="me-2 h-3.5 w-3.5" />
                                 {t('action_archive')}
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(version, 'unreleased')}
                               >
-                                <ArchiveRestore className="mr-2 h-3.5 w-3.5" />
+                                <ArchiveRestore className="me-2 h-3.5 w-3.5" />
                                 {t('action_restore')}
                               </DropdownMenuItem>
                             )}
@@ -380,7 +380,7 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
                               className="text-destructive focus:text-destructive"
                               onClick={() => setDeletingVersion(version)}
                             >
-                              <Trash2 className="mr-2 h-3.5 w-3.5" />
+                              <Trash2 className="me-2 h-3.5 w-3.5" />
                               {t('action_delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -441,7 +441,7 @@ export function VersionsManager({ projectId }: VersionsManagerProps) {
               onClick={handleDelete}
               disabled={deleteVersion.isPending}
             >
-              {deleteVersion.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {deleteVersion.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('delete_submit')}
             </Button>
           </DialogFooter>
@@ -604,7 +604,7 @@ function VersionEditorDialog({
               {tActions('cancel')}
             </Button>
             <Button type="submit" disabled={isPending || !name.trim()}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {isEditMode ? t('save_submit') : t('create_submit')}
             </Button>
           </DialogFooter>
@@ -699,9 +699,9 @@ function ReleaseVersionDialog({
             </Button>
             <Button type="submit" disabled={releaseVersion.isPending}>
               {releaseVersion.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Rocket className="mr-2 h-4 w-4" />
+                <Rocket className="me-2 h-4 w-4" />
               )}
               {t('release_submit')}
             </Button>

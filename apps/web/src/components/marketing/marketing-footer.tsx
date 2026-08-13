@@ -40,8 +40,8 @@ export function MarketingFooter() {
   return (
     <footer className="border-t border-[var(--landing-border)]">
       <Shell className="py-14">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))]">
-          <div className="max-w-sm sm:col-span-2 lg:col-span-1">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] lg:gap-0">
+          <div className="max-w-sm sm:col-span-2 lg:col-span-1 lg:pe-10">
             <div className="flex items-center gap-3">
               <TaskNebulaLogo variant="mono" className="text-[var(--landing-accent-blue)]" />
               <div>
@@ -59,7 +59,7 @@ export function MarketingFooter() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t('githubAria')}
-              className={`ease-snap mt-5 inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--landing-border-strong)] px-3 text-[12px] font-[430] text-[var(--landing-text)] transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--landing-bg-elevated)] ${focusRingClass}`}
+              className={`mt-5 inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--landing-border-strong)] px-3 text-[12px] font-[430] text-[var(--landing-text)] transition-colors duration-150 hover:bg-[var(--landing-bg-elevated)] ${focusRingClass}`}
             >
               <Github className="h-4 w-4" aria-hidden="true" />
               {t('starGithub')}
@@ -67,7 +67,10 @@ export function MarketingFooter() {
           </div>
 
           {columns.map((column) => (
-            <div key={column.titleKey}>
+            <div
+              key={column.titleKey}
+              className="lg:border-s lg:border-[var(--landing-border)] lg:px-8 lg:last:pe-0"
+            >
               <h3 className="landing-kicker text-[var(--landing-text-subtle)]">
                 {t(`columns.${column.titleKey}`)}
               </h3>

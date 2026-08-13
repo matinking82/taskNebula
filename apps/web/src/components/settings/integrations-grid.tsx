@@ -597,7 +597,7 @@ function GitLabIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleDisconnect}
                 disabled={disconnecting}
                 className={cn(
-                  'border-border bg-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-border bg-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:border-foreground/30 disabled:opacity-60'
                 )}
               >
@@ -609,7 +609,7 @@ function GitLabIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleConnect}
                 disabled={!currentOrganizationId || loading}
                 className={cn(
-                  'border-foreground bg-foreground text-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-foreground bg-foreground text-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:opacity-90 disabled:opacity-60'
                 )}
               >
@@ -729,7 +729,7 @@ function JiraIntegrationCard({ integration }: IntegrationCardProps) {
                     href={siteUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline-offset-2 hover:underline"
+                    className="focus-visible:ring-ring rounded-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                   >
                     {t('integrations.open')}
                   </a>
@@ -745,7 +745,7 @@ function JiraIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleDisconnect}
                 disabled={disconnecting}
                 className={cn(
-                  'border-border bg-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-border bg-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:border-foreground/30 disabled:opacity-60'
                 )}
               >
@@ -757,7 +757,7 @@ function JiraIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleConnect}
                 disabled={!currentOrganizationId || loading}
                 className={cn(
-                  'border-foreground bg-foreground text-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-foreground bg-foreground text-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:opacity-90 disabled:opacity-60'
                 )}
               >
@@ -893,7 +893,7 @@ function GitHubIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleDisconnect}
                 disabled={disconnecting}
                 className={cn(
-                  'border-border bg-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-border bg-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:border-foreground/30 disabled:opacity-60'
                 )}
               >
@@ -905,7 +905,7 @@ function GitHubIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleConnect}
                 disabled={!currentOrganizationId || loading}
                 className={cn(
-                  'border-foreground bg-foreground text-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-foreground bg-foreground text-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:opacity-90 disabled:opacity-60'
                 )}
               >
@@ -1041,7 +1041,7 @@ function SentryIntegrationCard({ integration }: IntegrationCardProps) {
                     href={`https://sentry.io/organizations/${encodeURIComponent(orgSlug)}/`}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline-offset-2 hover:underline"
+                    className="focus-visible:ring-ring rounded-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                   >
                     {t('integrations.open')}
                   </a>
@@ -1057,7 +1057,7 @@ function SentryIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleDisconnect}
                 disabled={disconnecting}
                 className={cn(
-                  'border-border bg-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-border bg-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:border-foreground/30 disabled:opacity-60'
                 )}
               >
@@ -1069,7 +1069,7 @@ function SentryIntegrationCard({ integration }: IntegrationCardProps) {
                 onClick={handleConnect}
                 disabled={!currentOrganizationId || loading}
                 className={cn(
-                  'border-foreground bg-foreground text-background rounded-md border px-2.5 py-1 text-xs font-medium',
+                  'border-foreground bg-foreground text-background focus-visible:ring-ring rounded-md border px-2.5 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                   'hover:opacity-90 disabled:opacity-60'
                 )}
               >
@@ -1150,7 +1150,7 @@ export function IntegrationsGrid({ integrations = INTEGRATIONS }: IntegrationsGr
           onClick={() => void slack.disconnect()}
           disabled={slack.disconnecting || orgDisabled}
           className={cn(
-            'border-border rounded-md border px-3 py-1 text-xs font-medium',
+            'border-border focus-visible:ring-ring rounded-md border px-3 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
             'hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50'
           )}
         >
@@ -1164,7 +1164,7 @@ export function IntegrationsGrid({ integrations = INTEGRATIONS }: IntegrationsGr
             if (orgDisabled) e.preventDefault();
           }}
           className={cn(
-            'border-border bg-foreground text-background rounded-md border px-3 py-1 text-xs font-medium',
+            'border-border bg-foreground text-background focus-visible:ring-ring rounded-md border px-3 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
             'hover:opacity-90',
             orgDisabled && 'pointer-events-none opacity-50'
           )}
@@ -1210,7 +1210,7 @@ export function IntegrationsGrid({ integrations = INTEGRATIONS }: IntegrationsGr
               aria-selected={isActive}
               onClick={() => setActiveCategory(chip.value)}
               className={cn(
-                'rounded-sm border px-3 py-1 text-xs font-medium transition-colors duration-150',
+                'focus-visible:ring-ring rounded-sm border px-3 py-1 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                 isActive
                   ? 'border-primary/20 bg-primary/10 text-primary'
                   : 'border-border bg-background text-muted-foreground hover:bg-muted/40 hover:text-foreground'

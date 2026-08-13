@@ -52,8 +52,8 @@ export default async function TrustCenterPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-      <header className="grid gap-6 border-b pb-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-12">
+    <main className="border-border bg-background mx-auto min-h-[calc(100dvh-4rem)] w-full max-w-[1200px] border-x px-4 py-10 sm:px-6 sm:py-14 lg:px-10">
+      <header className="border-border grid gap-8 border-b pb-10 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16 lg:pb-14">
         <div>
           <p className="text-muted-foreground text-xs font-medium uppercase tracking-[0.14em]">
             {t('trustEyebrow')}
@@ -67,7 +67,10 @@ export default async function TrustCenterPage() {
         </p>
       </header>
 
-      <nav aria-label={t('trustEyebrow')} className="border-b py-4">
+      <nav
+        aria-label={t('trustEyebrow')}
+        className="border-border bg-background/95 sticky top-16 z-30 border-b py-4 backdrop-blur-sm"
+      >
         <ul className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-2 text-xs">
           {sections.map((section) => (
             <li key={section.id}>
@@ -154,7 +157,7 @@ export default async function TrustCenterPage() {
                       <span className="font-medium">{sp.name}</span>
                     )}
                     {sp.placeholder ? (
-                      <span className="bg-muted text-muted-foreground ml-2 rounded-sm px-1.5 py-0.5 text-[10px] font-medium">
+                      <span className="bg-muted text-muted-foreground ms-2 rounded-sm px-1.5 py-0.5 text-[10px] font-medium">
                         {t('trustStatusPlanned')}
                       </span>
                     ) : null}
@@ -259,7 +262,7 @@ function Section({
   return (
     <section
       id={id}
-      className="border-border grid scroll-mt-6 gap-6 border-b py-10 last:border-b-0 lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-12"
+      className="border-border grid scroll-mt-32 gap-6 border-b py-10 last:border-b-0 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16 lg:py-12"
     >
       <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       <div className="min-w-0">{children}</div>
@@ -271,7 +274,7 @@ function Th({ children }: { children: React.ReactNode }) {
   return (
     <th
       scope="col"
-      className="text-muted-foreground px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider first:pl-0 last:pr-0"
+      className="text-muted-foreground px-3 py-3 text-start text-xs font-semibold uppercase tracking-wider first:ps-0 last:pe-0"
     >
       {children}
     </th>
@@ -279,7 +282,7 @@ function Th({ children }: { children: React.ReactNode }) {
 }
 
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-3 align-top first:pl-0 last:pr-0 ${className}`}>{children}</td>;
+  return <td className={`px-3 py-3 align-top first:ps-0 last:pe-0 ${className}`}>{children}</td>;
 }
 
 function ComplianceCard({

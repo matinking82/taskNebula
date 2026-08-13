@@ -257,15 +257,15 @@ function ProviderRow({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Button size="sm" variant="outline" onClick={onConfigure}>
-          <Cog className="mr-1.5 h-3.5 w-3.5" />
+          <Cog className="me-1.5 h-3.5 w-3.5" />
           {provider.source === 'db' ? t('integrations.edit') : t('integrations.configure')}
         </Button>
         {provider.source === 'db' ? (
           <Button size="sm" variant="outline" onClick={onRemove} disabled={removing}>
             {removing ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              <Trash2 className="me-1.5 h-3.5 w-3.5" />
             )}
             {t('integrations.remove')}
           </Button>
@@ -405,7 +405,7 @@ function ConfigureDialog({
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || saveMutation.isPending}>
             {saveMutation.isPending ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
             ) : null}
             {t('integrations.saveCredentials')}
           </Button>

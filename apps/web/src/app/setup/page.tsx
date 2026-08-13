@@ -210,20 +210,24 @@ export default function SetupPage() {
 
   if (loading) {
     return (
-      <div className="bg-background relative grid min-h-dvh place-items-center overflow-hidden">
+      <main className="bg-background relative grid min-h-dvh place-items-center overflow-hidden">
         <div className="auth-carbon-spinner" aria-label={t('loading')} />
-      </div>
+      </main>
     );
   }
 
   if (stage === 'done') {
     return (
-      <div className="bg-background grid min-h-dvh place-items-center px-4">
-        <div className="surface-card animate-fade-up border-t-primary w-full max-w-md space-y-5 border-t-2 p-8 text-center shadow-none">
-          <div className="flex justify-center">
+      <main className="bg-surface grid min-h-dvh place-items-center px-4">
+        <div
+          className="border-border bg-background animate-fade-up grid w-full max-w-2xl overflow-hidden rounded-lg border sm:grid-cols-[10rem_minmax(0,1fr)]"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="bg-rail flex items-center justify-center p-8">
             <CheckCircle2 className="text-accent-emerald h-9 w-9" aria-hidden="true" />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 p-8 text-start">
             <h1 className="text-foreground text-2xl font-semibold tracking-tight">
               {t('setupComplete')}
             </h1>
@@ -234,14 +238,14 @@ export default function SetupPage() {
             </p>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <main className="bg-background min-h-dvh">
-      <div className="border-border bg-card border-b">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4 lg:px-8">
+    <main className="bg-surface min-h-dvh">
+      <header className="border-border bg-background border-b">
+        <div className="border-border mx-auto flex w-full max-w-[1280px] items-center justify-between border-x px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <TaskNebulaLogo compact />
             <div>
@@ -254,10 +258,10 @@ export default function SetupPage() {
             {t('setupInstanceEmpty')}
           </span>
         </div>
-      </div>
+      </header>
 
-      <div className="mx-auto grid min-h-[calc(100dvh-73px)] w-full max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-8">
-        <aside className="space-y-5">
+      <div className="border-border bg-background mx-auto grid min-h-[calc(100dvh-73px)] w-full max-w-[1280px] border-x lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <aside className="border-border space-y-5 border-b p-5 sm:p-6 lg:border-b-0 lg:border-e lg:p-8">
           <div className="space-y-2">
             <span className="kicker">{t('setupKicker')}</span>
             <h1 className="text-foreground text-3xl font-semibold tracking-tight">
@@ -309,7 +313,7 @@ export default function SetupPage() {
           </div>
         </aside>
 
-        <section className="min-w-0">
+        <section className="min-w-0 p-5 sm:p-8 lg:p-10">
           {setupUnavailable ? (
             <div className="surface-card animate-fade-up border-t-destructive max-w-2xl space-y-4 border-t-2 p-6 shadow-none">
               <p className="text-destructive text-sm" role="alert">
@@ -428,7 +432,7 @@ export default function SetupPage() {
 
                 <Button type="submit" size="lg" className="w-full sm:w-auto">
                   {t('setupContinue')}
-                  <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden="true" />
+                  <ArrowRight className="ms-1.5 h-4 w-4 rtl:rotate-180" aria-hidden="true" />
                 </Button>
               </form>
             </div>
@@ -474,7 +478,7 @@ export default function SetupPage() {
                         type="button"
                         onClick={() => setImportSource(source)}
                         className={cn(
-                          'row-interactive min-h-[104px] rounded-lg border p-3 text-left transition-colors duration-150',
+                          'row-interactive min-h-[104px] rounded-lg border p-3 text-start transition-colors duration-150',
                           importSource === source
                             ? 'border-primary/40 bg-primary/10'
                             : 'border-border bg-card'
@@ -553,13 +557,13 @@ export default function SetupPage() {
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <Button type="button" variant="outline" onClick={() => setStage('account')}>
-                  <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  <ArrowLeft className="me-1.5 h-4 w-4 rtl:rotate-180" aria-hidden="true" />
                   {t('setupBack')}
                 </Button>
                 <Button type="button" size="lg" onClick={handleCreateSetup} disabled={submitting}>
                   {submitting ? (
                     <>
-                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+                      <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
                       {t('setupCreatingAccount')}
                     </>
                   ) : (
@@ -567,7 +571,7 @@ export default function SetupPage() {
                       {startMode === 'import'
                         ? t('setupCreateAndImport', { source: selectedSourceLabel })
                         : t('setupCreateAdminAccount')}
-                      <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden="true" />
+                      <ArrowRight className="ms-1.5 h-4 w-4 rtl:rotate-180" aria-hidden="true" />
                     </>
                   )}
                 </Button>
@@ -602,7 +606,7 @@ function StartModeButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'row-interactive rounded-lg border p-4 text-left transition-colors duration-150',
+        'row-interactive rounded-lg border p-4 text-start transition-colors duration-150',
         active ? 'border-primary/40 bg-primary/10' : 'border-border bg-card'
       )}
       data-active={active ? 'true' : undefined}

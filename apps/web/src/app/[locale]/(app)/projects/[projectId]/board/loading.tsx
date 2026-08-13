@@ -10,20 +10,20 @@ export default async function BoardLoading() {
   return (
     <div className="flex h-full flex-col">
       <h1 className="sr-only">{tProjects('tabBoard')}</h1>
-      <div className="border-border shrink-0 border-b px-6 py-3">
-        <div className="flex items-center justify-between">
+      <div className="border-border shrink-0 border-b px-3 py-2 sm:px-4">
+        <div className="flex flex-wrap items-center justify-between gap-2" aria-busy="true">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-40 rounded-md" />
-            <Skeleton className="h-8 w-24 rounded-md" />
+            <Skeleton className="h-10 w-40 rounded-md sm:h-8" />
+            <Skeleton className="h-10 w-10 rounded-md sm:h-8 sm:w-24" />
           </div>
           <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-24 rounded-md" />
-            <Skeleton className="h-8 w-20 rounded-md" />
+            <Skeleton className="h-10 w-10 rounded-md sm:h-8 sm:w-24" />
+            <Skeleton className="h-10 w-10 rounded-md sm:h-8 sm:w-20" />
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 py-4">
-        <div className="flex h-full gap-3">
+      <div className="custom-scrollbar flex-1 overflow-x-auto overflow-y-hidden px-3 py-3 sm:px-4 sm:py-4">
+        <div className="flex h-full gap-2.5">
           <SkeletonKanbanColumn title={t('columnBacklog')} cards={3} />
           <SkeletonKanbanColumn title={t('columnToDo')} cards={4} />
           <SkeletonKanbanColumn title={t('columnInProgress')} cards={2} />

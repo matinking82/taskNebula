@@ -1017,7 +1017,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
               disabled={moderateMessages.isPending}
             >
               {moderateMessages.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : null}
               {t('chat.confirm')}
             </Button>
@@ -1026,8 +1026,8 @@ export function ChatShell({ projectId }: { projectId: string }) {
       </Dialog>
 
       <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-        <SheetContent side="left" className="w-[320px] p-0">
-          <SheetHeader className="border-b px-4 py-4 text-left">
+        <SheetContent side="start" className="w-[320px] p-0">
+          <SheetHeader className="border-b px-4 py-4 text-start">
             <SheetTitle>{t('chat.conversations')}</SheetTitle>
           </SheetHeader>
           {sidebar}
@@ -1038,12 +1038,12 @@ export function ChatShell({ projectId }: { projectId: string }) {
         <div className="bg-background flex h-full min-h-0 flex-col">{sidebar}</div>
       </PageSidebarContent>
 
-      <div className="bg-background flex h-full min-h-0">
+      <div className="bg-workbench-canvas flex h-full min-h-0">
         <main className="flex min-h-0 min-w-0 flex-1">
           {selectedRoomMeta ? (
             <>
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 border-b px-4 py-3 backdrop-blur sm:px-6">
+                <div className="bg-surface/55 border-border border-b px-3 py-3 sm:px-6">
                   <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-3">
                       <Button
@@ -1104,7 +1104,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                             <DropdownMenuItem
                               onClick={() => setPendingModerationAction('clear_deleted')}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2 className="me-2 h-4 w-4" />
                               {t('chat.moderation.clearDeletedTitle')}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -1112,7 +1112,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                               className="text-destructive focus:text-destructive"
                               onClick={() => setPendingModerationAction('clear_room')}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2 className="me-2 h-4 w-4" />
                               {t('chat.moderation.clearHistoryTitle')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -1128,7 +1128,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                             }
                           }}
                         >
-                          <Volume2 className="mr-1.5 h-4 w-4" />
+                          <Volume2 className="me-1.5 h-4 w-4" />
                           {isCurrentVoiceRoom ? t('chat.voice.inCall') : t('chat.voice.openCall')}
                         </Button>
                       ) : null}
@@ -1144,9 +1144,9 @@ export function ChatShell({ projectId }: { projectId: string }) {
                           }
                         >
                           {isJoiningCall ? (
-                            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                            <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
                           ) : (
-                            <PhoneCall className="mr-1.5 h-4 w-4" />
+                            <PhoneCall className="me-1.5 h-4 w-4" />
                           )}
                           {voice.currentSession
                             ? t('chat.voice.inCall')
@@ -1191,7 +1191,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                           variant="outline"
                           onClick={() => void voice.leaveCurrentCall()}
                         >
-                          <PhoneOff className="mr-2 h-3.5 w-3.5" />
+                          <PhoneOff className="me-2 h-3.5 w-3.5" />
                           {t('chat.voice.leave')}
                         </Button>
                       ) : (
@@ -1201,7 +1201,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                           onClick={handleOpenVoiceSetup}
                           disabled={Boolean(voice.currentSession) || isJoiningCall}
                         >
-                          <PhoneCall className="mr-2 h-3.5 w-3.5" />
+                          <PhoneCall className="me-2 h-3.5 w-3.5" />
                           {t('chat.voice.join')}
                         </Button>
                       )}
@@ -1233,7 +1233,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                               disabled={messagesQuery.isLoadingMore}
                             >
                               {messagesQuery.isLoadingMore ? (
-                                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                <Loader2 className="me-2 h-3.5 w-3.5 animate-spin" />
                               ) : null}
                               {t('chat.loadOlder')}
                             </Button>
@@ -1258,7 +1258,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                   </div>
                 </div>
 
-                <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 border-t px-4 py-4 backdrop-blur sm:px-6">
+                <div className="bg-surface/55 border-border border-t px-3 py-3 sm:px-6 sm:py-4">
                   <form
                     className="mx-auto flex w-full max-w-6xl flex-col gap-3"
                     onSubmit={handleComposerSubmit}
@@ -1362,7 +1362,7 @@ export function ChatShell({ projectId }: { projectId: string }) {
                 <aside
                   className={cn(
                     'hidden h-full shrink-0 overflow-hidden transition-[width,border-color] duration-200 xl:flex',
-                    isVoicePanelOpen ? 'w-[360px] border-l' : 'w-0 border-l-transparent'
+                    isVoicePanelOpen ? 'w-[360px] border-s' : 'w-0 border-s-transparent'
                   )}
                 >
                   <VoiceJoinSetupPanel
@@ -1410,8 +1410,8 @@ function ChatSidebar({
 }) {
   const t = useTranslations('workspaceTools');
   return (
-    <div className="bg-background/98 flex h-full min-h-0 flex-col">
-      <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 border-b px-5 py-4 backdrop-blur">
+    <div className="bg-context flex h-full min-h-0 flex-col">
+      <div className="bg-context border-border border-b px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <div className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.18em]">
@@ -1445,7 +1445,7 @@ function ChatSidebar({
                 type="button"
                 onClick={() => channel.roomId && onSelectRoom(channel.roomId)}
                 data-active={channel.roomId === selectedRoomId ? 'true' : undefined}
-                className="row-interactive flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+                className="row-interactive flex w-full items-center gap-2 px-3 py-2 text-start text-sm"
               >
                 <Hash className="h-4 w-4 shrink-0" />
                 <span className="min-w-0 flex-1 truncate">{channel.name}</span>
@@ -1472,7 +1472,7 @@ function ChatSidebar({
                   type="button"
                   onClick={() => onSelectRoom(discussion.id)}
                   data-active={discussion.id === selectedRoomId ? 'true' : undefined}
-                  className="row-interactive flex w-full items-start gap-2 px-3 py-2 text-left"
+                  className="row-interactive flex w-full items-start gap-2 px-3 py-2 text-start"
                 >
                   <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0" />
                   <div className="min-w-0 flex-1">
@@ -1536,7 +1536,7 @@ function ChatMessageRow({
         <AvatarFallback className="text-[10px]">{getInitials(authorName)}</AvatarFallback>
       </Avatar>
 
-      <div className={cn('min-w-0 flex-1', isOwnMessage && 'text-right')}>
+      <div className={cn('min-w-0 flex-1', isOwnMessage && 'text-end')}>
         <div
           className={cn(
             'flex flex-wrap items-baseline gap-x-2 gap-y-1',
@@ -1567,14 +1567,14 @@ function ChatMessageRow({
             message.deletedAt && 'text-muted-foreground italic',
             isOwnMessage &&
               !message.deletedAt &&
-              'bg-primary/8 inline-block max-w-full rounded-md px-3 py-1.5 text-left'
+              'bg-primary/8 inline-block max-w-full rounded-md px-3 py-1.5 text-start'
           )}
         >
           {message.deletedAt ? t('chat.message.messageDeleted') : message.body}
         </div>
 
         {message.deletedAt && message.moderation?.deletedBody ? (
-          <div className="surface-inset mt-2 rounded-md px-3 py-2 text-left">
+          <div className="surface-inset mt-2 rounded-md px-3 py-2 text-start">
             <div className="text-muted-foreground text-[11px] font-medium uppercase tracking-[0.12em]">
               {moderationLabel}
             </div>
@@ -2499,9 +2499,9 @@ export function VoiceJoinSetupPanel({
                   }
                 >
                   {isUnlockingMicrophoneAccess ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Mic className="mr-1.5 h-3.5 w-3.5" />
+                    <Mic className="me-1.5 h-3.5 w-3.5" />
                   )}
                   {t('chat.voice.unlockMicrophones')}
                 </Button>
@@ -2514,9 +2514,9 @@ export function VoiceJoinSetupPanel({
                 disabled={isSubmittingJoin || isPreparing || isRefreshingMicrophoneEnvironment}
               >
                 {isRefreshingMicrophoneEnvironment ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                  <RefreshCw className="me-1.5 h-3.5 w-3.5" />
                 )}
                 {t('chat.voice.refreshDevices')}
               </Button>
@@ -2549,9 +2549,9 @@ export function VoiceJoinSetupPanel({
               }
             >
               {isPreparingMicrophoneTest ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <TestTube2 className="mr-2 h-4 w-4" />
+                <TestTube2 className="me-2 h-4 w-4" />
               )}
               {isTestingMicrophone
                 ? t('chat.voice.stopTest')
@@ -2571,7 +2571,7 @@ export function VoiceJoinSetupPanel({
                 (!isTestingMicrophone && !isSelfMonitorEnabled)
               }
             >
-              <Volume2 className="mr-2 h-4 w-4" />
+              <Volume2 className="me-2 h-4 w-4" />
               {isSelfMonitorEnabled ? t('chat.voice.stopMonitor') : t('chat.voice.hearMyself')}
             </Button>
           </div>
@@ -2648,7 +2648,7 @@ export function VoiceJoinSetupPanel({
               disabled={isJoining || isSubmittingJoin || isPreparing || !isReady}
             >
               {isJoining || isSubmittingJoin || isPreparing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : null}
               {t('chat.voice.joinMuted')}
             </Button>
@@ -2660,9 +2660,9 @@ export function VoiceJoinSetupPanel({
               disabled={isJoining || isSubmittingJoin || isPreparing || !isReady}
             >
               {isJoining || isSubmittingJoin || isPreparing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Mic className="mr-2 h-4 w-4" />
+                <Mic className="me-2 h-4 w-4" />
               )}
               {t('chat.voice.joinWithMic')}
             </Button>
@@ -2917,7 +2917,7 @@ function InlineVoiceRoom({
             />
             <div className="text-sm font-medium">{t('chat.voice.voiceRoomLive')}</div>
             <Badge variant="outline" className="h-6 rounded-md px-2">
-              <Users2 className="mr-1.5 h-3.5 w-3.5" />
+              <Users2 className="me-1.5 h-3.5 w-3.5" />
               {participants.length}
             </Badge>
           </div>
@@ -2936,9 +2936,9 @@ function InlineVoiceRoom({
             disabled={isStartingAudioPlayback}
           >
             {isStartingAudioPlayback ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Volume2 className="mr-2 h-4 w-4" />
+              <Volume2 className="me-2 h-4 w-4" />
             )}
             {t('chat.voice.enableAudio')}
           </Button>
@@ -2995,7 +2995,7 @@ function InlineVoiceRoom({
           {t('chat.voice.audioSettings')}
           <ChevronDown
             className={cn(
-              'ml-2 h-4 w-4 transition-transform duration-200',
+              'ms-2 h-4 w-4 transition-transform duration-200',
               expandedPanel === 'audio' && 'rotate-180'
             )}
           />
@@ -3069,7 +3069,7 @@ function InlineVoiceRoom({
               onClick={() => void handleEnd()}
               disabled={isEnding || isLeaving}
             >
-              {isEnding ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+              {isEnding ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : null}
               {t('chat.voice.end')}
             </Button>
           ) : null}
@@ -3286,9 +3286,9 @@ function VoiceAudioSettingsPanel({
                 disabled={isMicrophonePending || isUnlockingMicrophoneAccess}
               >
                 {isUnlockingMicrophoneAccess ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Mic className="mr-1.5 h-3.5 w-3.5" />
+                  <Mic className="me-1.5 h-3.5 w-3.5" />
                 )}
                 {t('chat.voice.unlockMicrophones')}
               </Button>
@@ -3301,9 +3301,9 @@ function VoiceAudioSettingsPanel({
               disabled={isMicrophonePending || isRefreshingMicrophoneEnvironment}
             >
               {isRefreshingMicrophoneEnvironment ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                <RefreshCw className="me-1.5 h-3.5 w-3.5" />
               )}
               {t('chat.voice.refreshDevices')}
             </Button>

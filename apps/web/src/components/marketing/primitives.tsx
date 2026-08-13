@@ -14,7 +14,9 @@ export const DOCKER_HUB_URL = 'https://hub.docker.com/r/neuraparse/tasknebula';
 
 export function Shell({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`mx-auto w-full max-w-screen-xl px-4 sm:px-8 lg:px-20 ${className}`}>
+    <div
+      className={`mx-auto w-full max-w-[1440px] border-[var(--landing-border)] px-4 sm:px-6 lg:border-x lg:px-10 xl:px-14 ${className}`}
+    >
       {children}
     </div>
   );
@@ -31,11 +33,14 @@ export function Kicker({
 }) {
   return (
     <span
-      className={`landing-kicker inline-flex items-center gap-2 text-[var(--landing-text-subtle)] ${
+      className={`landing-kicker inline-flex items-center gap-2.5 text-[var(--landing-text-subtle)] ${
         center ? 'justify-center' : ''
       }`}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accentVar }} />
+      <span className="flex items-center" aria-hidden="true">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accentVar }} />
+        <span className="h-px w-5 bg-[var(--landing-border-strong)]" />
+      </span>
       {label}
     </span>
   );
@@ -54,14 +59,28 @@ export function SectionHeader({
   description: string;
   compact?: boolean;
 }) {
+  if (!compact) {
+    return (
+      <div className="grid max-w-5xl gap-5 lg:grid-cols-[10rem_minmax(0,1fr)] lg:gap-10">
+        <div className="pt-1">
+          <Kicker label={kicker} accentVar={kickerAccentVar} />
+        </div>
+        <div>
+          <h2 className="landing-title text-balance text-[34px] text-[var(--landing-text-dark)] sm:text-[42px] lg:text-[52px]">
+            {title}
+          </h2>
+          <p className="landing-body mt-4 max-w-2xl text-[15px] text-[var(--landing-text-subtle)] sm:text-[16px]">
+            {description}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={compact ? 'max-w-2xl' : 'max-w-3xl'}>
+    <div className="max-w-2xl">
       <Kicker label={kicker} accentVar={kickerAccentVar} />
-      <h2
-        className={`landing-title mt-5 text-balance text-[var(--landing-text-dark)] ${
-          compact ? 'text-[30px] sm:text-[36px]' : 'text-[34px] sm:text-[42px] lg:text-[52px]'
-        }`}
-      >
+      <h2 className="landing-title mt-5 text-balance text-[30px] text-[var(--landing-text-dark)] sm:text-[36px]">
         {title}
       </h2>
       <p className="landing-body mt-4 max-w-2xl text-[15px] text-[var(--landing-text-subtle)] sm:text-[16px]">
@@ -76,7 +95,7 @@ export const focusRingClass =
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent-blue)]';
 
 /** Canonical primary CTA classes for the landing IBM/Carbon palette. */
-export const primaryCtaClass = `inline-flex h-11 items-center gap-2 rounded-md bg-[var(--landing-accent-blue-solid)] px-4 text-sm font-[450] text-white transition duration-150 ease-snap hover:-translate-y-0.5 hover:bg-[var(--landing-accent-blue-solid-hover)] ${focusRingClass}`;
+export const primaryCtaClass = `inline-flex h-11 items-center gap-2 rounded-md bg-[var(--landing-accent-blue-solid)] px-4 text-sm font-[450] text-white transition-colors duration-150 hover:bg-[var(--landing-accent-blue-solid-hover)] ${focusRingClass}`;
 
 /** Canonical secondary (outline) CTA classes. */
-export const secondaryCtaClass = `inline-flex h-11 items-center gap-2 rounded-md border border-[var(--landing-border-strong)] bg-[var(--landing-bg-elevated)] px-4 text-sm font-[450] text-[var(--landing-text)] transition duration-150 ease-snap hover:-translate-y-0.5 hover:bg-[var(--landing-bg-hover)] ${focusRingClass}`;
+export const secondaryCtaClass = `inline-flex h-11 items-center gap-2 rounded-md border border-[var(--landing-border-strong)] bg-[var(--landing-bg-elevated)] px-4 text-sm font-[450] text-[var(--landing-text)] transition-colors duration-150 hover:bg-[var(--landing-bg-hover)] ${focusRingClass}`;

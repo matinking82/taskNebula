@@ -27,11 +27,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Plus,
   Timer,
-  AlertCircle,
-  Circle,
-  ArrowUp,
-  ArrowDown,
-  Minus,
   BookOpen,
   CheckSquare,
   Bug,
@@ -88,21 +83,6 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
     );
   };
 
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return <AlertCircle className="text-accent-rose h-3.5 w-3.5" />;
-      case 'high':
-        return <ArrowUp className="text-accent-amber h-3.5 w-3.5" />;
-      case 'medium':
-        return <Minus className="text-accent-amber h-3.5 w-3.5" />;
-      case 'low':
-        return <ArrowDown className="text-accent-blue h-3.5 w-3.5" />;
-      default:
-        return <Circle className="text-muted-foreground h-3.5 w-3.5" />;
-    }
-  };
-
   if (issuesLoading || sprintsLoading) {
     return <BacklogLoadingShell title={t('backlogTitle')} />;
   }
@@ -110,20 +90,24 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
   return (
     <div className="animate-fade-in flex h-full flex-col">
       {/* Header */}
-      <div className="border-border bg-background/95 shrink-0 border-b px-6 py-3 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{t('backlogTitle')}</h1>
+      <div className="border-border bg-background shrink-0 border-b px-3 py-2.5 sm:px-5 sm:py-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-baseline gap-3">
+            <h1 className="truncate text-xl font-semibold tracking-tight">{t('backlogTitle')}</h1>
             <span className="text-muted-foreground text-xs">
               {t('issuesCount', { count: backlogIssues.length })}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="custom-scrollbar -mx-1 flex w-[calc(100%+0.5rem)] items-center gap-2 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:w-auto sm:overflow-visible sm:px-0 sm:pb-0">
             {selectedIssues.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 shrink-0 gap-1.5 text-xs sm:h-8"
+                  >
                     <Timer className="h-3.5 w-3.5" />
                     {t('moveToSprint', { count: selectedIssues.length })}
                   </Button>
@@ -147,7 +131,7 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 gap-1.5 text-xs"
+                className="h-10 shrink-0 gap-1.5 text-xs sm:h-8"
                 onClick={() => setAiDraftOpen(true)}
               >
                 <Sparkles className="h-3.5 w-3.5" />
@@ -157,7 +141,7 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
 
             <Button
               size="sm"
-              className="h-8 gap-1.5 text-xs"
+              className="h-10 shrink-0 gap-1.5 text-xs sm:h-8"
               onClick={() => setCreateModalOpen(true)}
             >
               <Plus className="h-3.5 w-3.5" />
@@ -168,21 +152,24 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="custom-scrollbar flex-1 overflow-auto">
         {backlogIssues.length === 0 ? (
-          <div className="animate-fade-up border-border mx-auto mt-16 flex max-w-md flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
+          <div className="animate-fade-up border-border mx-3 mt-10 flex max-w-md flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center sm:mx-auto sm:mt-16 sm:p-8">
             <Inbox className="text-muted-foreground h-8 w-8" />
             <p className="text-muted-foreground text-sm">{t('backlogEmpty')}</p>
             <Button size="sm" variant="outline" onClick={() => setCreateModalOpen(true)}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              <Plus className="me-1.5 h-3.5 w-3.5" />
               {t('createIssue')}
             </Button>
           </div>
         ) : (
-          <div>
+          <div role="table" aria-label={t('backlogTitle')} className="min-w-[760px]">
             {/* Table Header */}
-            <div className="border-border bg-surface text-muted-foreground sticky top-0 z-10 flex items-center gap-3 border-b px-6 py-2 text-[11px] font-medium uppercase tracking-wider">
-              <div className="flex w-8 justify-center">
+            <div
+              role="row"
+              className="border-border bg-surface text-muted-foreground sticky top-0 z-10 flex min-h-9 items-center gap-3 border-b px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] sm:px-5"
+            >
+              <div role="columnheader" className="flex w-8 justify-center">
                 <Checkbox
                   aria-label={t('allIssues')}
                   checked={
@@ -197,13 +184,24 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
                   }}
                 />
               </div>
-              <div className="w-8" />
-              <div className="w-20">{t('columnKey')}</div>
-              <div className="flex-1">{t('columnTitle')}</div>
-              <div className="w-20 text-center">{t('columnType')}</div>
-              <div className="w-20 text-center">{t('columnPriority')}</div>
-              <div className="w-16 text-center">{t('columnEstimate')}</div>
-              <div className="w-44">{t('columnSprint')}</div>
+              <div role="columnheader" className="w-20">
+                {t('columnKey')}
+              </div>
+              <div role="columnheader" className="flex-1">
+                {t('columnTitle')}
+              </div>
+              <div role="columnheader" className="w-20 text-center">
+                {t('columnType')}
+              </div>
+              <div role="columnheader" className="w-20 text-center">
+                {t('columnPriority')}
+              </div>
+              <div role="columnheader" className="w-16 text-center">
+                {t('columnEstimate')}
+              </div>
+              <div role="columnheader" className="w-44">
+                {t('columnSprint')}
+              </div>
             </div>
 
             {/* Rows */}
@@ -217,12 +215,14 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
               return (
                 <div
                   key={issue.id}
+                  role="row"
+                  aria-selected={selectedIssues.includes(issue.id)}
                   className={cn(
-                    'border-border/30 hover:bg-accent/50 group flex items-center gap-3 border-b px-6 py-2.5 transition-colors',
+                    'border-border/40 hover:bg-accent/40 group flex min-h-11 items-center gap-3 border-b px-4 py-1.5 transition-colors duration-150 sm:px-5',
                     selectedIssues.includes(issue.id) && 'bg-primary/5'
                   )}
                 >
-                  <div className="flex w-8 justify-center">
+                  <div role="cell" className="flex w-8 justify-center">
                     <Checkbox
                       aria-label={`${issue.key} — ${issue.title}`}
                       checked={selectedIssues.includes(issue.id)}
@@ -230,26 +230,25 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
                     />
                   </div>
 
-                  <div className="flex w-8 justify-center">{getPriorityIcon(issue.priority)}</div>
-
-                  <div className="w-20">
+                  <div role="cell" className="w-20">
                     <span className="text-muted-foreground font-mono text-xs">{issue.key}</span>
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div role="cell" className="min-w-0 flex-1">
                     <button
                       onClick={() => setSelectedIssueId(issue.id)}
-                      className="text-foreground hover:text-primary block w-full truncate text-left text-sm font-medium transition-colors"
+                      className="text-foreground hover:text-primary focus-visible:ring-ring block w-full truncate rounded-sm text-start text-sm font-medium outline-none transition-colors focus-visible:ring-2"
                     >
                       {issue.title}
                     </button>
                   </div>
 
-                  <div className="flex w-20 justify-center">
-                    <TypeIcon className={cn('h-4 w-4', tConfig.color)} />
+                  <div role="cell" className="flex w-20 justify-center">
+                    <TypeIcon className={cn('h-4 w-4', tConfig.color)} aria-hidden="true" />
+                    <span className="sr-only">{issue.type}</span>
                   </div>
 
-                  <div className="flex w-20 justify-center">
+                  <div role="cell" className="flex w-20 justify-center">
                     <Badge
                       variant="outline"
                       className={cn(
@@ -262,7 +261,7 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
                     </Badge>
                   </div>
 
-                  <div className="w-16 text-center">
+                  <div role="cell" className="w-16 text-center">
                     {issue.estimate ? (
                       <span className="text-muted-foreground text-xs">
                         {t('estimatePoints', { points: issue.estimate })}
@@ -272,10 +271,10 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
                     )}
                   </div>
 
-                  <div className="w-44">
+                  <div role="cell" className="w-44">
                     <Select onValueChange={(sprintId) => handleAssignToSprint(issue.id, sprintId)}>
                       <SelectTrigger
-                        className="h-7 border-dashed text-xs"
+                        className="h-8 border-dashed text-xs"
                         aria-label={`${t('columnSprint')}: ${issue.key}`}
                       >
                         <SelectValue placeholder={t('addToSprint')} />

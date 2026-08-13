@@ -5,6 +5,8 @@ import { and, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { requirePermission } from '@/lib/auth/permissions';
 import { IntegrationsGrid } from '@/components/settings/integrations-grid';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 
 export async function generateMetadata() {
   const t = await getTranslations('pagesSettings');
@@ -34,12 +36,9 @@ export default async function IntegrationsPage() {
   const t = await getTranslations('pagesSettings');
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('integrations.title')}</h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">{t('integrations.subtitle')}</p>
-      </header>
+    <PageFrame contentClassName="max-w-5xl">
+      <PageHeader title={t('integrations.title')} description={t('integrations.subtitle')} />
       <IntegrationsGrid />
-    </div>
+    </PageFrame>
   );
 }

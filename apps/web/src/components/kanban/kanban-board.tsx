@@ -1,7 +1,4 @@
 'use client';
-
-// QUAL-21 TS-strict-migration: file untouched intentionally; surfaces 3 errors
-// under `exactOptionalPropertyTypes`. See docs/TS_STRICT_MIGRATION.md.
 import { KanbanColumn } from './kanban-column';
 import { KanbanCard } from './kanban-card';
 import { AddColumnDialog } from './add-column-dialog';
@@ -37,9 +34,10 @@ interface KanbanBoardProps {
   projectId: string;
   sprintId?: string;
   filters?: BoardFilters;
+  ariaLabel?: string;
 }
 
-export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) {
+export function KanbanBoard({ projectId, sprintId, filters, ariaLabel }: KanbanBoardProps) {
   const t = useTranslations('kanban');
   const { data: issues, isLoading: issuesLoading, error } = useIssues({ projectId, sprintId });
   const { data: workflowStatuses = [], isLoading: statusesLoading } =
@@ -161,8 +159,13 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
   if (isLoading) {
     const columnCount = workflowStatuses.length > 0 ? workflowStatuses.length : 4;
     return (
-      <div className="flex h-full overflow-x-auto overflow-y-hidden px-4 py-4">
-        <div className="flex h-full gap-3">
+      <div
+        className="custom-scrollbar flex h-full overflow-x-auto overflow-y-hidden px-3 py-3 sm:px-4 sm:py-4"
+        role={ariaLabel ? 'region' : undefined}
+        aria-label={ariaLabel}
+        tabIndex={ariaLabel ? 0 : undefined}
+      >
+        <div className="flex h-full gap-2.5">
           {Array.from({ length: columnCount }).map((_, idx) => (
             <SkeletonKanbanColumn key={idx} title={workflowStatuses[idx]?.name ?? ''} cards={3} />
           ))}
@@ -173,8 +176,8 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
+      <div className="flex h-full items-center justify-center px-4" role="alert">
+        <div className="border-destructive/20 bg-destructive/5 w-full max-w-sm rounded-md border px-4 py-5 text-center">
           <p className="text-destructive text-sm">{t('loadFailed')}</p>
         </div>
       </div>
@@ -183,11 +186,11 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
 
   if (workflowStatuses.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
         <LayoutKanban className="text-muted-foreground/40 h-8 w-8" />
         <p className="text-muted-foreground text-sm">{t('noColumns')}</p>
         <Button variant="outline" size="sm" onClick={() => setAddColumnOpen(true)}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <Plus className="me-1.5 h-3.5 w-3.5" />
           {t('addColumn')}
         </Button>
         <AddColumnDialog
@@ -205,7 +208,7 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
   return (
     <>
       <div
-        className="dot-grid bg-background flex h-full flex-col"
+        className="bg-background flex h-full min-w-0 flex-col"
         data-dragging-active={activeId ? 'true' : undefined}
       >
         <DndContext
@@ -216,7 +219,12 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
           accessibility={{ announcements }}
           measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         >
-          <div className="custom-scrollbar flex flex-1 items-stretch gap-3 overflow-x-auto px-4 py-4">
+          <div
+            className="custom-scrollbar focus-visible:ring-ring flex flex-1 items-stretch gap-2.5 overflow-x-auto px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset sm:px-4 sm:py-4"
+            role={ariaLabel ? 'region' : undefined}
+            aria-label={ariaLabel}
+            tabIndex={ariaLabel ? 0 : undefined}
+          >
             {workflowStatuses.map((status) => {
               const columnIssues = filteredIssues.filter((issue) => {
                 if (issue.statusId === status.id) return true;
@@ -276,13 +284,13 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
               );
             })}
 
-            <div className="w-[320px] flex-shrink-0 self-start">
+            <div className="w-[calc(100vw-1.5rem)] max-w-72 flex-shrink-0 self-start sm:w-72">
               <Button
                 variant="ghost"
                 className="border-border text-muted-foreground ease-snap hover:border-primary/40 hover:bg-primary/5 hover:text-primary h-10 w-full rounded-md border border-dashed text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                 onClick={() => setAddColumnOpen(true)}
               >
-                <Plus className="mr-1.5 h-4 w-4" />
+                <Plus className="me-1.5 h-4 w-4" />
                 {t('addColumn')}
               </Button>
             </div>
@@ -298,7 +306,7 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
             }}
           >
             {activeIssue ? (
-              <div className="w-[300px] rotate-[1.2deg] shadow-lg">
+              <div className="w-72 shadow-sm">
                 <KanbanCard
                   issue={{
                     id: activeIssue.id,
@@ -329,13 +337,13 @@ export function KanbanBoard({ projectId, sprintId, filters }: KanbanBoardProps) 
         </DndContext>
       </div>
 
-      {selectedIssueId && (
+      {selectedIssueId ? (
         <IssueDetailModal
           issueId={selectedIssueId}
           open={!!selectedIssueId}
           onOpenChange={(open) => !open && setSelectedIssueId(null)}
         />
-      )}
+      ) : null}
 
       <AddColumnDialog
         open={addColumnOpen}

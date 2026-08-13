@@ -176,7 +176,7 @@ export function IssueActivity({ issueId }: { issueId: string }) {
                 onClick={handleAddComment}
                 disabled={createComment.isPending || !newComment.trim()}
               >
-                {createComment.isPending && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                {createComment.isPending && <Loader2 className="me-1.5 h-3 w-3 animate-spin" />}
                 {t('activity.comment_action')}
               </Button>
             </div>
@@ -239,7 +239,7 @@ export function IssueActivity({ issueId }: { issueId: string }) {
                     activityNode = (
                       <span>
                         {t('activity.assigned_to', { name: userName })}{' '}
-                        <span className="inline-flex items-center gap-1 rounded-md bg-violet-100 px-1.5 py-0.5 text-[11.5px] font-medium text-violet-700">
+                        <span className="bg-accent-violet/10 text-accent-violet inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11.5px] font-medium">
                           <Bot className="h-3 w-3" />
                           {activity.newValue}
                         </span>
@@ -272,10 +272,10 @@ export function IssueActivity({ issueId }: { issueId: string }) {
                     activityNode = (
                       <>
                         <span className="text-foreground/80">{activityText}</span>
-                        <span className="text-muted-foreground ml-2 text-[11px]">
+                        <span className="text-muted-foreground ms-2 text-[11px]">
                           {userName}
                           {actorIsAgent && (
-                            <span className="bg-muted text-muted-foreground ml-1 rounded-sm px-1.5 align-middle text-[9px] font-semibold tracking-wider">
+                            <span className="bg-muted text-muted-foreground ms-1 rounded-sm px-1.5 align-middle text-[9px] font-semibold tracking-wider">
                               {t('activity.agent_badge')}
                             </span>
                           )}
@@ -301,14 +301,14 @@ export function IssueActivity({ issueId }: { issueId: string }) {
                       {idx === connectedStripIndex && (
                         <div className="border-border bg-muted/30 my-3 flex items-center justify-between rounded-lg border px-3 py-2 text-[12px]">
                           <div className="flex items-center gap-2">
-                            <Bot className="h-3.5 w-3.5 text-violet-500" />
+                            <Bot className="text-accent-violet h-3.5 w-3.5" />
                             <span>
                               {t('activity.connected_with')}{' '}
                               <span className="text-foreground font-medium">
                                 {connectedAgentName}
                               </span>
                             </span>
-                            <span className="text-amber-600">
+                            <span className="text-accent-amber">
                               {t('activity.awaiting_response')}
                             </span>
                           </div>

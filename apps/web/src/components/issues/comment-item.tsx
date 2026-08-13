@@ -164,11 +164,11 @@ export function CommentItem({ comment, issueId, currentUserId, isAgent }: Commen
           <span className="text-muted-foreground text-[11px]">{timeAgo}</span>
           {isEdited && <span className="text-muted-foreground/80 text-[11px]">{t('edited')}</span>}
           {!isAgent && isOwn && !isEditing && (
-            <span className="ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100">
+            <span className="ms-auto flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:focus-within:opacity-100 sm:group-hover:opacity-100">
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="text-muted-foreground hover:text-foreground h-6 w-6"
+                className="text-muted-foreground hover:text-foreground h-10 w-10 sm:h-6 sm:w-6"
                 onClick={startEdit}
                 aria-label={t('edit')}
                 title={t('edit')}
@@ -180,7 +180,7 @@ export function CommentItem({ comment, issueId, currentUserId, isAgent }: Commen
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="text-muted-foreground hover:text-destructive h-6 w-6"
+                    className="text-muted-foreground hover:text-destructive h-10 w-10 sm:h-6 sm:w-6"
                     aria-label={t('delete')}
                     title={t('delete')}
                   >
@@ -207,7 +207,7 @@ export function CommentItem({ comment, issueId, currentUserId, isAgent }: Commen
                       disabled={deleteComment.isPending}
                     >
                       {deleteComment.isPending && (
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                        <Loader2 className="me-1.5 h-3 w-3 animate-spin" />
                       )}
                       {t('delete')}
                     </Button>
@@ -228,7 +228,7 @@ export function CommentItem({ comment, issueId, currentUserId, isAgent }: Commen
               className="min-h-[60px] text-sm"
             />
             <div className="mt-1.5 flex items-center gap-2">
-              <span className="text-muted-foreground mr-auto text-[11px]">{t('editHint')}</span>
+              <span className="text-muted-foreground me-auto text-[11px]">{t('editHint')}</span>
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={cancelEdit}>
                 {t('cancel')}
               </Button>
@@ -238,7 +238,7 @@ export function CommentItem({ comment, issueId, currentUserId, isAgent }: Commen
                 onClick={() => void saveEdit()}
                 disabled={updateComment.isPending || !draft.trim()}
               >
-                {updateComment.isPending && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                {updateComment.isPending && <Loader2 className="me-1.5 h-3 w-3 animate-spin" />}
                 {t('save')}
               </Button>
             </div>
@@ -247,7 +247,8 @@ export function CommentItem({ comment, issueId, currentUserId, isAgent }: Commen
           <p
             className={cn(
               'text-foreground/90 mt-0.5 text-sm leading-relaxed',
-              isAgent && 'mt-1 rounded-md border border-violet-100 bg-violet-50/40 px-2.5 py-1.5'
+              isAgent &&
+                'border-accent-violet/20 bg-accent-violet/5 mt-1 rounded-md border px-2.5 py-1.5'
             )}
           >
             {comment.content}

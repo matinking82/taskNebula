@@ -198,7 +198,7 @@ function RegistrationSection() {
                 key={option.mode}
                 type="button"
                 className={cn(
-                  'ease-snap focus-visible:ring-ring flex min-h-28 flex-col items-start gap-2 rounded-md border p-4 text-left text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60',
+                  'ease-snap focus-visible:ring-ring flex min-h-28 flex-col items-start gap-2 rounded-md border p-4 text-start text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60',
                   selected
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-card hover:border-foreground/30'
@@ -226,9 +226,9 @@ function RegistrationSection() {
           disabled={isLoading || saveMutation.isPending || mode === savedMode}
         >
           {saveMutation.isPending ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Save className="mr-1.5 h-3.5 w-3.5" />
+            <Save className="me-1.5 h-3.5 w-3.5" />
           )}
           {t('systemCredentials.save')}
         </Button>
@@ -427,9 +427,9 @@ function SmtpSection() {
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Save className="mr-1.5 h-3.5 w-3.5" />
+            <Save className="me-1.5 h-3.5 w-3.5" />
           )}
           {t('systemCredentials.save')}
         </Button>
@@ -445,9 +445,9 @@ function SmtpSection() {
           }
         >
           {testMutation.isPending ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Mail className="mr-1.5 h-3.5 w-3.5" />
+            <Mail className="me-1.5 h-3.5 w-3.5" />
           )}
           {t('systemCredentials.smtp.sendTest')}
         </Button>
@@ -613,9 +613,9 @@ function LivekitSection() {
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Save className="mr-1.5 h-3.5 w-3.5" />
+            <Save className="me-1.5 h-3.5 w-3.5" />
           )}
           {t('systemCredentials.save')}
         </Button>
@@ -631,9 +631,9 @@ function LivekitSection() {
           }
         >
           {testMutation.isPending ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Radio className="mr-1.5 h-3.5 w-3.5" />
+            <Radio className="me-1.5 h-3.5 w-3.5" />
           )}
           {t('systemCredentials.livekit.mintTest')}
         </Button>
@@ -781,9 +781,9 @@ function StorageSection() {
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
           {saveMutation.isPending ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Save className="mr-1.5 h-3.5 w-3.5" />
+            <Save className="me-1.5 h-3.5 w-3.5" />
           )}
           {t('systemCredentials.save')}
         </Button>

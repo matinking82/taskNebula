@@ -79,10 +79,10 @@ export function IssueContent({ issue }: IssueContentProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-foreground h-6 px-2 text-xs"
+              className="text-muted-foreground hover:text-foreground h-10 px-2 text-xs sm:h-7"
               onClick={() => setIsEditing(true)}
             >
-              <Pencil className="mr-1.5 h-3 w-3" />
+              <Pencil className="me-1.5 h-3 w-3" />
               {t('content.edit')}
             </Button>
           )}
@@ -121,17 +121,17 @@ export function IssueContent({ issue }: IssueContentProps) {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                className="h-7 text-xs"
+                className="h-10 text-xs sm:h-8"
                 onClick={handleSave}
                 disabled={updateIssue.isPending}
               >
-                {updateIssue.isPending && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                {updateIssue.isPending && <Loader2 className="me-1.5 h-3 w-3 animate-spin" />}
                 {tActions('save')}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 text-xs"
+                className="h-10 text-xs sm:h-8"
                 onClick={handleCancel}
                 disabled={updateIssue.isPending}
               >

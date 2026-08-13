@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MetricStrip } from '@/components/ui/metric-strip';
 import {
   Select,
   SelectContent,
@@ -69,9 +70,7 @@ import {
   Activity,
   Archive,
   ArrowRight,
-  Bot,
   CheckCircle2,
-  Clock3,
   Cpu,
   Database,
   Loader2,
@@ -529,7 +528,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
   }
 
   return (
-    <div className="animate-fade-up space-y-6">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -674,7 +673,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                 <div className="border-border/60 bg-muted/10 text-muted-foreground rounded-lg border p-3 text-xs">
                   {t('orgAi.provider_note')}
                   {activeModelConfig && (
-                    <span className="ml-1">
+                    <span className="ms-1">
                       {t('orgAi.locked_profile_prefix')}{' '}
                       <span className="text-foreground font-medium">{activeModelConfig.name}</span>
                       {'.'}
@@ -867,7 +866,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                   onClick={openCreateModelConfigDialog}
                   disabled={!canManage}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="me-2 h-4 w-4" />
                   {t('orgAi.create_profile')}
                 </Button>
               </div>
@@ -934,7 +933,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                             onClick={() => openEditModelConfigDialog(config)}
                             disabled={!canManage}
                           >
-                            <PencilLine className="mr-2 h-3.5 w-3.5" />
+                            <PencilLine className="me-2 h-3.5 w-3.5" />
                             {t('orgAi.edit')}
                           </Button>
                           <Button
@@ -944,7 +943,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                             onClick={() => handleArchiveModelConfig(config)}
                             disabled={!canManage || isApplied || archiveModelConfig.isPending}
                           >
-                            <Archive className="mr-2 h-3.5 w-3.5" />
+                            <Archive className="me-2 h-3.5 w-3.5" />
                             {t('orgAi.archive')}
                           </Button>
                         </div>
@@ -1023,12 +1022,12 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
             >
               {updateSettings.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   {t('orgAi.saving')}
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <Sparkles className="me-2 h-4 w-4" />
                   {t('orgAi.save_workspace_policy')}
                 </>
               )}
@@ -1046,36 +1045,36 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
           <CardDescription>{t('orgAi.workspace_runtime_desc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <RuntimeStatCard
-              icon={Bot}
-              label={t('orgAi.stat_projects_with_agents')}
-              value={`${data.runtimeSummary.enabledProjectCount}/${data.runtimeSummary.projectCount}`}
-              detail={t('orgAi.stat_projects_with_agents_detail')}
-            />
-            <RuntimeStatCard
-              icon={Cpu}
-              label={t('orgAi.stat_running_now')}
-              value={String(data.runtimeSummary.runningRuns)}
-              detail={t('orgAi.stat_running_now_detail')}
-            />
-            <RuntimeStatCard
-              icon={Activity}
-              label={t('orgAi.stat_total_runs')}
-              value={String(data.runtimeSummary.totalRuns)}
-              detail={t('orgAi.stat_total_runs_detail')}
-            />
-            <RuntimeStatCard
-              icon={Clock3}
-              label={t('orgAi.stat_last_completed')}
-              value={
-                data.runtimeSummary.lastCompletedAt
+          <MetricStrip
+            items={[
+              {
+                id: 'projects-with-agents',
+                label: t('orgAi.stat_projects_with_agents'),
+                value: `${data.runtimeSummary.enabledProjectCount}/${data.runtimeSummary.projectCount}`,
+                hint: t('orgAi.stat_projects_with_agents_detail'),
+              },
+              {
+                id: 'running-now',
+                label: t('orgAi.stat_running_now'),
+                value: String(data.runtimeSummary.runningRuns),
+                hint: t('orgAi.stat_running_now_detail'),
+              },
+              {
+                id: 'total-runs',
+                label: t('orgAi.stat_total_runs'),
+                value: String(data.runtimeSummary.totalRuns),
+                hint: t('orgAi.stat_total_runs_detail'),
+              },
+              {
+                id: 'last-completed',
+                label: t('orgAi.stat_last_completed'),
+                value: data.runtimeSummary.lastCompletedAt
                   ? formatter.relativeTime(new Date(data.runtimeSummary.lastCompletedAt))
-                  : t('orgAi.none_yet')
-              }
-              detail={t('orgAi.stat_last_completed_detail')}
-            />
-          </div>
+                  : t('orgAi.none_yet'),
+                hint: t('orgAi.stat_last_completed_detail'),
+              },
+            ]}
+          />
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <Card className="border-border/60">
@@ -1528,7 +1527,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
             >
               {createModelConfig.isPending || updateModelConfig.isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   {t('orgAi.saving')}
                 </>
               ) : editingModelConfig ? (
@@ -1540,29 +1539,6 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function RuntimeStatCard({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: typeof Bot;
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="border-border/60 rounded-lg border p-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-muted-foreground text-xs uppercase tracking-[0.16em]">{label}</p>
-        <Icon className="text-muted-foreground h-4 w-4" />
-      </div>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-      <p className="text-muted-foreground mt-1 text-sm">{detail}</p>
     </div>
   );
 }

@@ -150,6 +150,19 @@ export function KanbanCard({ issue, draggableId, statusId, issueId, onClick }: K
     onClick?.();
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    // dnd-kit uses Space/Enter to start a keyboard drag. Reserve Enter for
+    // opening the card when it is also an issue-detail trigger; Space keeps
+    // the sortable keyboard contract intact.
+    if (event.key === 'Enter' && onClick && !isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+      onClick();
+      return;
+    }
+    listeners?.onKeyDown?.(event);
+  };
+
   const allAssignees = issue.assignees ?? (issue.assignee ? [issue.assignee] : []);
   const visibleAssignees = allAssignees.slice(0, 2);
   const extraAssignees = Math.max(0, allAssignees.length - visibleAssignees.length);
@@ -202,9 +215,10 @@ export function KanbanCard({ issue, draggableId, statusId, issueId, onClick }: K
         {...attributes}
         {...listeners}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         aria-busy={issue.optimistic ? true : undefined}
         className={cn(
-          'kanban-card group/card touch-manipulation select-none py-3.5 pl-4',
+          'kanban-card group/card focus-visible:ring-ring touch-manipulation select-none ps-3.5 outline-none focus-visible:ring-2',
           isDragging ? 'opacity-40 [&_*]:pointer-events-none' : 'cursor-grab',
           // Pending optimistic create: dim + non-interactive until the server row lands.
           issue.optimistic && 'pointer-events-none animate-pulse opacity-60'
@@ -213,7 +227,7 @@ export function KanbanCard({ issue, draggableId, statusId, issueId, onClick }: K
         {/* Priority indicator bar — left edge, full height */}
         <div
           className={cn(
-            'priority-indicator absolute bottom-0 left-0 top-0 w-1',
+            'priority-indicator absolute inset-y-0 start-0 w-0.5',
             (issue.priority === 'critical' || issue.priority === 'urgent') && 'priority-critical',
             issue.priority === 'high' && 'priority-high',
             issue.priority === 'medium' && 'priority-medium',
@@ -224,14 +238,14 @@ export function KanbanCard({ issue, draggableId, statusId, issueId, onClick }: K
         {isUrgent ? <span className="sr-only">{t('card.urgentPriority')}</span> : null}
 
         {/* Top row: status icon + issue key + type */}
-        {hasTopRow && (
-          <div className="mb-2 flex items-center gap-1.5">
+        {hasTopRow ? (
+          <div className="mb-1.5 flex items-center gap-1.5">
             <InlineStatusIcon kind={statusKind} size={12} />
-            {keyChip && (
+            {keyChip ? (
               <span className="text-muted-foreground font-mono text-[10px] font-medium tracking-tight">
                 {keyChip}
               </span>
-            )}
+            ) : null}
             {issue.type ? (
               <>
                 <span className="text-muted-foreground/40" aria-hidden>
@@ -244,32 +258,32 @@ export function KanbanCard({ issue, draggableId, statusId, issueId, onClick }: K
               <span className="text-muted-foreground truncate text-[10px]">{issue.status}</span>
             ) : null}
           </div>
-        )}
+        ) : null}
 
         {/* Title */}
-        <h4 className="text-foreground line-clamp-2 text-[13.5px] font-medium leading-snug">
+        <h4 className="text-foreground line-clamp-2 text-[13px] font-medium leading-snug">
           {issue.title}
         </h4>
 
         {/* Labels stay neutral so status and priority retain semantic color. */}
-        {hasLabels && (
-          <div className="mt-2.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
+        {hasLabels ? (
+          <div className="mt-2 flex min-w-0 items-center gap-1.5 overflow-hidden">
             {visibleLabels.map((label) => (
               <InlineLabel key={label} label={label} />
             ))}
-            {extraLabels > 0 && (
+            {extraLabels > 0 ? (
               <span className="text-muted-foreground shrink-0 text-[11px] font-medium tabular-nums">
                 +{extraLabels}
               </span>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         {/* Footer: due + subtasks + comments + attachments + assignees */}
-        {hasFooter && (
-          <div className="mt-3 flex items-center justify-between gap-2">
+        {hasFooter ? (
+          <div className="border-border/60 mt-2.5 flex items-center justify-between gap-2 border-t pt-2">
             <div className="text-muted-foreground flex min-w-0 items-center gap-2 text-[11.5px]">
-              {due && (
+              {due ? (
                 <span
                   className={cn(
                     'inline-flex items-center gap-1 tabular-nums',
@@ -280,29 +294,29 @@ export function KanbanCard({ issue, draggableId, statusId, issueId, onClick }: K
                   <CalendarDays className="h-3 w-3" />
                   {dueLabel}
                 </span>
-              )}
-              {subtasks && (
+              ) : null}
+              {subtasks ? (
                 <span className="inline-flex items-center gap-1 tabular-nums">
                   <GitBranch className="h-3 w-3" />
                   {subtasks.done}/{subtasks.total}
                 </span>
-              )}
-              {comments > 0 && (
+              ) : null}
+              {comments > 0 ? (
                 <span className="inline-flex items-center gap-1 tabular-nums">
                   <MessageCircle className="h-3 w-3" />
                   {comments}
                 </span>
-              )}
-              {attachments > 0 && (
+              ) : null}
+              {attachments > 0 ? (
                 <span className="inline-flex items-center gap-1 tabular-nums">
                   <Paperclip className="h-3 w-3" />
                   {attachments}
                 </span>
-              )}
+              ) : null}
             </div>
 
-            {visibleAssignees.length > 0 && (
-              <div className="flex shrink-0 -space-x-1.5">
+            {visibleAssignees.length > 0 ? (
+              <div className="flex shrink-0 -space-x-1.5 rtl:space-x-reverse">
                 {visibleAssignees.map((a) => {
                   const initials = a.name
                     ?.split(' ')
@@ -324,18 +338,18 @@ export function KanbanCard({ issue, draggableId, statusId, issueId, onClick }: K
                     </Avatar>
                   );
                 })}
-                {extraAssignees > 0 && (
+                {extraAssignees > 0 ? (
                   <span
                     className="ring-card bg-muted text-muted-foreground flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-semibold ring-2"
                     title={t('card.moreAssignees', { count: extraAssignees })}
                   >
                     +{extraAssignees}
                   </span>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
       </div>
     </ViewTransition>
   );

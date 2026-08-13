@@ -80,10 +80,16 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="sr-only">{t('tabBoard')}</h1>
+      <h1 id="project-board-title" className="sr-only">
+        {t('tabBoard')}
+      </h1>
       {/* Board Header - single compact row */}
-      <div className="border-border bg-background/95 shrink-0 border-b px-4 py-2 backdrop-blur">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="border-border bg-background shrink-0 border-b px-3 py-2 sm:px-4">
+        <div
+          className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:gap-x-3"
+          role="toolbar"
+          aria-labelledby="project-board-title"
+        >
           {/* Sprint selector */}
           <Select
             value={selectedSprintId || 'all'}
@@ -91,7 +97,7 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
           >
             <SelectTrigger
               aria-label={t('sprintsHeader')}
-              className="border-border bg-background h-8 w-40 shrink-0 text-xs shadow-none sm:w-48"
+              className="border-border bg-background h-10 w-40 shrink-0 text-xs shadow-none sm:h-8 sm:w-48"
             >
               <SelectValue placeholder={t('allIssues')} />
             </SelectTrigger>
@@ -146,7 +152,7 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
                 variant="ghost"
                 size="icon"
                 aria-label={t('allIssues')}
-                className="text-muted-foreground hover:bg-muted hover:text-foreground h-5 w-5"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground h-8 w-8 sm:h-6 sm:w-6"
                 onClick={() => setSelectedSprintId(undefined)}
               >
                 <X className="h-2.5 w-2.5" />
@@ -160,7 +166,7 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
               {t('noActiveSprint')}
               <Link
                 href={`/projects/${projectId}/sprints`}
-                className="text-primary ml-0.5 hover:underline"
+                className="text-primary ms-0.5 hover:underline"
               >
                 {plannedSprints.length > 0 ? t('startSprintLink') : t('createSprintLink')}
               </Link>
@@ -181,8 +187,12 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
           </div>
 
           {/* Spacer + New Issue */}
-          <div className="ml-auto shrink-0">
-            <Button size="sm" onClick={() => setCreateModalOpen(true)} className="h-8 gap-1.5">
+          <div className="ms-auto shrink-0">
+            <Button
+              size="sm"
+              onClick={() => setCreateModalOpen(true)}
+              className="h-10 gap-1.5 sm:h-8"
+            >
               <Plus className="h-3.5 w-3.5" />
               {t('newIssue')}
             </Button>
@@ -192,7 +202,12 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-hidden">
-        <KanbanBoard projectId={projectId} sprintId={effectiveSprintId} filters={filters} />
+        <KanbanBoard
+          projectId={projectId}
+          sprintId={effectiveSprintId}
+          filters={filters}
+          ariaLabel={t('tabBoard')}
+        />
       </div>
 
       <CreateIssueModal

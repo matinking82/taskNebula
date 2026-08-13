@@ -227,7 +227,7 @@ export function EstimateScalePicker({ initialScale, onSave, className }: Estimat
                     </label>
 
                     {isCustom && isSelected ? (
-                      <div className="flex flex-col gap-2 pl-7">
+                      <div className="flex flex-col gap-2 ps-7">
                         {customValues[kind].map((value, index) => (
                           <div key={`${kind}-custom-${index}`} className="flex items-center gap-2">
                             <Input

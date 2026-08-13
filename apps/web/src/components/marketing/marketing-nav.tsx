@@ -20,10 +20,10 @@ export function MarketingNav() {
       aria-label={t('primaryAria')}
       className="sticky top-0 z-50 border-b border-[var(--landing-border)] bg-[color-mix(in_srgb,var(--landing-bg)_88%,transparent)] backdrop-blur-xl backdrop-saturate-150"
     >
-      <Shell className="flex h-14 items-center justify-between gap-4">
+      <Shell className="grid h-16 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-0 lg:grid-cols-[minmax(14rem,1fr)_auto_minmax(14rem,1fr)]">
         <Link
           href="/"
-          className={`flex items-center gap-2.5 rounded-md ${focusRingClass}`}
+          className={`flex min-w-0 items-center gap-2.5 rounded-sm lg:border-e lg:border-[var(--landing-border)] lg:pe-6 ${focusRingClass}`}
           aria-label={t('homeAria')}
         >
           <TaskNebulaLogo
@@ -36,7 +36,7 @@ export function MarketingNav() {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-1 lg:flex">
+        <div className="hidden items-center gap-1 px-5 lg:flex">
           {items.map((item) => (
             <a
               key={item.href}
@@ -48,13 +48,13 @@ export function MarketingNav() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2 lg:border-s lg:border-[var(--landing-border)] lg:ps-6">
           <a
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t('githubAria')}
-            className={`ease-snap inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--landing-border-strong)] px-3 text-[13px] font-[430] text-[var(--landing-text)] transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--landing-bg-elevated)] ${focusRingClass}`}
+            className={`hidden h-[34px] items-center gap-2 rounded-md border border-[var(--landing-border-strong)] px-3 text-[13px] font-[430] text-[var(--landing-text)] transition-colors duration-150 hover:bg-[var(--landing-bg-elevated)] min-[390px]:inline-flex ${focusRingClass}`}
           >
             <Github className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">{t('github')}</span>
@@ -67,11 +67,11 @@ export function MarketingNav() {
           </Link>
           <Link
             href="/auth/signup"
-            className={`ease-snap group inline-flex h-[34px] items-center gap-1.5 rounded-md bg-[var(--landing-accent-blue-solid)] px-3 text-[13px] font-[450] text-white transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--landing-accent-blue-solid-hover)] ${focusRingClass}`}
+            className={`group inline-flex h-[34px] items-center gap-1.5 rounded-md bg-[var(--landing-accent-blue-solid)] px-3 text-[13px] font-[450] text-white transition-colors duration-150 hover:bg-[var(--landing-accent-blue-solid-hover)] ${focusRingClass}`}
           >
             {t('startFree')}
             <ArrowRight
-              className="ease-snap h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5"
+              className="ease-snap h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
               aria-hidden="true"
             />
           </Link>

@@ -111,7 +111,7 @@ describe('IssueDetailView', () => {
     expect(screen.getByTestId('time-tracking-panel')).toBeInTheDocument();
 
     const sidebarColumn = screen.getByTestId('issue-sidebar').parentElement?.parentElement;
-    expect(sidebarColumn).toHaveClass('min-w-0', 'border-t', 'lg:border-l', 'lg:border-t-0');
+    expect(sidebarColumn).toHaveClass('min-w-0', 'border-t', 'lg:border-s', 'lg:border-t-0');
     const detailGrid = sidebarColumn?.parentElement;
     expect(detailGrid).toHaveClass('lg:grid-cols-[minmax(0,1fr)_320px]');
     expect(detailGrid?.parentElement).toHaveClass('overflow-visible', 'lg:overflow-hidden');
@@ -205,7 +205,7 @@ describe('IssueDetailView', () => {
       </Wrapper>
     );
 
-    expect(screen.getByText(/issue not found/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /issue not found/i, level: 1 })).toBeInTheDocument();
     expect(screen.queryByTestId('issue-header')).not.toBeInTheDocument();
   });
 
@@ -224,7 +224,10 @@ describe('IssueDetailView', () => {
       </Wrapper>
     );
 
-    expect(screen.getByText(/failed to load issue/i)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /failed to load issue/i, level: 1 })
+    ).toBeInTheDocument();
     expect(screen.getByText(/refresh the page or try again/i)).toBeInTheDocument();
     expect(screen.queryByText(/boom/i)).not.toBeInTheDocument();
   });
@@ -244,7 +247,10 @@ describe('IssueDetailView', () => {
       </Wrapper>
     );
 
-    expect(screen.getByText(/failed to load issue/i)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /failed to load issue/i, level: 1 })
+    ).toBeInTheDocument();
     expect(screen.getByText(/you don't have permission to view that page/i)).toBeInTheDocument();
     expect(screen.queryByText(/^forbidden$/i)).not.toBeInTheDocument();
   });

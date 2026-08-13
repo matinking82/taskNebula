@@ -43,14 +43,14 @@ export function KanbanColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          'kanban-column group flex h-full min-h-[520px] w-[320px] flex-shrink-0 touch-manipulation flex-col',
+          'kanban-column group flex h-full min-h-[28rem] w-[calc(100vw-1.5rem)] max-w-72 shrink-0 touch-manipulation flex-col overflow-hidden sm:w-72',
           isOver && 'kanban-column-drop-active'
         )}
       >
         {/* Header: name + count + add */}
-        <div className="kanban-column-header flex items-center justify-between gap-2">
+        <div className="kanban-column-header border-border/70 bg-surface/80 flex min-h-10 items-center justify-between gap-2 border-b px-3 py-1.5">
           <div className="flex min-w-0 items-center gap-2">
-            <h3 className="text-foreground/70 truncate text-[11px] font-semibold uppercase tracking-[0.18em]">
+            <h3 className="text-foreground/80 truncate text-[11px] font-semibold uppercase tracking-[0.12em]">
               {column.name}
             </h3>
             <span className="chip tabular-nums">{issueCount}</span>
@@ -59,7 +59,7 @@ export function KanbanColumn({
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-foreground h-7 w-7 p-0"
+            className="text-muted-foreground hover:text-foreground h-9 w-9 p-0 sm:h-8 sm:w-8"
             onClick={() => setCreateModalOpen(true)}
             aria-label={t('column.addIssue')}
           >
@@ -68,15 +68,13 @@ export function KanbanColumn({
         </div>
 
         {/* Content */}
-        <div className="custom-scrollbar min-h-[420px] flex-1 overflow-y-auto px-2.5 py-2.5">
+        <div className="custom-scrollbar min-h-[24rem] flex-1 overflow-y-auto px-2 py-2.5">
           <SortableContext items={issueIds} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">{children}</div>
           </SortableContext>
-          {issueCount === 0 && (
+          {issueCount === 0 ? (
             <div className="border-border/70 mx-1 mt-2 flex flex-col items-center gap-3 rounded-md border border-dashed px-3 py-6 text-center">
-              <div className="bg-muted/60 flex h-9 w-9 items-center justify-center rounded-md">
-                <Inbox className="text-muted-foreground h-4 w-4" aria-hidden />
-              </div>
+              <Inbox className="text-muted-foreground h-5 w-5" aria-hidden />
               <div className="space-y-0.5">
                 <p className="text-foreground text-xs font-medium">{t('column.emptyTitle')}</p>
                 <p className="text-muted-foreground text-[11px]">
@@ -91,14 +89,14 @@ export function KanbanColumn({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 w-full text-xs"
+                className="h-10 w-full text-xs sm:h-8"
                 onClick={() => setCreateModalOpen(true)}
               >
-                <Plus className="mr-1 h-3 w-3" />
+                <Plus className="me-1 h-3 w-3" />
                 {t('column.newIssue')}
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

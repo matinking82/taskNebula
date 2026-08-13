@@ -410,7 +410,7 @@ export function MembersPageClient() {
   }
 
   return (
-    <div className="animate-fade-up stagger space-y-8">
+    <div className="space-y-8">
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
@@ -448,7 +448,7 @@ export function MembersPageClient() {
             >
               <DialogTrigger asChild>
                 <Button size="sm" disabled={permissionsLoading || !canInvite}>
-                  <UserPlus className="mr-1.5 h-4 w-4" />
+                  <UserPlus className="me-1.5 h-4 w-4" />
                   {t('members.invite')}
                 </Button>
               </DialogTrigger>
@@ -523,7 +523,7 @@ export function MembersPageClient() {
                       <button
                         type="button"
                         onClick={() => setProjectsExpanded((v) => !v)}
-                        className="flex w-full items-center justify-between text-left"
+                        className="focus-visible:ring-ring flex min-h-9 w-full items-center justify-between rounded-sm text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset"
                       >
                         <span className="flex items-center gap-2 text-sm font-medium">
                           <FolderKanban className="text-muted-foreground h-4 w-4" />
@@ -569,7 +569,7 @@ export function MembersPageClient() {
                                             count: selectedProjectIds.length,
                                           })}
                                     </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent
@@ -591,12 +591,12 @@ export function MembersPageClient() {
                                             >
                                               <Check
                                                 className={cn(
-                                                  'mr-2 h-4 w-4',
+                                                  'me-2 h-4 w-4',
                                                   selected ? 'opacity-100' : 'opacity-0'
                                                 )}
                                               />
                                               <span className="truncate">{project.name}</span>
-                                              <span className="text-muted-foreground ml-2 truncate font-mono text-xs">
+                                              <span className="text-muted-foreground ms-2 truncate font-mono text-xs">
                                                 {project.key}
                                               </span>
                                             </CommandItem>
@@ -621,7 +621,7 @@ export function MembersPageClient() {
                                         <button
                                           type="button"
                                           onClick={() => removeProject(id)}
-                                          className="rounded p-0.5 opacity-60 hover:opacity-100"
+                                          className="focus-visible:ring-ring rounded-sm p-1 opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                                           aria-label={t('members.removeProject', {
                                             name: project?.name ?? id,
                                           })}
@@ -669,7 +669,7 @@ export function MembersPageClient() {
                     onClick={handleSubmitInvite}
                     disabled={!canInvite || inviteMutation.isPending || !inviteEmail}
                   >
-                    {inviteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {inviteMutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                     {t('members.sendInvitation')}
                   </Button>
                 </DialogFooter>
@@ -785,7 +785,7 @@ export function MembersPageClient() {
                         <DropdownMenuContent align="end">
                           {canAssignProjects ? (
                             <DropdownMenuItem onClick={() => openAssignProjects(member)}>
-                              <FolderKanban className="mr-2 h-4 w-4" />
+                              <FolderKanban className="me-2 h-4 w-4" />
                               {t('members.addToProjects')}
                             </DropdownMenuItem>
                           ) : null}
@@ -860,7 +860,7 @@ export function MembersPageClient() {
                                   count: assignSelectedProjectIds.length,
                                 })}
                           </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent
@@ -882,12 +882,12 @@ export function MembersPageClient() {
                                   >
                                     <Check
                                       className={cn(
-                                        'mr-2 h-4 w-4',
+                                        'me-2 h-4 w-4',
                                         selected ? 'opacity-100' : 'opacity-0'
                                       )}
                                     />
                                     <span className="truncate">{project.name}</span>
-                                    <span className="text-muted-foreground ml-2 truncate font-mono text-xs">
+                                    <span className="text-muted-foreground ms-2 truncate font-mono text-xs">
                                       {project.key}
                                     </span>
                                   </CommandItem>
@@ -910,7 +910,7 @@ export function MembersPageClient() {
                             <button
                               type="button"
                               onClick={() => removeAssignProject(id)}
-                              className="rounded p-0.5 opacity-60 hover:opacity-100"
+                              className="focus-visible:ring-ring rounded-sm p-1 opacity-60 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                               aria-label={t('members.removeProject', {
                                 name: project?.name ?? id,
                               })}
@@ -965,7 +965,7 @@ export function MembersPageClient() {
                 }
               >
                 {assignProjectsMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 ) : null}
                 {t('members.addToProjects')}
               </Button>

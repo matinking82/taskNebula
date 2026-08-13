@@ -191,9 +191,9 @@ export function CollabDescriptionEditor({
             disabled={isSaving}
           >
             {isSaving ? (
-              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+              <Loader2 className="me-1.5 h-3 w-3 animate-spin" />
             ) : (
-              <Save className="mr-1.5 h-3 w-3" />
+              <Save className="me-1.5 h-3 w-3" />
             )}
             {t('save_snapshot')}
           </Button>
@@ -216,10 +216,10 @@ function ConnectionPill({ state }: { state: 'connecting' | 'connected' | 'discon
         : t('connection_offline');
   const tone =
     state === 'connected'
-      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+      ? 'bg-accent-emerald/10 text-accent-emerald'
       : state === 'connecting'
-        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300'
-        : 'bg-rose-500/10 text-rose-600 dark:text-rose-300';
+        ? 'bg-accent-amber/10 text-accent-amber'
+        : 'bg-accent-rose/10 text-accent-rose';
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${tone}`}

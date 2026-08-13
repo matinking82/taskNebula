@@ -624,12 +624,12 @@ export function DocsShell({ projectId }: DocsShellProps) {
 
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
-              <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+              <Search className="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
               <Input
                 value={pageSearch}
                 onChange={(event) => setPageSearch(event.target.value)}
                 placeholder={t('shell.searchPages')}
-                className="h-8 pl-8 text-sm"
+                className="h-8 ps-8 text-sm"
               />
             </div>
           </div>
@@ -643,7 +643,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
               searchResults.map((result) => (
                 <button
                   key={result.id}
-                  className="row-interactive flex w-full items-start gap-2.5 px-2 py-1.5 text-left text-sm"
+                  className="row-interactive flex w-full items-start gap-2.5 px-2 py-1.5 text-start text-sm"
                   onClick={() => {
                     setPageSearch('');
                     updateQueryParams({ pageId: result.id, spaceId: result.spaceId });
@@ -730,7 +730,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
 
   const detailsPane = currentPage ? (
     <div className="bg-background min-h-full">
-      <div className="border-border border-b px-5 pb-4 pr-14 pt-5">
+      <div className="border-border border-b px-5 pb-4 pe-14 pt-5">
         <span className="kicker">{t('shell.details.kicker')}</span>
         <div className="mt-3 flex items-start gap-3">
           <DocumentIcon icon={currentPage.icon} className="h-9 w-9 rounded-md text-sm" />
@@ -811,7 +811,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => void copyCurrentPageLink()}>
-                    <Share2 className="mr-2 h-4 w-4" />
+                    <Share2 className="me-2 h-4 w-4" />
                     {t('shell.copy')}
                   </Button>
                   <Button
@@ -823,7 +823,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                       }
                     }}
                   >
-                    <ExternalLink className="mr-2 h-4 w-4" />
+                    <ExternalLink className="me-2 h-4 w-4" />
                     {t('shell.open')}
                   </Button>
                 </div>
@@ -902,7 +902,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => void copyPublicPageLink()}>
-                      <Globe2 className="mr-2 h-4 w-4" />
+                      <Globe2 className="me-2 h-4 w-4" />
                       {t('shell.copy')}
                     </Button>
                     <Button
@@ -914,7 +914,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                         }
                       }}
                     >
-                      <ExternalLink className="mr-2 h-4 w-4" />
+                      <ExternalLink className="me-2 h-4 w-4" />
                       {t('shell.open')}
                     </Button>
                     {currentPage.share?.canManagePublic && (
@@ -929,7 +929,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                           )
                         }
                       >
-                        <RefreshCcw className="mr-2 h-4 w-4" />
+                        <RefreshCcw className="me-2 h-4 w-4" />
                         {t('shell.renew')}
                       </Button>
                     )}
@@ -979,7 +979,9 @@ export function DocsShell({ projectId }: DocsShellProps) {
                       childPage.excerpt ||
                       formatter.dateTime(new Date(childPage.updatedAt), { dateStyle: 'medium' })
                     }
-                    action={<ChevronRight className="text-muted-foreground h-4 w-4" />}
+                    action={
+                      <ChevronRight className="text-muted-foreground h-4 w-4 rtl:rotate-180" />
+                    }
                   />
                 </button>
               ))
@@ -1013,7 +1015,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                         className="border-border border-b last:border-b-0"
                       >
                         <AccordionTrigger className="px-3 py-2.5 hover:no-underline">
-                          <div className="min-w-0 flex-1 text-left">
+                          <div className="min-w-0 flex-1 text-start">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-muted-foreground font-mono text-[11px]">
                                 {getShortRevisionId(revision.id)}
@@ -1053,7 +1055,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                                 className="h-8"
                                 onClick={() => handleRestoreRevision(revision.id)}
                               >
-                                <RefreshCcw className="mr-2 h-3.5 w-3.5" />
+                                <RefreshCcw className="me-2 h-3.5 w-3.5" />
                                 {t('shell.restore')}
                               </Button>
                             )}
@@ -1146,7 +1148,9 @@ export function DocsShell({ projectId }: DocsShellProps) {
                       <DetailButtonRow
                         primary={backlink.title}
                         secondary={backlink.slug}
-                        action={<ChevronRight className="text-muted-foreground h-4 w-4" />}
+                        action={
+                          <ChevronRight className="text-muted-foreground h-4 w-4 rtl:rotate-180" />
+                        }
                       />
                     </button>
                   ))
@@ -1212,9 +1216,9 @@ export function DocsShell({ projectId }: DocsShellProps) {
 
   return (
     <>
-      <div className="bg-background flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="bg-workbench-canvas flex h-full min-h-0 flex-col overflow-hidden">
         <h1 className="sr-only">{t('shell.docsTitle')}</h1>
-        <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-2 lg:hidden">
+        <div className="workbench-commandbar border-border flex min-h-12 items-center justify-between gap-3 border-b px-3 py-2 sm:px-4 lg:hidden">
           <div className="min-w-0 truncate text-sm font-medium">
             {currentPage?.title || activeSpace?.name || t('shell.docsTitle')}
           </div>
@@ -1225,7 +1229,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                   {t('shell.pages')}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[92vw] max-w-md p-0">
+              <SheetContent side="start" className="w-[92vw] max-w-md p-0">
                 <SheetTitle className="sr-only">{t('shell.pages')}</SheetTitle>
                 <div className="bg-surface flex h-full min-h-0 flex-col">{navigationPane}</div>
               </SheetContent>
@@ -1237,7 +1241,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
                   {t('shell.details.kicker')}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[95vw] max-w-[32rem] p-0">
+              <SheetContent side="end" className="w-[95vw] max-w-[32rem] p-0">
                 <SheetTitle className="sr-only">{t('shell.details.kicker')}</SheetTitle>
                 <div className="bg-background h-full min-h-0 overflow-y-auto overscroll-contain">
                   {detailsPane}
@@ -1288,7 +1292,7 @@ export function DocsShell({ projectId }: DocsShellProps) {
           </div>
 
           {currentPage ? (
-            <aside className="border-border bg-background hidden h-full min-h-0 overflow-y-auto overscroll-contain border-l lg:block">
+            <aside className="border-border bg-surface/45 hidden h-full min-h-0 overflow-y-auto overscroll-contain border-s lg:block">
               {detailsPane}
             </aside>
           ) : null}
@@ -1401,7 +1405,7 @@ function SidebarSection({
             !open && '-rotate-90'
           )}
         />
-        <span className="flex-1 truncate text-left">{title}</span>
+        <span className="flex-1 truncate text-start">{title}</span>
         {typeof count === 'number' && (
           <span className="text-muted-foreground/70 text-[10px] font-normal normal-case tracking-normal">
             {count}
@@ -1414,12 +1418,12 @@ function SidebarSection({
 }
 
 const COLLECTION_TILE_PALETTE = [
-  'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200',
-  'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200',
-  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200',
-  'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200',
-  'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200',
-  'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-200',
+  'bg-accent-blue/10 text-accent-blue',
+  'bg-accent-emerald/10 text-accent-emerald',
+  'bg-accent-amber/10 text-accent-amber',
+  'bg-accent-violet/10 text-accent-violet',
+  'bg-accent-rose/10 text-accent-rose',
+  'bg-accent-cyan/10 text-accent-cyan',
 ];
 
 function pickCollectionTone(seed: string) {
@@ -1465,7 +1469,7 @@ function TreeNode({
             {open ? (
               <ChevronDown className="h-3.5 w-3.5" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
             )}
           </button>
         ) : (
@@ -1475,7 +1479,7 @@ function TreeNode({
         <button
           type="button"
           aria-current={isActive ? 'page' : undefined}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          className="flex min-w-0 flex-1 items-center gap-2 text-start"
           onClick={() => onSelect(node.id)}
         >
           {isCollectionRoot ? (
@@ -1579,7 +1583,7 @@ function DetailRow({
       <div
         className={cn(
           'text-foreground min-w-0 flex-1 text-sm',
-          children ? 'text-left' : 'text-right'
+          children ? 'text-start' : 'text-end'
         )}
       >
         {children ?? value}

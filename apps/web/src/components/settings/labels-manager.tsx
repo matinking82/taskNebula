@@ -176,7 +176,7 @@ export function LabelsManager({ organizationId }: LabelsManagerProps) {
 
   return (
     <>
-      <div className="surface-card animate-fade-up space-y-4 p-5">
+      <div className="surface-card space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <span className="kicker">{t('kicker')}</span>
@@ -184,7 +184,7 @@ export function LabelsManager({ organizationId }: LabelsManagerProps) {
             <p className="text-muted-foreground text-xs">{t('subtitle')}</p>
           </div>
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             {t('new_label')}
           </Button>
         </div>
@@ -194,12 +194,12 @@ export function LabelsManager({ organizationId }: LabelsManagerProps) {
             <Tags className="text-muted-foreground/40 mx-auto h-8 w-8" />
             <p className="text-muted-foreground text-sm">{t('empty')}</p>
             <Button size="sm" variant="outline" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               {t('create_first')}
             </Button>
           </div>
         ) : (
-          <div className="stagger divide-border/60 -mx-1 divide-y">
+          <div className="divide-border/60 -mx-1 divide-y">
             {labelList.map((label) => (
               <div
                 key={label.id}
@@ -293,7 +293,7 @@ export function LabelsManager({ organizationId }: LabelsManagerProps) {
               onClick={handleDelete}
               disabled={deleteLabel.isPending}
             >
-              {deleteLabel.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {deleteLabel.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('delete_submit')}
             </Button>
           </DialogFooter>
@@ -451,7 +451,7 @@ function LabelEditorDialog({
               {tActions('cancel')}
             </Button>
             <Button type="submit" disabled={isPending || !name.trim()}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {isEditMode ? t('save_submit') : t('create_submit')}
             </Button>
           </DialogFooter>

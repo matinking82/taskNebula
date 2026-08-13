@@ -1,17 +1,23 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, type RenderResult } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import RoadmapPage from '../page';
 
 async function renderPage(projectId: string) {
   const page = await RoadmapPage({ params: Promise.resolve({ projectId }) });
-  return render(page);
+  let result: RenderResult | undefined;
+  await act(async () => {
+    result = render(page);
+  });
+  return result!;
 }
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
 }));
 
+const mockToast = jest.fn();
 jest.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: jest.fn() }),
+  useToast: () => ({ toast: mockToast }),
 }));
 
 const fetchMock = jest.fn();
@@ -19,6 +25,7 @@ const fetchMock = jest.fn();
 describe('RoadmapPage (smoke)', () => {
   beforeEach(() => {
     fetchMock.mockReset();
+    mockToast.mockReset();
     global.fetch = fetchMock as unknown as typeof fetch;
   });
 
@@ -62,5 +69,33 @@ describe('RoadmapPage (smoke)', () => {
     // There are two renderings (left pane + Gantt bar) — use getAllByText.
     const matches = await screen.findAllByText('Launch v1.0');
     expect(matches.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders a visible alert instead of an empty roadmap when loading fails', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network unavailable'));
+
+    await renderPage('p1');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/failed to load/i);
+    expect(screen.queryByText(/no initiatives yet/i)).not.toBeInTheDocument();
+  });
+
+  it('exposes the selected period and lets keyboard users change it', async () => {
+    const user = userEvent.setup();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ issues: [] }),
+    });
+
+    await renderPage('p1');
+
+    const quarterly = await screen.findByRole('button', { name: /quarterly/i });
+    const weekly = screen.getByRole('button', { name: /weekly/i });
+    expect(quarterly).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(weekly);
+
+    expect(weekly).toHaveAttribute('aria-pressed', 'true');
+    expect(quarterly).toHaveAttribute('aria-pressed', 'false');
   });
 });

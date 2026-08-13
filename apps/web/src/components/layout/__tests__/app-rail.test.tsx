@@ -80,18 +80,12 @@ describe('AppRail', () => {
     });
   });
 
-  it('keeps rail labels inside a stable two-line slot without forced word breaks', () => {
+  it('keeps the global rail icon-only while retaining an accessible destination name', () => {
     render(<AppRail />);
 
     const myIssues = screen.getByRole('link', { name: /my issues/i });
-    expect(myIssues).toHaveClass('h-[50px]', 'w-12', 'justify-center');
-    expect(screen.getByText('My Issues')).toHaveClass(
-      'line-clamp-2',
-      'h-5',
-      'w-full',
-      'break-normal',
-      'text-center'
-    );
+    expect(myIssues).toHaveClass('h-10', 'w-10', 'justify-center');
+    expect(screen.getByText('My Issues')).toHaveClass('sr-only');
   });
 
   it('marks My Issues active under locale-prefixed issue pages', () => {
@@ -112,8 +106,8 @@ describe('AppRail', () => {
     });
 
     expect(accountMenu).toHaveClass(
-      'h-9',
-      'w-9',
+      'h-8',
+      'w-8',
       'rounded-full',
       'border-0',
       'bg-transparent',

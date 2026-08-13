@@ -423,7 +423,7 @@ export function AppearanceSettings() {
   ]);
 
   return (
-    <div className="animate-fade-up stagger space-y-8">
+    <div className="space-y-8">
       {/* Sync indicator */}
       {isAuthenticated && (
         <div
@@ -636,7 +636,7 @@ export function AppearanceSettings() {
                   aria-pressed={isActive}
                   onClick={() => setInterfaceFont(font.value)}
                   className={cn(
-                    'ease-snap flex min-h-[112px] flex-col items-start justify-between rounded-md border p-4 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
+                    'ease-snap flex min-h-[112px] flex-col items-start justify-between rounded-md border p-4 text-start transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150',
                     'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                     isActive
                       ? 'border-primary bg-primary/10 text-primary'

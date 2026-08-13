@@ -133,6 +133,9 @@ it('hides docs and chat tabs while project permissions are loading', () => {
   );
 
   expect(screen.getByRole('link', { name: /views/i })).toBeInTheDocument();
+  expect(screen.getByRole('navigation', { name: /breadcrumb/i }).querySelector('svg')).toHaveClass(
+    'rtl:rotate-180'
+  );
   expect(screen.queryByRole('link', { name: /docs/i })).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: /chat/i })).not.toBeInTheDocument();
 });

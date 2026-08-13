@@ -33,15 +33,15 @@ export function Hero() {
   return (
     <section
       aria-labelledby="landing-hero-title"
-      className="border-b border-[var(--landing-border)]"
+      className="relative border-b border-[var(--landing-border)]"
     >
-      <Shell className="py-16 sm:py-24 lg:py-28">
-        <div className="grid gap-14 lg:grid-cols-12 lg:items-end lg:gap-8">
-          <div className="animate-fade-up lg:col-span-8">
+      <Shell className="flex py-14 sm:py-20 lg:min-h-[calc(100svh-4rem)] lg:items-center lg:py-24">
+        <div className="grid w-full gap-14 lg:grid-cols-12 lg:items-end lg:gap-10">
+          <div className="animate-fade-up lg:col-span-8 xl:col-span-9">
             <Kicker label={t('kicker')} accentVar="var(--landing-accent-blue)" />
             <h1
               id="landing-hero-title"
-              className="landing-display mt-7 max-w-5xl text-balance text-[40px] text-[var(--landing-text-dark)] min-[390px]:text-[46px] sm:text-[62px] lg:text-[76px]"
+              className="landing-display mt-7 max-w-5xl text-balance text-[40px] text-[var(--landing-text-dark)] min-[390px]:text-[46px] sm:text-[62px] lg:text-[72px] xl:text-[82px]"
             >
               {t.rich('title', {
                 accent: (chunks) => (
@@ -59,7 +59,7 @@ export function Hero() {
                 className={`${primaryCtaClass} justify-between min-[390px]:justify-center`}
               >
                 {t('createWorkspace')}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
               </Link>
               <a
                 href={GITHUB_URL}
@@ -75,7 +75,7 @@ export function Hero() {
 
           <aside
             aria-label={proof('aria')}
-            className="border-t border-[var(--landing-border-strong)] pt-6 lg:col-span-4 lg:border-l lg:border-t-0 lg:pb-1 lg:pl-8 lg:pt-0"
+            className="border-y border-[var(--landing-border-strong)] bg-[var(--landing-bg-surface)] px-4 py-6 lg:col-span-4 lg:border-y-0 lg:border-s lg:bg-transparent lg:px-0 lg:pb-1 lg:ps-8 lg:pt-0 xl:col-span-3"
           >
             <p className="max-w-sm text-[13px] font-[500] leading-5 text-[var(--landing-text-dark)]">
               {proof('headline')}
@@ -109,7 +109,7 @@ export function Hero() {
               ))}
             </ol>
 
-            <p className="mt-5 border-l border-[var(--landing-border-strong)] pl-3 text-[11px] leading-5 text-[var(--landing-text-subtle)]">
+            <p className="mt-5 border-s border-[var(--landing-border-strong)] ps-3 text-[11px] leading-5 text-[var(--landing-text-subtle)]">
               {t('selfHostMeta')}
             </p>
           </aside>

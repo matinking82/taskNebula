@@ -77,9 +77,7 @@ function renderBoard(ui: ReactNode) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 beforeEach(() => {
@@ -111,6 +109,22 @@ describe('KanbanBoard', () => {
     // The issue card renders with its key and title.
     expect(screen.getByText('DEMO-1')).toBeInTheDocument();
     expect(screen.getByText('First issue')).toBeInTheDocument();
+  });
+
+  it('exposes the horizontally scrollable board as a named keyboard region', () => {
+    mockedUseWorkflowStatuses.mockReturnValue({
+      data: mockStatuses,
+      isLoading: false,
+    });
+    mockedUseIssues.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    });
+
+    renderBoard(<KanbanBoard projectId="project-1" ariaLabel="Project board" />);
+
+    expect(screen.getByRole('region', { name: 'Project board' })).toHaveAttribute('tabindex', '0');
   });
 
   it('renders columns with empty state when the project has no issues', () => {

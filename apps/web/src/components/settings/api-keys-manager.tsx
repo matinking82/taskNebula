@@ -149,7 +149,7 @@ export function ApiKeysManager({ organizationId }: ApiKeysManagerProps) {
 
   return (
     <>
-      <section className="animate-fade-up space-y-4">
+      <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <span className="kicker">{t('apiKeys.kicker')}</span>
@@ -157,7 +157,7 @@ export function ApiKeysManager({ organizationId }: ApiKeysManagerProps) {
             <p className="text-muted-foreground max-w-prose text-sm">{t('apiKeys.subtitle')}</p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-            <Plus className="mr-1.5 h-4 w-4" />
+            <Plus className="me-1.5 h-4 w-4" />
             {t('apiKeys.create_key')}
           </Button>
         </div>
@@ -254,7 +254,7 @@ export function ApiKeysManager({ organizationId }: ApiKeysManagerProps) {
                 <code className="break-all text-sm">{createdKey}</code>
               </div>
               <Button onClick={handleCopyKey} className="w-full">
-                {copiedKey ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copiedKey ? <Check className="me-2 h-4 w-4" /> : <Copy className="me-2 h-4 w-4" />}
                 {copiedKey ? t('apiKeys.copied') : t('apiKeys.copy_to_clipboard')}
               </Button>
             </div>

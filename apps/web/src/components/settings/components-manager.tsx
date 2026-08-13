@@ -217,7 +217,7 @@ export function ComponentsManager({ projectId }: ComponentsManagerProps) {
 
   return (
     <>
-      <div className="surface-card animate-fade-up space-y-4 p-5">
+      <div className="surface-card space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <span className="kicker">{t('kicker')}</span>
@@ -225,7 +225,7 @@ export function ComponentsManager({ projectId }: ComponentsManagerProps) {
             <p className="text-muted-foreground text-xs">{t('subtitle')}</p>
           </div>
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             {t('new_component')}
           </Button>
         </div>
@@ -235,7 +235,7 @@ export function ComponentsManager({ projectId }: ComponentsManagerProps) {
             <Boxes className="text-muted-foreground/40 mx-auto h-8 w-8" />
             <p className="text-muted-foreground text-sm">{t('empty')}</p>
             <Button size="sm" variant="outline" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               {t('create_first')}
             </Button>
           </div>
@@ -246,12 +246,12 @@ export function ComponentsManager({ projectId }: ComponentsManagerProps) {
                 <span>{t('col_name')}</span>
                 <span>{t('col_lead')}</span>
                 <span>{t('col_default_assignee')}</span>
-                <span className="text-right">{t('col_issues')}</span>
+                <span className="text-end">{t('col_issues')}</span>
                 <span className="text-center">{t('col_archived')}</span>
                 <span aria-hidden="true" />
               </div>
 
-              <div className="stagger divide-border/60 divide-y">
+              <div className="divide-border/60 divide-y">
                 {componentList.map((component) => {
                   const lead = component.leadId ? membersById.get(component.leadId) : undefined;
 
@@ -311,7 +311,7 @@ export function ComponentsManager({ projectId }: ComponentsManagerProps) {
                         </SelectContent>
                       </Select>
 
-                      <span className="text-muted-foreground text-right text-xs tabular-nums">
+                      <span className="text-muted-foreground text-end text-xs tabular-nums">
                         {component.issueCount}
                       </span>
 
@@ -397,7 +397,7 @@ export function ComponentsManager({ projectId }: ComponentsManagerProps) {
               onClick={handleDelete}
               disabled={deleteComponent.isPending}
             >
-              {deleteComponent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {deleteComponent.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('delete_submit')}
             </Button>
           </DialogFooter>
@@ -575,7 +575,7 @@ function ComponentEditorDialog({
               {tActions('cancel')}
             </Button>
             <Button type="submit" disabled={isPending || !name.trim()}>
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {isEditMode ? t('save_submit') : t('create_submit')}
             </Button>
           </DialogFooter>

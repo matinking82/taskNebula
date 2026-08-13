@@ -57,14 +57,14 @@ function CollapsibleSection({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="text-muted-foreground ease-snap hover:text-foreground flex w-full items-center gap-2 text-xs font-medium transition-colors duration-150"
+        className="text-muted-foreground ease-snap hover:text-foreground flex min-h-10 w-full items-center gap-2 text-xs font-medium transition-colors duration-150 sm:min-h-8"
       >
         <Icon className="h-3.5 w-3.5" />
-        <span className="flex-1 text-left">{title}</span>
+        <span className="flex-1 text-start">{title}</span>
         <ChevronDown
           className={cn(
             'ease-snap h-3.5 w-3.5 transition-transform duration-150',
-            !open && '-rotate-90'
+            !open && '-rotate-90 rtl:rotate-90'
           )}
         />
       </button>
@@ -161,7 +161,7 @@ export function IssueDetailView({
             </div>
 
             {/* Sidebar skeleton */}
-            <div className="border-border custom-scrollbar hidden overflow-y-auto border-l lg:block">
+            <div className="border-border custom-scrollbar hidden overflow-y-auto border-s lg:block">
               <div className="space-y-5 px-5 py-5">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="space-y-2">
@@ -182,12 +182,12 @@ export function IssueDetailView({
       ? tHome('toast_access_denied_description')
       : t('view.loadFailedHint');
     return (
-      <div className="bg-background flex h-full items-center justify-center">
+      <div className="bg-background flex h-full items-center justify-center" role="alert">
         <div className="animate-fade-up max-w-sm px-4 text-center">
           <div className="bg-destructive/10 mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md">
             <AlertCircle className="text-destructive h-5 w-5" />
           </div>
-          <p className="text-foreground font-medium">{t('view.loadFailed')}</p>
+          <h1 className="text-foreground font-medium">{t('view.loadFailed')}</h1>
           <p className="text-muted-foreground mt-1 text-sm">{errorMessage}</p>
         </div>
       </div>
@@ -201,7 +201,7 @@ export function IssueDetailView({
           <div className="bg-muted mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md">
             <FileText className="text-muted-foreground h-5 w-5" />
           </div>
-          <p className="text-foreground font-medium">{t('view.notFound')}</p>
+          <h1 className="text-foreground font-medium">{t('view.notFound')}</h1>
           <p className="text-muted-foreground mt-1 text-sm">{t('view.notFoundHint')}</p>
         </div>
       </div>
@@ -224,13 +224,13 @@ export function IssueDetailView({
             // In modal mode the Dialog's absolute close (X) sits at top-right;
             // pad the header so the title row / action buttons never slip
             // underneath it. Full-page view (no onClose) keeps the normal inset.
-            onClose && 'pr-14'
+            onClose && 'pe-14'
           )}
         >
           <IssueHeader issue={issue} />
-          {/* Jira-style quick-action row under the title. Duplicate/Archive
-              callbacks are intentionally not passed — no backend yet. */}
-          <div className="mt-3">
+          {/* Contextual quick actions stay adjacent to the issue identity.
+              Duplicate/Archive callbacks are intentionally not passed — no backend yet. */}
+          <div className="custom-scrollbar mt-2.5 overflow-x-auto pb-0.5">
             <IssueQuickActions
               issueId={issue.id}
               issueKey={issue.key}
@@ -245,13 +245,13 @@ export function IssueDetailView({
       <div className="flex-none overflow-visible lg:min-h-0 lg:flex-1 lg:overflow-hidden">
         <div className="grid min-h-full grid-cols-1 lg:h-full lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="custom-scrollbar min-w-0 overflow-visible lg:overflow-y-auto">
-            <div className="space-y-8 px-4 py-5 sm:px-5 sm:py-6 lg:px-8">
+            <div className="space-y-6 px-4 py-4 sm:px-5 sm:py-5 lg:px-7">
               <IssueContent issue={issue} />
               <IssueActivity issueId={issue.id} />
             </div>
           </div>
 
-          <div className="border-border custom-scrollbar min-w-0 border-t lg:overflow-y-auto lg:border-l lg:border-t-0">
+          <div className="border-border bg-surface/30 custom-scrollbar min-w-0 border-t lg:overflow-y-auto lg:border-s lg:border-t-0">
             <div className="px-4 py-4 sm:px-5 sm:py-5">
               {canRunAgents && (
                 <CollapsibleSection

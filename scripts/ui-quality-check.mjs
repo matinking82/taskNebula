@@ -15,6 +15,10 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
 const WEB_ROOT = resolve(REPO_ROOT, 'apps/web');
 const WEB_SOURCE = resolve(WEB_ROOT, 'src');
 const ROUTE_MANIFEST = resolve(WEB_ROOT, 'design-route-manifest.json');
+const STYLE_SOURCES = [
+  resolve(WEB_SOURCE, 'app/globals.css'),
+  resolve(WEB_ROOT, 'tailwind.config.ts'),
+];
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx']);
 const EXCLUDED_SEGMENTS = ['/__tests__/', '/e2e/', '/test-results/'];
@@ -137,6 +141,16 @@ function isExempt(path, exemptions) {
 const findings = [];
 const files = (await walk(WEB_SOURCE)).filter((file) => !isExcluded(normalize(file)));
 
+function addStyleFinding(file, source, rule, description, match) {
+  findings.push({
+    rule,
+    description,
+    path: relative(REPO_ROOT, file).replaceAll('\\', '/'),
+    line: lineForOffset(source, match.index ?? 0),
+    match: match[0].replaceAll(/\s+/g, ' ').slice(0, 120),
+  });
+}
+
 function addManifestFinding(match, description) {
   findings.push({
     rule: 'route-design-contract',
@@ -171,6 +185,7 @@ if (routeManifest) {
     .sort();
   const actualPageSet = new Set(actualPages);
   const manifestPageSet = new Set();
+  const reviewGraph = routeManifest.reviewGraph;
 
   if (routeManifest.version !== 1) {
     addManifestFinding(
@@ -184,6 +199,103 @@ if (routeManifest) {
       'no archetypes',
       'The route design manifest must declare the allowed page archetypes.'
     );
+  }
+
+  if (!reviewGraph || typeof reviewGraph !== 'object') {
+    addManifestFinding(
+      'missing review graph',
+      'The route design contract must define the bounded maker/checker review graph.'
+    );
+  } else {
+    const nodes = Array.isArray(reviewGraph.nodes) ? reviewGraph.nodes : [];
+    const edges = Array.isArray(reviewGraph.edges) ? reviewGraph.edges : [];
+    const nodeIds = new Set();
+
+    for (const node of nodes) {
+      const id = typeof node?.id === 'string' ? node.id.trim() : '';
+      if (!id || nodeIds.has(id)) {
+        addManifestFinding(
+          id || 'invalid review node',
+          'Review graph node ids must be present and unique.'
+        );
+        continue;
+      }
+      nodeIds.add(id);
+    }
+
+    if (
+      !Number.isInteger(reviewGraph.maxMakerCheckerCycles) ||
+      reviewGraph.maxMakerCheckerCycles < 1 ||
+      reviewGraph.maxMakerCheckerCycles > 3
+    ) {
+      addManifestFinding(
+        `max cycles ${String(reviewGraph.maxMakerCheckerCycles)}`,
+        'The maker/checker loop must be explicitly bounded to one through three cycles.'
+      );
+    }
+
+    if (!nodeIds.has(reviewGraph.entry)) {
+      addManifestFinding(
+        `entry ${String(reviewGraph.entry)}`,
+        'The review graph entry must name an existing node.'
+      );
+    }
+
+    if (!nodeIds.has(reviewGraph.terminal) || reviewGraph.terminal !== 'end') {
+      addManifestFinding(
+        `terminal ${String(reviewGraph.terminal)}`,
+        'The review graph must have the explicit terminal node "end".'
+      );
+    }
+
+    let hasBoundedFeedbackEdge = false;
+    const reachable = new Set([reviewGraph.entry]);
+    let changed = true;
+
+    for (const edge of edges) {
+      const from = typeof edge?.from === 'string' ? edge.from : '';
+      const to = typeof edge?.to === 'string' ? edge.to : '';
+      const when = typeof edge?.when === 'string' ? edge.when.trim() : '';
+
+      if (!nodeIds.has(from) || !nodeIds.has(to) || !when) {
+        addManifestFinding(
+          `${from || 'missing'} -> ${to || 'missing'}`,
+          'Every review edge must connect existing nodes and name its transition condition.'
+        );
+      }
+
+      if (
+        (from === 'static-gates' || from === 'browser-check') &&
+        to === 'owner' &&
+        when.includes('cycle-remains')
+      ) {
+        hasBoundedFeedbackEdge = true;
+      }
+    }
+
+    while (changed) {
+      changed = false;
+      for (const edge of edges) {
+        if (reachable.has(edge?.from) && !reachable.has(edge?.to)) {
+          reachable.add(edge.to);
+          changed = true;
+        }
+      }
+    }
+
+    if (!hasBoundedFeedbackEdge) {
+      addManifestFinding(
+        'missing bounded feedback edge',
+        'The review graph must return failed evidence to the smallest implementation owner while a cycle remains.'
+      );
+    }
+
+    if (!reachable.has(reviewGraph.terminal)) {
+      addManifestFinding(
+        'unreachable end',
+        'The review graph terminal must be reachable from its entry.'
+      );
+    }
   }
 
   for (const route of routes) {
@@ -261,6 +373,61 @@ for (const file of files) {
   }
 }
 
+for (const file of STYLE_SOURCES) {
+  const source = await readFile(file, 'utf8');
+  const checks = [
+    {
+      id: 'hidden-focus-fallback',
+      description:
+        'Global styles must not remove focus-visible without supplying a visible fallback.',
+      pattern: /:focus-visible\s*\{[^}]*outline\s*:\s*none/gs,
+    },
+    {
+      id: 'broad-style-transition',
+      description: 'Shared CSS transitions must name the properties they animate.',
+      pattern: /transition\s*:\s*all\b/g,
+    },
+    {
+      id: 'oversized-kanban-radius',
+      description: 'Workbench kanban surfaces use the shared 2/4/6px product geometry.',
+      pattern: /\.kanban-(?:card|column)[^{]*\{[^}]*rounded-(?:xl|2xl|3xl)/gs,
+    },
+    {
+      id: 'forced-workbench-radius',
+      description:
+        'The workbench must preserve semantic component radii instead of force-overriding descendants.',
+      pattern:
+        /\.app-(?:workbench|square-ui)[^{]*\[class[^\{]*\{[^}]*border-radius[^}]*!important/gs,
+    },
+  ];
+
+  for (const check of checks) {
+    for (const match of source.matchAll(check.pattern)) {
+      addStyleFinding(file, source, check.id, check.description, match);
+    }
+  }
+
+  const boundedMotionPatterns = [
+    /\.animate-(?:fade-in|fade-up|fade-down|scale-in|slide-in-right|blur-in|pop-in|alert-in|toast-in|page-enter)\s*\{[^}]*animation:[^;]*?\s(?<seconds>\d+(?:\.\d+)?)s/gs,
+    /['"](?:fade-in|fade-up|fade-down|scale-in|slide-in-from-(?:top|bottom|left|right)|blur-in|pop-in|alert-in|toast-in|page-enter)['"]\s*:\s*['"][^'"]*?\s(?<seconds>\d+(?:\.\d+)?)s/gs,
+  ];
+
+  for (const pattern of boundedMotionPatterns) {
+    for (const match of source.matchAll(pattern)) {
+      const seconds = Number(match.groups?.seconds);
+      if (Number.isFinite(seconds) && seconds > 0.4) {
+        addStyleFinding(
+          file,
+          source,
+          'slow-shared-motion',
+          'Shared product entrance motion must complete within 400ms.',
+          match
+        );
+      }
+    }
+  }
+}
+
 if (findings.length > 0) {
   process.stderr.write(`UI quality check failed with ${findings.length} finding(s).\n\n`);
 
@@ -274,6 +441,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   process.stdout.write(
-    `UI quality check passed: ${files.length} source files satisfy ${RULES.length} static rules and the route design contract.\n`
+    `UI quality check passed: ${files.length} source files and ${STYLE_SOURCES.length} style sources satisfy the static rules, bounded review graph, and route design contract.\n`
   );
 }

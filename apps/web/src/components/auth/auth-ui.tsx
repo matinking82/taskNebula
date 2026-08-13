@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
 export const AUTH_INPUT_CLASS_NAME =
-  'h-11 bg-background text-foreground !transition-colors duration-150';
+  'h-11 bg-surface text-foreground !transition-colors duration-150';
 
 export const AUTH_LINK_CLASS_NAME =
   'rounded-sm font-medium text-primary underline-offset-4 transition-colors duration-150 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
@@ -19,9 +19,11 @@ interface AuthIntroProps {
 
 export function AuthIntro({ title, description, className }: AuthIntroProps) {
   return (
-    <header className={cn('space-y-2', className)}>
-      <h1 className="text-foreground text-3xl font-semibold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground max-w-sm text-sm leading-6">{description}</p>
+    <header className={cn('border-primary space-y-2 border-s-2 ps-4', className)}>
+      <h1 className="text-foreground text-balance text-3xl font-semibold tracking-tight">
+        {title}
+      </h1>
+      <p className="text-muted-foreground max-w-sm text-pretty text-sm leading-6">{description}</p>
     </header>
   );
 }
@@ -36,7 +38,7 @@ export function AuthFieldError({ id, children }: { id: string; children: ReactNo
 
 export function AuthFormAlert({ id, children }: { id?: string; children: ReactNode }) {
   return (
-    <Alert id={id} variant="destructive" className="rounded-lg">
+    <Alert id={id} variant="destructive" className="rounded-md">
       <AlertCircle aria-hidden="true" />
       <AlertDescription>{children}</AlertDescription>
     </Alert>

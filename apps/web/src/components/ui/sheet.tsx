@@ -40,6 +40,8 @@ const sheetVariants = cva(
         bottom: 'inset-x-0 bottom-0 border-t rounded-t-lg',
         left: 'inset-y-0 left-0 h-full w-3/4 border-r rounded-r-lg sm:max-w-sm',
         right: 'inset-y-0 right-0 h-full w-3/4 border-l rounded-l-lg sm:max-w-sm',
+        start: 'inset-y-0 start-0 h-full w-3/4 border-e rounded-e-lg sm:max-w-sm',
+        end: 'inset-y-0 end-0 h-full w-3/4 border-s rounded-s-lg sm:max-w-sm',
       },
     },
     defaultVariants: {
@@ -67,7 +69,7 @@ const SheetContent = React.forwardRef<
       >
         <SheetPrimitive.Close
           aria-label={t('close')}
-          className="text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none"
+          className="text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background absolute end-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">{t('close')}</span>
