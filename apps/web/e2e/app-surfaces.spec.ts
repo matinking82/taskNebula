@@ -129,14 +129,25 @@ async function dismissAiDisclosure(page: Page) {
 }
 
 async function waitForSurfaceReady(page: Page) {
-  await page.waitForLoadState('load');
-  await expect(page.locator('main')).toBeVisible();
-  await page.evaluate(async () => {
-    await document.fonts?.ready;
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
-  });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.waitForLoadState('load');
+    await expect(page.locator('main')).toBeVisible();
+
+    try {
+      await page.evaluate(async () => {
+        await document.fonts?.ready;
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+      });
+      return;
+    } catch (error) {
+      const navigationReplacedContext = errorMessage(error).includes(
+        'Execution context was destroyed'
+      );
+      if (!navigationReplacedContext || attempt === 2) throw error;
+    }
+  }
 }
 
 async function getHorizontalOverflow(page: Page) {

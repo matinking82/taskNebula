@@ -479,6 +479,30 @@ converted to completed work.
 - [x] Bump package, desktop Compose, OpenAPI, changelog, and status references
       to `0.17.1`.
 - [x] Pass the canonical release quality gate after the correction.
-- [ ] Commit and publish `v0.17.1` to GitHub and Docker Hub.
-- [ ] Take a fresh backup, deploy only `web`, and pass loopback/public plus
-      desktop/mobile light/dark smoke checks.
+- [x] Commit and publish the immutable `v0.17.1` source commit and annotated tag
+      to GitHub.
+- [x] Stop the `v0.17.1` Docker/live rollout after operator feedback; do not move
+      its immutable Git refs and supersede it with the navigation-restoration
+      patch below.
+
+## v0.17.2 configuration-access restoration — 2026-08-20
+
+- [x] Inventory every organization, project, and platform-administration route;
+      distinguish deleted behavior from hidden or orphaned navigation.
+- [x] Keep the desktop context panel available throughout Settings and Admin,
+      even when the normal work context was previously collapsed.
+- [x] Restore discoverable links to every real organization-settings surface,
+      including integrations, import, intake forms, SSO/SCIM, and audit streaming,
+      without exposing permission-gated controls to unauthorized users.
+- [x] Make project settings a visible, permission-aware full-page destination;
+      preserve every existing project configuration tab and deep link.
+- [x] Give super admins explicit Admin and Updates entry points from Settings,
+      and keep every admin tab reachable on desktop and mobile.
+- [x] Add regression coverage for expanded/collapsed navigation, permissions,
+      locale-prefixed paths, mobile selection, and project-settings access.
+- [x] Pass i18n, UI, hygiene, docs, type-check, lint, full tests, OpenAPI drift,
+      production build, React review, and browser checks at 320/390/desktop in
+      light, dark, and representative RTL layouts.
+- [ ] Cut and publish the next patch release to GitHub and Docker Hub, preserve a
+      rollback image and fresh database backup, recreate only `web`, then verify
+      live health and the restored settings/admin/project-settings journeys.

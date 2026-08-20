@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-08-20
+
+### Changed
+
+- Replaced the project-settings icon action with a visible, permission-aware
+  full-page destination and added one complete mobile selector for organization
+  settings, platform administration, and update controls.
+
+### Fixed
+
+- Restored discoverable navigation to integrations, imports, intake forms,
+  SSO/SCIM, audit streaming, every project-settings tab, every administrator
+  tab, and the self-update surface without weakening their permission gates.
+- Kept Settings and Admin context navigation expanded regardless of a saved
+  work-context preference, while retaining the collapsed panel tree to prevent
+  selective-hydration identifier mismatches on project pages.
+- Made the exhaustive product-surface browser contract resilient to intentional
+  server redirects that replace the page execution context while a route is
+  settling.
+
 ## [0.17.1] - 2026-08-20
 
 ### Fixed

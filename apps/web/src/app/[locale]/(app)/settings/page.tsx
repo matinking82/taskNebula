@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { ApiKeysManager } from '@/components/settings/api-keys-manager';
 import { WebhooksManager } from '@/components/settings/webhooks-manager';
 import { AuditLogViewer } from '@/components/audit/audit-log-viewer';
@@ -20,19 +20,6 @@ import { useOrganizationPermissions } from '@/lib/hooks/use-permissions';
 import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
 import type { Permission } from '@tasknebula/db';
-import {
-  Palette,
-  Building2,
-  Users,
-  Bell,
-  Key,
-  Webhook,
-  ScrollText,
-  Bot,
-  MessageSquareText,
-  Sparkles,
-  Tags,
-} from 'lucide-react';
 
 type NavItem = {
   value:
@@ -48,7 +35,6 @@ type NavItem = {
     | 'communications'
     | 'audit-log';
   labelKey: string;
-  icon: typeof Building2;
   // Permission required to see this tab. `undefined` means every member sees it.
   requiredPermissions?: Permission;
 };
@@ -57,53 +43,45 @@ const NAV_ITEMS: readonly NavItem[] = [
   {
     value: 'organization',
     labelKey: 'nav.organization',
-    icon: Building2,
     requiredPermissions: 'org:settings',
   },
   {
     // Every member can view members; `member:invite` is enforced inside the manager.
     value: 'members',
     labelKey: 'nav.members',
-    icon: Users,
     requiredPermissions: 'member:view',
   },
   {
     value: 'api-keys',
     labelKey: 'nav.apiKeys',
-    icon: Key,
     requiredPermissions: 'api_key:view',
   },
   {
     value: 'webhooks',
     labelKey: 'nav.webhooks',
-    icon: Webhook,
     requiredPermissions: 'webhook:view',
   },
-  { value: 'labels', labelKey: 'nav.labels', icon: Tags },
-  { value: 'notifications', labelKey: 'nav.notifications', icon: Bell },
-  { value: 'appearance', labelKey: 'nav.appearance', icon: Palette },
+  { value: 'labels', labelKey: 'nav.labels' },
+  { value: 'notifications', labelKey: 'nav.notifications' },
+  { value: 'appearance', labelKey: 'nav.appearance' },
   {
     value: 'ai-agents',
     labelKey: 'nav.aiAgents',
-    icon: Bot,
     requiredPermissions: 'org:settings',
   },
   {
     value: 'ai-transparency',
     labelKey: 'aiTransparency.title',
-    icon: Sparkles,
     requiredPermissions: 'org:settings',
   },
   {
     value: 'communications',
     labelKey: 'nav.communications',
-    icon: MessageSquareText,
     requiredPermissions: 'org:settings',
   },
   {
     value: 'audit-log',
     labelKey: 'nav.activity',
-    icon: ScrollText,
     requiredPermissions: 'org:manage',
   },
 ] as const;
@@ -114,13 +92,10 @@ const PERSONAL_TABS = new Set<TabValue>(['appearance']);
 const UNGATED_TABS = new Set<TabValue>(['labels', 'notifications', 'appearance']);
 
 export default function SettingsPage() {
-  const t = useTranslations('pagesSettings');
   const tNav = useTranslations('nav');
   const { currentOrganizationId } = useOrganization();
   const { aiEnabled } = useAiFeature();
   const perms = useOrganizationPermissions(currentOrganizationId ?? undefined);
-  const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const visibleNavItems = useMemo<readonly NavItem[]>(() => {
@@ -150,18 +125,7 @@ export default function SettingsPage() {
     return (validTabs[0] ?? 'appearance') as TabValue;
   }, [requestedTab, validTabs]);
 
-  const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab]);
-
-  function handleTabChange(nextTab: TabValue) {
-    setActiveTab(nextTab);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('tab', nextTab);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }
+  const activeTab = initialTab;
 
   // Permission-aware content: a direct navigation to a gated tab that the user
   // is not authorised for shows a friendly notice instead of the manager.
@@ -172,31 +136,6 @@ export default function SettingsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      {/* Mobile tab bar — main sidebar already hosts the nav on desktop.
-          Horizontally scrollable so every tab is reachable on narrow screens;
-          scrollbar hidden, with trailing padding so the last tab clears the edge. */}
-      <nav
-        aria-label={tNav('settings')}
-        className="scrollbar-none border-border flex min-h-12 flex-nowrap gap-1 overflow-x-auto whitespace-nowrap border-b py-1.5 ps-3 lg:hidden"
-      >
-        {visibleNavItems.map(({ value, labelKey, icon: Icon }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => handleTabChange(value)}
-            data-active={activeTab === value ? 'true' : undefined}
-            aria-current={activeTab === value ? 'page' : undefined}
-            className="row-interactive focus-visible:ring-ring min-h-9 shrink-0 gap-1.5 px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset"
-          >
-            <Icon className="h-3.5 w-3.5" />
-            <span>{t(labelKey)}</span>
-          </button>
-        ))}
-        {/* Trailing spacer: guarantees the last tab clears the right edge even
-            though flex overflow containers can collapse trailing padding. */}
-        <span aria-hidden className="w-4 shrink-0" />
-      </nav>
-
       <PageFrame className="flex-1" contentClassName="max-w-5xl">
         <PageHeader title={tNav('settings')} />
         <div className="min-w-0" data-settings-tab={activeTab}>

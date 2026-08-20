@@ -75,7 +75,19 @@ jest.mock('@/lib/hooks/use-permissions', () => ({
 }));
 
 jest.mock('@/components/layout/app-rail', () => ({
-  AppRail: () => <div data-testid="app-rail" />,
+  AppRail: ({
+    contextCollapsed,
+    onToggleContext,
+  }: {
+    contextCollapsed?: boolean;
+    onToggleContext?: () => void;
+  }) => (
+    <div
+      data-testid="app-rail"
+      data-context-collapsed={contextCollapsed ? 'true' : 'false'}
+      data-context-toggle={onToggleContext ? 'true' : 'false'}
+    />
+  ),
 }));
 
 jest.mock('@/components/organization/teamspace-switcher', () => ({
@@ -337,7 +349,7 @@ describe('AppSidebar', () => {
     expect(screen.getByRole('link', { name: /^members$/i })).not.toHaveAttribute('data-active');
   });
 
-  it('renders SETTINGS_LINKS on /settings (Organization, Members, API Keys, Labels, Integrations, Activity)', () => {
+  it('renders every organization settings surface on /settings', () => {
     setPathname('/settings');
 
     render(
@@ -370,6 +382,22 @@ describe('AppSidebar', () => {
       'href',
       '/settings/integrations'
     );
+    expect(screen.getByRole('link', { name: /import issues/i })).toHaveAttribute(
+      'href',
+      '/settings/import'
+    );
+    expect(screen.getByRole('link', { name: /intake forms/i })).toHaveAttribute(
+      'href',
+      '/settings/intake-forms'
+    );
+    expect(screen.getByRole('link', { name: /single sign-on/i })).toHaveAttribute(
+      'href',
+      '/settings/sso'
+    );
+    expect(screen.getByRole('link', { name: /audit streaming/i })).toHaveAttribute(
+      'href',
+      '/settings/security/audit-log-streaming'
+    );
     expect(screen.getByRole('link', { name: /notifications/i })).toHaveAttribute(
       'href',
       '/settings?tab=notifications'
@@ -384,7 +412,7 @@ describe('AppSidebar', () => {
     );
   });
 
-  it('keeps admin navigation out of the settings sidebar even for super admins', () => {
+  it('gives super admins direct Admin and Updates entry points from settings', () => {
     setPathname('/settings');
     setIsSuperAdmin(true);
 
@@ -398,11 +426,64 @@ describe('AppSidebar', () => {
       'href',
       '/settings?tab=organization'
     );
+    expect(screen.getByRole('link', { name: /^admin$/i })).toHaveAttribute('href', '/admin');
+    expect(screen.getByRole('link', { name: /^updates$/i })).toHaveAttribute(
+      'href',
+      '/admin?tab=updates'
+    );
     expect(screen.queryByRole('link', { name: /feature flags/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /agent control/i })).not.toBeInTheDocument();
     expect(document.querySelector('a[href="/admin?tab=integrations"]')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^system$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /audit logs/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps configuration navigation expanded and non-collapsible on settings routes', () => {
+    window.localStorage.setItem('tasknebula.context-sidebar-collapsed', 'true');
+    setPathname('/settings');
+
+    render(
+      <Wrapper>
+        <AppSidebar />
+      </Wrapper>
+    );
+
+    expect(document.getElementById('workbench-context-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('app-rail')).toHaveAttribute('data-context-collapsed', 'false');
+    expect(screen.getByTestId('app-rail')).toHaveAttribute('data-context-toggle', 'false');
+  });
+
+  it('keeps the context-panel tree mounted when a saved preference collapses it', () => {
+    window.localStorage.setItem('tasknebula.context-sidebar-collapsed', 'true');
+    setPathname('/dashboard');
+
+    render(
+      <Wrapper>
+        <AppSidebar />
+      </Wrapper>
+    );
+
+    expect(document.getElementById('workbench-context-panel')).toHaveClass('hidden');
+    expect(document.getElementById('workbench-context-panel')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    );
+    expect(screen.getByTestId('app-rail')).toHaveAttribute('data-context-collapsed', 'true');
+  });
+
+  it('marks nested intake-form routes under their settings destination', () => {
+    setPathname('/settings/intake-forms/form-1/edit');
+
+    render(
+      <Wrapper>
+        <AppSidebar />
+      </Wrapper>
+    );
+
+    expect(screen.getByRole('link', { name: /intake forms/i })).toHaveAttribute(
+      'data-active',
+      'true'
+    );
   });
 
   it('limits settings navigation to personal appearance when the user has no workspace access', () => {

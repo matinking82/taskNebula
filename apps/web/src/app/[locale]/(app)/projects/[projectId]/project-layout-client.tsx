@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ProjectSettingsDialog } from '@/components/projects/project-settings-dialog';
 import { useProjectPermissions } from '@/lib/hooks/use-project-permissions';
 import { stripLocalePrefix } from '@/components/layout/nav-paths';
 import { cn } from '@/lib/utils';
@@ -54,7 +52,6 @@ export function ProjectLayoutClient({
   const t = useTranslations('pagesProjects');
   const pathname = usePathname();
   const { permissions, isLoading: permissionsLoading } = useProjectPermissions(projectId);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { data: project } = useQuery<ProjectSummary | null>({
     queryKey: ['project', projectId],
@@ -85,6 +82,7 @@ export function ProjectLayoutClient({
     normalizedPathname === projectRoot || normalizedPathname === `${projectRoot}/`
       ? 'views'
       : matchedTab;
+  const isProjectSettingsActive = normalizedPathname.startsWith(`${projectRoot}/settings`);
   const hasProjectAccess =
     permissions.canBrowseProject ||
     permissions.isSuperAdmin ||
@@ -195,37 +193,26 @@ export function ProjectLayoutClient({
               ) : null}
 
               {canOpenSettings ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={t('projectSettings')}
-                      onClick={() => setIsSettingsOpen(true)}
-                      className="text-muted-foreground hover:bg-accent hover:text-foreground h-10 w-10 sm:h-8 sm:w-8"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    {t('settings')}
-                  </TooltipContent>
-                </Tooltip>
+                <Link
+                  href={`/projects/${projectId}/settings`}
+                  aria-label={t('projectSettings')}
+                  aria-current={isProjectSettingsActive ? 'page' : undefined}
+                  data-active={isProjectSettingsActive ? 'true' : undefined}
+                  className={cn(
+                    'text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border-b border-transparent px-2.5 text-xs font-medium transition-[background-color,color,border-color] sm:h-8',
+                    isProjectSettingsActive &&
+                      'border-primary bg-primary/[0.07] text-foreground hover:bg-primary/10'
+                  )}
+                >
+                  <Settings className="h-4 w-4 shrink-0" />
+                  <span>{t('settings')}</span>
+                </Link>
               ) : null}
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-hidden">{children}</div>
-
-        {canOpenSettings ? (
-          <ProjectSettingsDialog
-            projectId={projectId}
-            open={isSettingsOpen}
-            onOpenChange={setIsSettingsOpen}
-          />
-        ) : null}
       </div>
     </TooltipProvider>
   );

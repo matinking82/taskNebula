@@ -1,6 +1,6 @@
 # TaskNebula project status
 
-**Verified:** 2026-08-20 · **Version:** 0.17.1 · **Lifecycle:** beta,
+**Verified:** 2026-08-20 · **Version:** 0.17.2 · **Lifecycle:** beta,
 self-hostable
 
 This is the only live capability snapshot. Future work belongs in
@@ -43,6 +43,10 @@ The values below are a dated inventory, not agent instructions:
 - Enterprise controls: SAML/SCIM lifecycle and scoped tokens, audit/SIEM,
   database-backed LiveKit/SMTP/storage settings, session revocation, trust and
   AI transparency surfaces, and permission/security scheme configuration.
+- Configuration access: permission-aware organization, project, and platform
+  administration navigation remains discoverable across desktop and mobile;
+  Settings and Admin keep their complete context navigation available even
+  when the regular work context is collapsed.
 - CI: MCP build, i18n parity, public-repository hygiene, UI and documentation
   contracts, OpenAPI drift, type-check, lint, and tests run on pushes and pull
   requests to `main`; browser E2E remains a local/release gate.

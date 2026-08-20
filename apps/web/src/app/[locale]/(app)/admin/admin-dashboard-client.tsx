@@ -512,7 +512,7 @@ export function AdminDashboardClient() {
 
       <PageFrame contentClassName="max-w-none">
         {/* Mobile nav */}
-        <div className="lg:hidden">
+        <div className="md:hidden">
           <Select value={activeTab} onValueChange={handleTabChange}>
             <SelectTrigger aria-label={t(currentNav.labelKey)}>
               <SelectValue />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
@@ -116,10 +116,6 @@ describe('SettingsPage (/settings)', () => {
     renderWithProviders(<SettingsPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible();
-    const settingsNav = screen.getByRole('navigation', { name: 'Settings' });
-    const activeTab = within(settingsNav).getByRole('button', { name: 'Organization' });
-    expect(activeTab).toHaveAttribute('aria-current', 'page');
-    expect(activeTab).toHaveClass('focus-visible:ring-2');
     expect(screen.getByTestId('manager-organization')).toBeInTheDocument();
     // None of the other manager stubs should be mounted.
     expect(screen.queryByTestId('manager-api-keys')).not.toBeInTheDocument();

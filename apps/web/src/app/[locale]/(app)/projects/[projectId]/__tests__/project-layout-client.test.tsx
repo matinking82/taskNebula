@@ -6,26 +6,20 @@ import {
   useProjectPermissions,
   type UserProjectPermissions,
 } from '@/lib/hooks/use-project-permissions';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(),
-  useRouter: jest.fn(),
 }));
 
 jest.mock('@/lib/hooks/use-project-permissions', () => ({
   useProjectPermissions: jest.fn(),
 }));
 
-jest.mock('@/components/projects/project-settings-dialog', () => ({
-  ProjectSettingsDialog: () => null,
-}));
-
 const mockUseProjectPermissions = useProjectPermissions as jest.MockedFunction<
   typeof useProjectPermissions
 >;
 const mockUsePathname = usePathname as jest.MockedFunction<typeof usePathname>;
-const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 
 const initialProject = {
   id: 'project-1',
@@ -110,7 +104,6 @@ function Wrapper({ children }: { children: ReactNode }) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockUsePathname.mockReturnValue('/projects/prj/views');
-  mockUseRouter.mockReturnValue({ push: jest.fn() } as unknown as ReturnType<typeof useRouter>);
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => [],
@@ -160,7 +153,55 @@ it('hides docs, chat, and settings actions from read-only project viewers withou
   expect(screen.getByRole('link', { name: /modules/i })).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: /docs/i })).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: /chat/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /project settings/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /project settings/i })).not.toBeInTheDocument();
+});
+
+it('shows project settings as a visible full-page destination for project administrators', () => {
+  mockUseProjectPermissions.mockReturnValue({
+    permissions: projectPermissions({
+      canBrowseProject: true,
+      canAdministerProject: true,
+    }),
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useProjectPermissions>);
+
+  render(
+    <Wrapper>
+      <ProjectLayoutClient projectId="prj" initialProject={initialProject}>
+        <div />
+      </ProjectLayoutClient>
+    </Wrapper>
+  );
+
+  const settingsLink = screen.getByRole('link', { name: /project settings/i });
+  expect(settingsLink).toHaveAttribute('href', '/projects/prj/settings');
+  expect(settingsLink).toHaveTextContent('Settings');
+});
+
+it('marks project settings active on settings deep links', () => {
+  mockUsePathname.mockReturnValue('/tr/projects/prj/settings/workflows');
+  mockUseProjectPermissions.mockReturnValue({
+    permissions: projectPermissions({
+      canBrowseProject: true,
+      canManageWorkflow: true,
+    }),
+    isLoading: false,
+    error: null,
+  } as unknown as ReturnType<typeof useProjectPermissions>);
+
+  render(
+    <Wrapper>
+      <ProjectLayoutClient projectId="prj" initialProject={initialProject}>
+        <div />
+      </ProjectLayoutClient>
+    </Wrapper>
+  );
+
+  expect(screen.getByRole('link', { name: /project settings/i })).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
 });
 
 it('shows docs and chat tabs only when their project permissions are present', () => {
