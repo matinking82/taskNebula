@@ -5268,7 +5268,7 @@
           },
           "pin": {
             "title": "Version pinnen, der du vertraust",
-            "body": "Setze TASKNEBULA_IMAGE=neuraparse/tasknebula:0.16.0, um ein Release zu fixieren, oder folge :latest für die neueste Version."
+            "body": "Setze TASKNEBULA_IMAGE=neuraparse/tasknebula:X.Y.Z, um ein Release zu fixieren, oder folge :latest für die neueste Version."
           }
         },
         "terminalTitle": "Schnellstart — Docker Desktop oder jeder Docker-Host (~2 Min.)",

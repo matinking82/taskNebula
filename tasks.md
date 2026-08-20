@@ -469,3 +469,16 @@ converted to completed work.
       verify the registry digest.
 - [x] Keep the hosted environment unchanged; this release authorization covers
       Docker Hub publication, not a live restart or deployment.
+
+## v0.17.1 live-release correction — 2026-08-20
+
+- [x] Catch the stale `0.16.0` Docker pin example during the authorized live
+      visual smoke test without moving the immutable `v0.17.0` release refs.
+- [x] Replace the numeric landing-page example with the version-neutral
+      `X.Y.Z` release-tag placeholder in all 30 locale catalogs.
+- [x] Bump package, desktop Compose, OpenAPI, changelog, and status references
+      to `0.17.1`.
+- [x] Pass the canonical release quality gate after the correction.
+- [ ] Commit and publish `v0.17.1` to GitHub and Docker Hub.
+- [ ] Take a fresh backup, deploy only `web`, and pass loopback/public plus
+      desktop/mobile light/dark smoke checks.

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-08-20
+
+### Fixed
+
+- Replaced the stale numeric Docker image example on the self-hosting landing
+  surface with a release-tag placeholder across all locale catalogs.
+
 ## [0.17.0] - 2026-08-20
 
 ### Added

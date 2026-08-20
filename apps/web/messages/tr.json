@@ -5268,7 +5268,7 @@
           },
           "pin": {
             "title": "Güvendiğiniz sürümü sabitleyin",
-            "body": "Bir release’i kilitlemek için TASKNEBULA_IMAGE=neuraparse/tasknebula:0.16.0 ayarlayın ya da en yeni için :latest izleyin."
+            "body": "Bir release’i kilitlemek için TASKNEBULA_IMAGE=neuraparse/tasknebula:X.Y.Z ayarlayın ya da en yeni için :latest izleyin."
           }
         },
         "terminalTitle": "hızlı başlangıç — Docker Desktop veya herhangi bir Docker host (~2 dk)",

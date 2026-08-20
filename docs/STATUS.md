@@ -1,6 +1,6 @@
 # TaskNebula project status
 
-**Verified:** 2026-08-20 · **Version:** 0.17.0 · **Lifecycle:** beta,
+**Verified:** 2026-08-20 · **Version:** 0.17.1 · **Lifecycle:** beta,
 self-hostable
 
 This is the only live capability snapshot. Future work belongs in
