@@ -503,6 +503,6 @@ converted to completed work.
 - [x] Pass i18n, UI, hygiene, docs, type-check, lint, full tests, OpenAPI drift,
       production build, React review, and browser checks at 320/390/desktop in
       light, dark, and representative RTL layouts.
-- [ ] Cut and publish the next patch release to GitHub and Docker Hub, preserve a
+- [x] Cut and publish the next patch release to GitHub and Docker Hub, preserve a
       rollback image and fresh database backup, recreate only `web`, then verify
       live health and the restored settings/admin/project-settings journeys.
