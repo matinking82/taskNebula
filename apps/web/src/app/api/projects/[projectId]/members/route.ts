@@ -158,6 +158,15 @@ export async function POST(
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
+    const targetUser =
+      (await db.query.users.findFirst({
+        where: and(eq(schema.users.id, userId), eq(schema.users.status, 'active')),
+        columns: { id: true, email: true },
+      })) ?? null;
+    if (!targetUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const targetOrgMember = await db.query.organizationMembers.findFirst({
       where: and(
         eq(schema.organizationMembers.userId, userId),
@@ -167,20 +176,9 @@ export async function POST(
       columns: { id: true },
     });
 
-    let targetUser: { id: string; email: string } | null = null;
     const shouldEnsureOrgMember = !targetOrgMember;
 
     if (!targetOrgMember) {
-      targetUser =
-        (await db.query.users.findFirst({
-          where: and(eq(schema.users.id, userId), eq(schema.users.status, 'active')),
-          columns: { id: true, email: true },
-        })) ?? null;
-
-      if (!targetUser) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
       const canInviteToWorkspace = await hasPermission(project.organizationId, 'member:invite');
       if (!canInviteToWorkspace) {
         return NextResponse.json(

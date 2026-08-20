@@ -1,5 +1,6 @@
-import { db, initiatives, organizationMembers, users } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { db, initiatives } from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export type InitiativeAccess = {
   initiative: typeof initiatives.$inferSelect | null;
@@ -20,30 +21,8 @@ export async function resolveInitiativeAccess(
     return { initiative: null, canRead: false };
   }
 
-  const usersTable = users as typeof users | undefined;
-  if (usersTable) {
-    const [user] = await db
-      .select({ isSuperAdmin: usersTable.isSuperAdmin })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1);
-
-    if (user?.isSuperAdmin) {
-      return { initiative, canRead: true };
-    }
-  }
-
-  const [membership] = await db
-    .select({ id: organizationMembers.id })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, initiative.workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  return { initiative, canRead: Boolean(membership) };
+  return {
+    initiative,
+    canRead: (await resolveOrganizationAccess(userId, initiative.workspaceId)).allowed,
+  };
 }

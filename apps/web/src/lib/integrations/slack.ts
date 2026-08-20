@@ -30,9 +30,10 @@ export const SLACK_STATE_COOKIE = 'tn_slack_state';
 // `commands` is required for the slash
 // command, `chat:write` for thread replies and modals, `reactions:read` for
 // emoji-triage, `app_mentions:read` so the bot can react to @mentions in
-// channels, `channels:read` + `users:read` for the channel/user resolvers.
+// channels, `channels:read` + `users:read` + `users:read.email` for the
+// channel resolver and secure Slack→TaskNebula identity matching.
 export const SLACK_DEFAULT_SCOPES =
-  'commands,chat:write,reactions:read,app_mentions:read,channels:read,users:read';
+  'commands,chat:write,reactions:read,app_mentions:read,channels:read,users:read,users:read.email';
 
 export const SLACK_AUTHORIZE_URL = 'https://slack.com/oauth/v2/authorize';
 export const SLACK_TOKEN_URL = 'https://slack.com/api/oauth.v2.access';
@@ -115,6 +116,7 @@ export async function exchangeSlackCode(code: string): Promise<SlackOauthAccessR
       redirect_uri: redirectUri,
     }).toString(),
     cache: 'no-store',
+    signal: AbortSignal.timeout(10_000),
   });
   return (await response.json()) as SlackOauthAccessResponse;
 }
@@ -282,7 +284,8 @@ export interface SlackApiResponse<T> {
 export async function callSlackApi<T = Record<string, unknown>>(
   method: string,
   accessTokenEnc: unknown,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  options: { timeoutMs?: number } = {}
 ): Promise<SlackApiResponse<T>> {
   const envelope = asTokenEnvelope(accessTokenEnc);
   if (!envelope) {
@@ -295,6 +298,7 @@ export async function callSlackApi<T = Record<string, unknown>>(
     return { ok: false, error: 'token_decrypt_failed' };
   }
   try {
+    const timeoutMs = Math.min(Math.max(options.timeoutMs ?? 10_000, 250), 30_000);
     const response = await fetch(`${SLACK_API_BASE}/${method}`, {
       method: 'POST',
       headers: {
@@ -303,6 +307,7 @@ export async function callSlackApi<T = Record<string, unknown>>(
       },
       body: JSON.stringify(body),
       cache: 'no-store',
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const json = (await response.json()) as Record<string, unknown>;
     if (json.ok === true) {

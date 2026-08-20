@@ -3,15 +3,11 @@ import { auth } from '@/auth';
 import {
   db,
   issues,
-  projects,
   sprints,
-  projectMembers,
   organizationMembers,
+  organizations,
   users,
   createAuditLog,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  type ProjectRole,
 } from '@tasknebula/db';
 import { eq, inArray, and } from 'drizzle-orm';
 import { z } from 'zod';
@@ -22,6 +18,7 @@ import {
   isWorkflowTransitionError,
   WorkflowTransitionError,
 } from '@/lib/workflows/issue-transition-policy';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,94 +75,28 @@ async function assertBulkPermission(
     return { ok: false, status: 404, error: 'Some issues not found' };
   }
 
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (user?.isSuperAdmin) {
-    return { ok: true, issues: rows };
-  }
-
   const projectIds = Array.from(new Set(rows.map((r) => r.projectId)));
 
   for (const projectId of projectIds) {
-    const [project] = await db
-      .select({ id: projects.id, organizationId: projects.organizationId })
-      .from(projects)
-      .where(eq(projects.id, projectId))
-      .limit(1);
-
-    if (!project) {
+    const access = await resolveProjectCapabilityAccess(userId, projectId);
+    if (!access.project) {
       return { ok: false, status: 404, error: 'Project not found' };
     }
     if (
       rows.some(
-        (issue) => issue.projectId === projectId && issue.organizationId !== project.organizationId
+        (issue) =>
+          issue.projectId === projectId && issue.organizationId !== access.project?.organizationId
       )
     ) {
       return { ok: false, status: 404, error: 'Some issues not found' };
     }
-
-    const [orgMember] = await db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, userId),
-          eq(organizationMembers.organizationId, project.organizationId),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-
-    if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
-      continue;
-    }
-
-    const [projectMember] = await db
-      .select({
-        role: projectMembers.role,
-        canEditIssues: projectMembers.canEditIssues,
-        canDeleteIssues: projectMembers.canDeleteIssues,
-        canTransitionIssues: projectMembers.canTransitionIssues,
-        canAssignIssues: projectMembers.canAssignIssues,
-        canScheduleIssues: projectMembers.canScheduleIssues,
-      })
-      .from(projectMembers)
-      .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-      .limit(1);
-
-    if (!projectMember) {
-      return {
-        ok: false,
-        status: 403,
-        error: 'Not a project member for one or more issues',
-      };
-    }
-
-    const explicitPermission = {
-      edit: projectMember.canEditIssues,
-      delete: projectMember.canDeleteIssues,
-      transition: projectMember.canTransitionIssues,
-      assign: projectMember.canAssignIssues,
-      schedule: projectMember.canScheduleIssues,
+    const canModify = {
+      edit: access.permissions.canEditIssues,
+      delete: access.permissions.canDeleteIssues,
+      transition: access.permissions.canTransitionIssues,
+      assign: access.permissions.canAssignIssues,
+      schedule: access.permissions.canScheduleIssues,
     }[action];
-    // An explicit per-member value wins in both directions. Only a nullable
-    // legacy value falls back to the project role default.
-    const roleDefaults =
-      ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] ||
-      ROLE_DEFAULT_PERMISSIONS.viewer;
-    const allowedByRole = {
-      edit: roleDefaults.canEditIssues,
-      delete: roleDefaults.canDeleteIssues,
-      transition: roleDefaults.canTransitionIssues,
-      assign: roleDefaults.canAssignIssues,
-      schedule: roleDefaults.canScheduleIssues,
-    }[action];
-    const canModify =
-      explicitPermission === 'true' ? true : explicitPermission === 'false' ? false : allowedByRole;
 
     if (!canModify) {
       const actionLabel = action === 'transition' ? 'transition' : action;
@@ -299,10 +230,14 @@ async function handleBulkUpdate(body: any, userId: string) {
       const memberships = await tx
         .select({ organizationId: organizationMembers.organizationId })
         .from(organizationMembers)
+        .innerJoin(users, eq(users.id, organizationMembers.userId))
+        .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
         .where(
           and(
             eq(organizationMembers.userId, updates.assigneeId),
             eq(organizationMembers.status, 'active'),
+            eq(users.status, 'active'),
+            eq(organizations.status, 'active'),
             inArray(organizationMembers.organizationId, organizationIds)
           )
         );

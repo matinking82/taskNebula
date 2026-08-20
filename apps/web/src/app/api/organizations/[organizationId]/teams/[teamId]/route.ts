@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { and, db, eq, ne, organizationMembers, teamMembers, teams } from '@tasknebula/db';
+import { and, db, eq, ne, organizationMembers, teamMembers, teams, users } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 
@@ -52,11 +52,13 @@ async function ensureLeadMembership(organizationId: string, leadId?: string | nu
   const [member] = await db
     .select({ id: organizationMembers.id })
     .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
     .where(
       and(
         eq(organizationMembers.organizationId, organizationId),
         eq(organizationMembers.userId, leadId),
-        eq(organizationMembers.status, 'active')
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active')
       )
     )
     .limit(1);

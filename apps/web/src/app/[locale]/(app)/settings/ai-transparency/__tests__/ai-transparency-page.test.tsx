@@ -6,7 +6,7 @@ jest.mock('@/auth', () => ({
 }));
 
 jest.mock('@/lib/auth/permissions', () => ({
-  hasPermission: jest.fn(),
+  getPermittedOrganizationIds: jest.fn(),
 }));
 
 jest.mock('../ai-transparency-client', () => ({
@@ -19,45 +19,17 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
-jest.mock('drizzle-orm', () => ({
-  and: jest.fn((...conditions: unknown[]) => ({ conditions })),
-  eq: jest.fn((left: unknown, right: unknown) => ({ left, right })),
-}));
-
-jest.mock('@tasknebula/db', () => {
-  const limit = jest.fn();
-  return {
-    __mockLimit: limit,
-    db: {
-      select: jest.fn(() => ({
-        from: jest.fn(() => ({
-          where: jest.fn(() => ({
-            limit,
-          })),
-        })),
-      })),
-    },
-    organizationMembers: {
-      organizationId: 'organizationMembers.organizationId',
-      userId: 'organizationMembers.userId',
-      status: 'organizationMembers.status',
-    },
-  };
-});
-
 describe('AiTransparencyPage permissions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
     const authModule = jest.requireMock('@/auth') as { auth: jest.Mock };
     const permissionsModule = jest.requireMock('@/lib/auth/permissions') as {
-      hasPermission: jest.Mock;
+      getPermittedOrganizationIds: jest.Mock;
     };
-    const dbModule = jest.requireMock('@tasknebula/db') as { __mockLimit: jest.Mock };
 
     authModule.auth.mockResolvedValue({ user: { id: 'user-1' } });
-    permissionsModule.hasPermission.mockResolvedValue(true);
-    dbModule.__mockLimit.mockResolvedValue([{ organizationId: 'org-1' }]);
+    permissionsModule.getPermittedOrganizationIds.mockResolvedValue(['org-1']);
   });
 
   async function renderPage() {
@@ -70,6 +42,13 @@ describe('AiTransparencyPage permissions', () => {
     await renderPage();
 
     expect(screen.getByTestId('ai-transparency-client')).toBeInTheDocument();
+    const permissionsModule = jest.requireMock('@/lib/auth/permissions') as {
+      getPermittedOrganizationIds: jest.Mock;
+    };
+    expect(permissionsModule.getPermittedOrganizationIds).toHaveBeenCalledWith(
+      'user-1',
+      'org:settings'
+    );
   });
 
   it('redirects anonymous users to signin', async () => {
@@ -83,9 +62,9 @@ describe('AiTransparencyPage permissions', () => {
 
   it('redirects users without org settings permission', async () => {
     const permissionsModule = jest.requireMock('@/lib/auth/permissions') as {
-      hasPermission: jest.Mock;
+      getPermittedOrganizationIds: jest.Mock;
     };
-    permissionsModule.hasPermission.mockResolvedValue(false);
+    permissionsModule.getPermittedOrganizationIds.mockResolvedValue([]);
 
     await expect(renderPage()).rejects.toThrow('redirect:/dashboard?error=insufficient-permission');
   });

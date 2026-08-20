@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { DashboardClient } from '../dashboard-client';
 import { useOrganization } from '@/lib/hooks/use-organization';
@@ -30,6 +31,10 @@ jest.mock('@/components/dashboard/standup-widget', () => ({
 
 jest.mock('@/components/dashboard/delivery-analysis', () => ({
   DeliveryAnalysis: () => <div data-testid="delivery-analysis" />,
+}));
+
+jest.mock('@/components/dashboard/agent-attention-widget', () => ({
+  AgentAttentionWidget: () => <div data-testid="agent-attention-widget" />,
 }));
 
 jest.mock('@/components/issues/issue-detail-modal', () => ({
@@ -151,6 +156,29 @@ describe('DashboardClient', () => {
       'focus-visible:ring-2'
     );
     expect(screen.getByRole('link', { name: /my issues/i })).toHaveAttribute('href', '/my-issues');
+    expect(screen.getByTestId('agent-attention-widget')).toBeInTheDocument();
+    expect(screen.queryByTestId('standup-widget')).not.toBeInTheDocument();
+  });
+
+  it('loads secondary workspace tools only after the user expands them', async () => {
+    const user = userEvent.setup();
+    mockFetch({
+      '/api/organizations': {
+        organizations: [{ id: 'org-1', name: 'Acme' }],
+      },
+      '/api/issues/my-issues': { issues: [] },
+    });
+
+    render(
+      <Wrapper>
+        <DashboardClient />
+      </Wrapper>
+    );
+
+    await user.click(await screen.findByText(/today's standup/i));
+
+    expect(screen.getByTestId('standup-widget')).toBeInTheDocument();
+    expect(screen.getByTestId('pinned-items-widget')).toBeInTheDocument();
   });
 
   it('shows the empty state when no issues are returned', async () => {

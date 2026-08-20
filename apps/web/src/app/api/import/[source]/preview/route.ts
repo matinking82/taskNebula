@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, organizationMembers, eq, and } from '@tasknebula/db';
 import { getImporter, isImportSource } from '@/lib/importers';
 import { suggestColumnMapping, parseCsvText } from '@/lib/importers/csv';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,18 +49,7 @@ export async function POST(
     return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 });
   }
 
-  const [membership] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, session.user.id),
-        eq(organizationMembers.organizationId, workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (!membership) {
+  if (!(await resolveOrganizationAccess(session.user.id, workspaceId)).allowed) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

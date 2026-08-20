@@ -33,6 +33,10 @@ export const users = pgTable(
     locale: varchar('locale', { length: 10 }),
     settings: jsonb('settings').notNull().default('{}'),
     status: userStatusEnum('status').notNull().default('active'),
+    // Incremented whenever every existing JWT must become permanently stale.
+    // JWT sessions carry the version observed at sign-in; reactivating an
+    // account therefore cannot resurrect a token issued before deactivation.
+    sessionVersion: integer('session_version').notNull().default(0),
     // Super Admin
     isSuperAdmin: boolean('is_super_admin').notNull().default(false),
     superAdminGrantedAt: timestamp('super_admin_granted_at', { mode: 'date' }),

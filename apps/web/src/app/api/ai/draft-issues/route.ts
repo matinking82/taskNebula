@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { and, eq } from 'drizzle-orm';
-import {
-  createAuditLog,
-  db,
-  issues,
-  notifications,
-  organizationMembers,
-  organizations,
-  projects,
-  users,
-} from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
+import { createAuditLog, db, issues, notifications, organizations, projects } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { aiDisabledResponse, isAiFeatureEnabled } from '@/lib/ai/feature-gate';
 import { AiDraftError, type DraftProvider } from '@/lib/ai/draft-issue';
@@ -21,6 +12,8 @@ import { resolveProviderApiKeyFromSettings } from '@/lib/agents/credentials';
 import { normalizeWorkspaceAgentSettings } from '@/lib/agents/config';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
 import { evaluateInjectionRisk } from '@/lib/ai/safety/sandbox';
+import { canReadProject } from '@/lib/auth/access-control';
+import { isProductFeatureEnabled, PRODUCT_FEATURE_FLAGS } from '@/lib/feature-flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,29 +23,6 @@ const bodySchema = z.object({
   provider: z.enum(['native', 'openai', 'anthropic']).optional(),
   maxCount: z.number().int().min(1).max(20).optional(),
 });
-
-async function userHasProjectAccess(userId: string, projectIdOrKey: string) {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (user?.isSuperAdmin) return true;
-  const project = await resolveProjectByIdOrKey(projectIdOrKey);
-  if (!project) return false;
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  return !!orgMember;
-}
 
 async function resolveProviderAndKey(
   requested: DraftProvider | undefined,
@@ -114,14 +84,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const hasAccess = await userHasProjectAccess(session.user.id, body.projectId);
-  if (!hasAccess) {
+  const project = await resolveProjectByIdOrKey(body.projectId, session.user.id);
+  if (!project || !(await canReadProject(session.user.id, project))) {
     return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
   }
 
-  const project = await resolveProjectByIdOrKey(body.projectId);
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  if (
+    !(await isProductFeatureEnabled(
+      PRODUCT_FEATURE_FLAGS.AI_MULTI_ISSUE_DRAFTING,
+      project.organizationId
+    ))
+  ) {
+    return aiDisabledResponse();
   }
 
   const [org] = await db

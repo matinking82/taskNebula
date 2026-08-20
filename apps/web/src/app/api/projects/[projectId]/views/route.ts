@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { db, savedFilters, organizationMembers } from '@tasknebula/db';
+import { db, savedFilters } from '@tasknebula/db';
 import { and, desc, eq, or } from 'drizzle-orm';
-import { resolveProjectByIdOrKey } from '@/lib/projects/server';
+import { resolveProjectAccess } from '@/lib/auth/project-access';
 
 type ViewScope = 'personal' | 'project' | 'teamspace';
 
@@ -112,30 +112,11 @@ async function clearDefaultViewsForScope({
 }
 
 async function ensureProjectAccess(projectIdOrKey: string, userId: string) {
-  const project = await resolveProjectByIdOrKey(projectIdOrKey);
-  if (!project) {
+  const access = await resolveProjectAccess(userId, projectIdOrKey);
+  if (!access.project || !access.canRead) {
     return { error: NextResponse.json({ error: 'Project not found' }, { status: 404 }) };
   }
-
-  const [membership] = await db
-    .select({
-      id: organizationMembers.id,
-    })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  if (!membership) {
-    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
-  }
-
-  return { project };
+  return { project: access.project };
 }
 
 export async function GET(

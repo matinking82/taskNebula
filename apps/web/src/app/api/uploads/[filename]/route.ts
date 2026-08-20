@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
 import { auth } from '@/auth';
+import { db, attachments, documentPageAttachments } from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
+import { canReadIssue } from '@/lib/auth/access-control';
+import { resolveDocumentPageAccess } from '@/lib/docs/server';
 import {
-  db,
-  attachments,
-  documentPageAttachments,
-  documentPages,
-  issues,
-  projectMembers,
-  organizationMembers,
-  users,
-  hasPermission as roleHasPermission,
-} from '@tasknebula/db';
-import { eq, and } from 'drizzle-orm';
-
-const UPLOAD_DIR = join(process.cwd(), 'uploads');
+  attachmentContentDisposition,
+  readStoredFile,
+  StorageObjectNotFoundError,
+  validateStoredFilename,
+} from '@/lib/storage/blob-store';
 
 export async function GET(
   request: NextRequest,
@@ -29,8 +23,9 @@ export async function GET(
 
     const { filename } = await params;
 
-    // Security: Prevent directory traversal
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    try {
+      validateStoredFilename(filename);
+    } catch {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
 
@@ -38,30 +33,31 @@ export async function GET(
     // Both store filePath as `/uploads/<filename>`
     const storedPath = `/uploads/${filename}`;
 
-    const allowed = await userCanAccessFile(session.user.id, storedPath);
-    if (allowed === 'not_found') {
+    const access = await resolveFileAccess(session.user.id, storedPath);
+    if (access.result === 'not_found') {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
-    if (allowed === 'forbidden') {
+    if (access.result === 'forbidden') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-
-    const filePath = join(UPLOAD_DIR, filename);
+    if (access.result !== 'ok') {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
 
     try {
-      const fileBuffer = await readFile(filePath);
+      const fileBuffer = await readStoredFile(filename);
+      const contentType = access.mimeType || getContentType(filename.split('.').pop() || '');
 
-      // Determine content type based on file extension
-      const ext = filename.split('.').pop()?.toLowerCase();
-      const contentType = getContentType(ext || '');
-
-      return new NextResponse(fileBuffer, {
+      return new NextResponse(new Uint8Array(fileBuffer), {
         headers: {
           'Content-Type': contentType,
-          'Content-Disposition': `inline; filename="${filename}"`,
+          'Content-Disposition': attachmentContentDisposition(access.fileName),
+          'Content-Security-Policy': 'sandbox',
+          'X-Content-Type-Options': 'nosniff',
         },
       });
     } catch (error) {
+      if (!(error instanceof StorageObjectNotFoundError)) throw error;
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
   } catch (error) {
@@ -70,43 +66,34 @@ export async function GET(
   }
 }
 
-type AccessResult = 'ok' | 'forbidden' | 'not_found';
+type FileAccess =
+  | { result: 'not_found' }
+  | { result: 'forbidden' }
+  | { result: 'ok'; fileName: string; mimeType: string | null };
 
-async function userCanAccessFile(userId: string, storedPath: string): Promise<AccessResult> {
-  // Super admin bypass
-  const [currentUser] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  const isSuperAdmin = currentUser?.isSuperAdmin === true;
-
+async function resolveFileAccess(userId: string, storedPath: string): Promise<FileAccess> {
   // Try issue attachment first
   const [issueAttachment] = await db
     .select({
       id: attachments.id,
       issueId: attachments.issueId,
+      fileName: attachments.fileName,
+      mimeType: attachments.mimeType,
     })
     .from(attachments)
     .where(eq(attachments.filePath, storedPath))
     .limit(1);
 
   if (issueAttachment) {
-    if (isSuperAdmin) return 'ok';
-    const [issue] = await db
-      .select({
-        projectId: issues.projectId,
-        organizationId: issues.organizationId,
-      })
-      .from(issues)
-      .where(eq(issues.id, issueAttachment.issueId))
-      .limit(1);
-
-    if (!issue) return 'not_found';
-
-    return (await canAccessProject(userId, issue.projectId, issue.organizationId))
-      ? 'ok'
-      : 'forbidden';
+    const access = await canReadIssue(userId, issueAttachment.issueId);
+    if (!access.issue) return { result: 'not_found' };
+    return access.allowed
+      ? {
+          result: 'ok',
+          fileName: issueAttachment.fileName,
+          mimeType: issueAttachment.mimeType,
+        }
+      : { result: 'forbidden' };
   }
 
   // Try document page attachment
@@ -114,76 +101,26 @@ async function userCanAccessFile(userId: string, storedPath: string): Promise<Ac
     .select({
       id: documentPageAttachments.id,
       pageId: documentPageAttachments.pageId,
+      fileName: documentPageAttachments.fileName,
+      mimeType: documentPageAttachments.mimeType,
     })
     .from(documentPageAttachments)
     .where(eq(documentPageAttachments.filePath, storedPath))
     .limit(1);
 
   if (pageAttachment) {
-    if (isSuperAdmin) return 'ok';
-    const [page] = await db
-      .select({
-        projectId: documentPages.projectId,
-        organizationId: documentPages.organizationId,
-      })
-      .from(documentPages)
-      .where(eq(documentPages.id, pageAttachment.pageId))
-      .limit(1);
-
-    if (!page) return 'not_found';
-
-    // If page is org-scoped (no project), require org membership only
-    if (!page.projectId) {
-      const [orgMember] = await db
-        .select({ userId: organizationMembers.userId })
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.userId, userId),
-            eq(organizationMembers.organizationId, page.organizationId),
-            eq(organizationMembers.status, 'active')
-          )
-        )
-        .limit(1);
-      return orgMember ? 'ok' : 'forbidden';
-    }
-
-    return (await canAccessProject(userId, page.projectId, page.organizationId))
-      ? 'ok'
-      : 'forbidden';
+    const access = await resolveDocumentPageAccess(userId, pageAttachment.pageId);
+    if (!access) return { result: 'not_found' };
+    return access.permissions.canBrowse
+      ? {
+          result: 'ok',
+          fileName: pageAttachment.fileName,
+          mimeType: pageAttachment.mimeType,
+        }
+      : { result: 'forbidden' };
   }
 
-  return 'not_found';
-}
-
-async function canAccessProject(
-  userId: string,
-  projectId: string,
-  organizationId: string
-): Promise<boolean> {
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
-    return true;
-  }
-
-  const [projectMember] = await db
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-
-  return !!projectMember;
+  return { result: 'not_found' };
 }
 
 function getContentType(ext: string): string {

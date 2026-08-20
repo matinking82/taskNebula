@@ -1,6 +1,6 @@
 # TaskNebula Design System
 
-**Verified:** 2026-08-12
+**Verified:** 2026-08-20
 
 This is the implementation contract for TaskNebula's web UI. Read
 [`DESIGN.md`](DESIGN.md) first: it owns product intent, page archetypes, flow
@@ -49,6 +49,15 @@ TaskNebula Workbench is square-ish, calm, dense, and architectural.
   page header floating at one width above a table or board at another width.
 - Global search, create, and quick actions live in the command bar. Route-local
   filters and view controls live beside the data they affect.
+- The desktop shell uses a 48px global rail and a 228px context panel. The
+  context panel may be collapsed from the rail; persist that preference and
+  remove the collapsed panel from the focus order rather than visually hiding
+  interactive descendants.
+- The command bar is 44px tall. Project context navigation uses the same quiet
+  chrome token and a thin active underline; it must not become a second dark
+  global rail.
+- Mobile gets a five-destination bottom navigation and full-width route
+  composition. Desktop sidebars do not shrink into the mobile viewport.
 
 ## Tokens
 
@@ -122,6 +131,20 @@ Use the primitives in `src/components/ui` before writing custom markup.
 - Keep a stable label or accessible name during pending state; disable duplicate
   submission and show completion or actionable failure.
 
+### Page frame, headers, and tabs
+
+- `PageFrame` owns the shared content measure (up to 1480px), responsive page
+  padding, and vertical rhythm. Route components should not recreate its outer
+  gutters.
+- `PageHeader` keeps identity and description on the leading edge and the next
+  scoped action on the trailing edge. Secondary actions may wrap or disclose;
+  the title must remain the only page-level `h1`.
+- Shared tabs are compact text controls on one baseline with a 1px active
+  underline. Avoid rounded active tiles, side-tab accents, or a second card
+  around the tab list.
+- `.command-header` joins board/list/detail toolbars to the quiet chrome layer
+  so controls read as part of the work surface rather than a floating banner.
+
 ### Cards and panels
 
 - A card groups one coherent decision or object. It is not the default wrapper
@@ -137,11 +160,26 @@ Use the primitives in `src/components/ui` before writing custom markup.
   surface, then inset/selected state. Do not give every widget its own shadow.
 - Dense cards and rows show identity and state first. Optional metadata yields
   before titles truncate or action targets become too small.
+- Use `MetricStrip` for a short, comparable evidence row. It is a continuous
+  border-y ledger with dividers and tabular numerals—not a set of KPI cards.
 
 ### Badges and status
 
 A badge is earned by status or compact metadata. Use a status dot plus concise
 text when that is clearer. Never encode state by color alone.
+
+### Agent evidence
+
+- Agent activity belongs to the work object or accountable operating surface,
+  not an ornamental chatbot card.
+- Keep human ownership, run kind, run state, source/evidence, proposed effect,
+  approval requirement, and durable result visually distinguishable whenever
+  the backend exposes them.
+- A dashboard agent watch area may summarize real runs and pending approvals,
+  but it must permission-gate review data and must not imply preview-only work
+  was applied.
+- Detail activity uses flat evidence rows and a chronological ledger. Reserve
+  status color for real runtime state; do not invent confidence scores.
 
 ### Typography and numbers
 
@@ -163,10 +201,11 @@ text when that is clearer. Never encode state by color alone.
 
 ## Page-specific modifiers
 
-`.dashboard-carbon` is an existing dashboard-scoped density/visual modifier.
-It may square surfaces and tune typography inside that route; it is not a
-second global design system and must not leak into other archetypes. It still
-obeys semantic color, focus, i18n, responsive, and evidence requirements.
+`.dashboard-carbon` is a dashboard-scoped density modifier. It provides a calm
+canvas and compact row feedback; it is not a second global design system and
+must not leak into other archetypes. The first viewport uses one dominant
+attention queue, a subordinate evidence strip, and a narrower agent/deadline
+rail. Standup, pinned work, and delivery analysis stay progressively disclosed.
 
 ## Internationalization
 

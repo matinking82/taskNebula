@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { createId as cuid } from '@paralleldrive/cuid2';
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
-import { and, db, documentPageAttachments, eq } from '@tasknebula/db';
+import { and, db, documentPageAttachments, eq, sql } from '@tasknebula/db';
 import { resolveDocumentPageAccess } from '@/lib/docs/server';
+import { resolveStorageConfig, STORAGE_CONFIG_ADVISORY_LOCK } from '@/lib/admin/system-settings';
+import {
+  createStoredFilename,
+  deleteStoredFile,
+  storedFilenameFromPath,
+  writeStoredFile,
+} from '@/lib/storage/blob-store';
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-async function ensureUploadDir() {
-  await mkdir(UPLOAD_DIR, { recursive: true });
-}
 
 export async function GET(
   request: NextRequest,
@@ -71,27 +71,35 @@ export async function POST(
       return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 });
     }
 
-    await ensureUploadDir();
-
     const fileId = cuid();
-    const fileExtension = file.name.split('.').pop() || '';
-    const fileName = `${fileId}.${fileExtension}`;
-    const filePath = join(UPLOAD_DIR, fileName);
+    const fileName = createStoredFilename(fileId, file.name);
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const attachment = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock_shared(hashtext(${STORAGE_CONFIG_ADVISORY_LOCK}))`
+      );
+      const storageConfig = await resolveStorageConfig();
+      await writeStoredFile(fileName, Buffer.from(bytes), file.type, storageConfig);
 
-    const [attachment] = await db
-      .insert(documentPageAttachments)
-      .values({
-        id: fileId,
-        pageId,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        filePath: `/uploads/${fileName}`,
-        uploadedById: session.user.id,
-      })
-      .returning();
+      try {
+        const [created] = await tx
+          .insert(documentPageAttachments)
+          .values({
+            id: fileId,
+            pageId,
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type,
+            filePath: `/uploads/${fileName}`,
+            uploadedById: session.user.id,
+          })
+          .returning();
+        return created;
+      } catch (error) {
+        await deleteStoredFile(fileName, storageConfig).catch(() => undefined);
+        throw error;
+      }
+    });
 
     return NextResponse.json({ attachment }, { status: 201 });
   } catch (error) {
@@ -126,14 +134,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'attachmentId is required' }, { status: 400 });
     }
 
-    await db
-      .delete(documentPageAttachments)
+    const [attachment] = await db
+      .select({ filePath: documentPageAttachments.filePath })
+      .from(documentPageAttachments)
       .where(
         and(
           eq(documentPageAttachments.id, attachmentId),
           eq(documentPageAttachments.pageId, pageId)
         )
+      )
+      .limit(1);
+
+    if (!attachment) {
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock_shared(hashtext(${STORAGE_CONFIG_ADVISORY_LOCK}))`
       );
+      const storageConfig = await resolveStorageConfig();
+      await deleteStoredFile(storedFilenameFromPath(attachment.filePath), storageConfig);
+      await tx.delete(documentPageAttachments).where(eq(documentPageAttachments.id, attachmentId));
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting document attachment:', error);

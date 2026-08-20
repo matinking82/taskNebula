@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Loader2, Send, Target } from 'lucide-react';
+import { ChevronLeft, Loader2, Send } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 import {
   Select,
   SelectContent,
@@ -19,6 +21,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+
+function InitiativeStatusBadge({ status }: { status: string }) {
+  const t = useTranslations('planning');
+  const tProjects = useTranslations('pagesProjects');
+  const labelKey: Record<string, string> = {
+    planned: 'status_planned',
+    paused: 'status_paused',
+    complete: 'status_completed',
+    cancelled: 'status_cancelled',
+  };
+  const tone: Record<string, string> = {
+    planned: 'bg-muted text-muted-foreground',
+    active: 'bg-accent-blue/10 text-accent-blue',
+    paused: 'bg-accent-amber/10 text-accent-amber',
+    complete: 'bg-accent-emerald/10 text-accent-emerald',
+    cancelled: 'bg-accent-rose/10 text-accent-rose',
+  };
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn('uppercase tracking-wider', tone[status] ?? tone.planned)}
+    >
+      {status === 'active' ? tProjects('statusActive') : t(labelKey[status] ?? 'status_planned')}
+    </Badge>
+  );
+}
+
+function InitiativeHealthBadge({ status }: { status: string }) {
+  const t = useTranslations('pagesHome');
+  const labelKey: Record<string, string> = {
+    green: 'initiative_detail_status_green',
+    yellow: 'initiative_detail_status_yellow',
+    red: 'initiative_detail_status_red',
+  };
+  const tone: Record<string, string> = {
+    green: 'bg-accent-emerald/10 text-accent-emerald',
+    yellow: 'bg-accent-amber/10 text-accent-amber',
+    red: 'bg-accent-rose/10 text-accent-rose',
+  };
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn('uppercase tracking-wider', tone[status] ?? tone.yellow)}
+    >
+      {t(labelKey[status] ?? 'initiative_detail_status_yellow')}
+    </Badge>
+  );
+}
 
 interface InitiativeDetail {
   initiative: {
@@ -134,17 +187,19 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground flex h-full items-center justify-center">
+      <PageFrame contentClassName="flex min-h-[50vh] max-w-6xl items-center justify-center">
         <h1 className="sr-only">{t('initiative_detail_kicker')}</h1>
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        {t('initiative_detail_loading')}
-      </div>
+        <div className="text-muted-foreground flex items-center text-sm">
+          <Loader2 className="me-2 h-4 w-4 animate-spin" />
+          {t('initiative_detail_loading')}
+        </div>
+      </PageFrame>
     );
   }
 
   if (detailError || !detail) {
     return (
-      <div className="flex h-full items-center justify-center p-6">
+      <PageFrame contentClassName="flex min-h-[50vh] max-w-6xl items-center justify-center">
         <h1 className="sr-only">{t('initiative_detail_kicker')}</h1>
         <Alert className="max-w-lg">
           <AlertTitle>{t('toast_access_denied_title')}</AlertTitle>
@@ -152,40 +207,29 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
             {detailError instanceof Error ? detailError.message : t('initiative_detail_error_load')}
           </AlertDescription>
         </Alert>
-      </div>
+      </PageFrame>
     );
   }
 
   return (
-    <div className="animate-fade-in flex h-full flex-col overflow-auto">
-      <div className="border-border bg-background border-b px-6 py-5">
-        <Link
-          href="/initiatives"
-          className="text-muted-foreground hover:text-foreground mb-2 flex items-center gap-1 text-xs"
-        >
-          <ChevronLeft className="h-3 w-3" />
-          {t('initiative_detail_all_initiatives')}
-        </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <span className="kicker">{t('initiative_detail_kicker')}</span>
-            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-              <Target className="text-muted-foreground h-5 w-5" />
-              {detail.initiative.name}
-            </h1>
-            {detail.initiative.description ? (
-              <p className="text-muted-foreground text-sm">{detail.initiative.description}</p>
-            ) : null}
-          </div>
-          <Badge variant="outline" className="uppercase tracking-wider">
-            {detail.initiative.status}
-          </Badge>
-        </div>
-      </div>
+    <PageFrame className="animate-fade-in" contentClassName="max-w-7xl">
+      <Link
+        href="/initiatives"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -mb-1 inline-flex min-h-8 items-center gap-1 rounded-sm text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      >
+        <ChevronLeft className="h-3 w-3 rtl:rotate-180" />
+        {t('initiative_detail_all_initiatives')}
+      </Link>
+      <PageHeader
+        kicker={t('initiative_detail_kicker')}
+        title={detail.initiative.name}
+        description={detail.initiative.description}
+        actions={<InitiativeStatusBadge status={detail.initiative.status} />}
+      />
 
-      <div className="grid flex-1 gap-6 px-6 py-6 lg:grid-cols-3">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]">
         {/* Roll-up + member projects */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('initiative_detail_rollup')}</CardTitle>
@@ -225,13 +269,11 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
               ) : (
                 <table className="w-full text-sm">
                   <thead className="border-border bg-surface border-b">
-                    <tr className="text-muted-foreground text-left text-[10px] uppercase tracking-wider">
+                    <tr className="text-muted-foreground text-start text-[10px] uppercase tracking-wider">
                       <th className="px-4 py-2">{t('initiative_detail_col_key')}</th>
                       <th className="px-4 py-2">{t('initiative_detail_col_project')}</th>
                       <th className="px-4 py-2">{t('initiative_detail_col_issues')}</th>
-                      <th className="px-4 py-2 text-right">
-                        {t('initiative_detail_col_progress')}
-                      </th>
+                      <th className="px-4 py-2 text-end">{t('initiative_detail_col_progress')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -246,7 +288,7 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
                           <td className="text-muted-foreground px-4 py-2 text-xs">
                             {stats ? `${stats.done}/${stats.total}` : '—'}
                           </td>
-                          <td className="px-4 py-2 text-right font-mono text-xs tabular-nums">
+                          <td className="px-4 py-2 text-end font-mono text-xs tabular-nums">
                             {stats ? `${stats.percent}%` : '—'}
                           </td>
                         </tr>
@@ -278,9 +320,7 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
                       >
                         {child.name}
                       </Link>
-                      <Badge variant="outline" className="uppercase tracking-wider">
-                        {child.status}
-                      </Badge>
+                      <InitiativeStatusBadge status={child.status} />
                     </li>
                   ))}
                 </ul>
@@ -290,7 +330,7 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
         </div>
 
         {/* Updates feed + post-update form */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('initiative_detail_post_update')}</CardTitle>
@@ -372,9 +412,7 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
                         {u.authorName ?? t('initiative_detail_anonymous')}
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className="uppercase tracking-wider">
-                          {u.status}
-                        </Badge>
+                        <InitiativeHealthBadge status={u.status} />
                         <span className="text-muted-foreground text-[10px]">{u.weekOf}</span>
                       </div>
                     </div>
@@ -398,6 +436,6 @@ export function InitiativeDetailClient({ initiativeId }: { initiativeId: string 
           </Card>
         </div>
       </div>
-    </div>
+    </PageFrame>
   );
 }

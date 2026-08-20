@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, eq, and } from '@tasknebula/db';
 import { integrationConnections } from '@tasknebula/db/src/schema/integration-connections';
+import { getTranslations } from 'next-intl/server';
 import {
   callSlackApi,
   getSlackSigningSecret,
@@ -33,6 +34,7 @@ import {
   resolveSlackOrg,
   type SlackCommandContext,
 } from '@/lib/integrations/slack-commands';
+import { defaultLocale } from '@/lib/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,20 +73,26 @@ export async function POST(request: NextRequest) {
     slackUserName: userName,
   };
 
-  // For `new` we also fire-and-forget views.open so the modal appears. The
-  // synchronous response from handleSlashCommand stays ephemeral.
-  if (parsed.verb === 'new' && triggerId) {
-    void openNewIssueModal({
-      teamId,
-      triggerId,
-      seedTitle: parsed.raw,
-      channelId,
-    }).catch((err) =>
-      console.warn('[slack-commands] views.open failed', err)
-    );
-  }
-
-  const response = await handleSlashCommand(parsed, ctx);
+  // Resolve the command response and modal concurrently, but await both so a
+  // serverless runtime cannot terminate before `views.open` reaches Slack.
+  const modalPromise =
+    parsed.verb === 'new'
+      ? openNewIssueModal({
+          teamId,
+          triggerId,
+          seedTitle: parsed.raw,
+          channelId,
+        }).catch(async (err) => {
+          console.warn('[slack-commands] views.open failed', err);
+          const t = await getTranslations({
+            locale: defaultLocale,
+            namespace: 'slackCommands',
+          });
+          return t('modalOpenFailed');
+        })
+      : Promise.resolve(null);
+  const [response, modalError] = await Promise.all([handleSlashCommand(parsed, ctx), modalPromise]);
+  if (modalError) response.text = modalError;
   return NextResponse.json(response);
 }
 
@@ -98,9 +106,11 @@ async function openNewIssueModal(params: {
   triggerId: string;
   seedTitle: string;
   channelId: string;
-}): Promise<void> {
+}): Promise<string | null> {
   const org = await resolveSlackOrg(params.teamId);
-  if (!org) return;
+  if (!org) return null;
+  const t = await getTranslations({ locale: org.locale, namespace: 'slackCommands' });
+  if (!params.triggerId) return t('modalOpenFailed');
 
   const [conn] = await db
     .select({ accessTokenEnc: integrationConnections.accessTokenEnc })
@@ -108,11 +118,12 @@ async function openNewIssueModal(params: {
     .where(
       and(
         eq(integrationConnections.id, org.connectionId),
-        eq(integrationConnections.provider, 'slack')
+        eq(integrationConnections.provider, 'slack'),
+        eq(integrationConnections.externalAccountId, params.teamId)
       )
     )
     .limit(1);
-  if (!conn) return;
+  if (!conn) return t('modalOpenFailed');
 
   // Modal that callbacks into /interactivity with callback_id =
   // "tn_new_issue_modal". The interactivity handler does the actual insert.
@@ -122,14 +133,14 @@ async function openNewIssueModal(params: {
     private_metadata: JSON.stringify({
       channelId: params.channelId,
     }),
-    title: { type: 'plain_text', text: 'New TaskNebula issue' },
-    submit: { type: 'plain_text', text: 'Create' },
-    close: { type: 'plain_text', text: 'Cancel' },
+    title: { type: 'plain_text', text: t('modalTitle') },
+    submit: { type: 'plain_text', text: t('modalSubmit') },
+    close: { type: 'plain_text', text: t('modalCancel') },
     blocks: [
       {
         type: 'input',
         block_id: 'title',
-        label: { type: 'plain_text', text: 'Title' },
+        label: { type: 'plain_text', text: t('modalTitleLabel') },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -141,7 +152,7 @@ async function openNewIssueModal(params: {
         type: 'input',
         block_id: 'description',
         optional: true,
-        label: { type: 'plain_text', text: 'Description' },
+        label: { type: 'plain_text', text: t('modalDescriptionStandaloneLabel') },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -151,15 +162,20 @@ async function openNewIssueModal(params: {
       {
         type: 'input',
         block_id: 'project',
-        optional: true,
-        label: { type: 'plain_text', text: 'Project key (e.g. TN)' },
+        label: { type: 'plain_text', text: t('modalStandaloneProjectLabel') },
         element: { type: 'plain_text_input', action_id: 'value' },
       },
     ],
   };
 
-  await callSlackApi('views.open', conn.accessTokenEnc, {
-    trigger_id: params.triggerId,
-    view,
-  });
+  const opened = await callSlackApi(
+    'views.open',
+    conn.accessTokenEnc,
+    {
+      trigger_id: params.triggerId,
+      view,
+    },
+    { timeoutMs: 2_500 }
+  );
+  return opened.ok ? null : t('modalOpenFailed');
 }

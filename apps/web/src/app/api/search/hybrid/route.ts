@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { and, eq, db, organizationMembers } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { hybridSearch } from '@/lib/search/hybrid';
+import {
+  listActiveOrganizationMemberships,
+  resolveOrganizationAccess,
+} from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,25 +45,9 @@ async function resolveOrganizationId(
   requested?: string | null
 ): Promise<string | null> {
   if (requested) {
-    const [member] = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, userId),
-          eq(organizationMembers.organizationId, requested),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-    return member?.organizationId ?? null;
+    return (await resolveOrganizationAccess(userId, requested)).allowed ? requested : null;
   }
-  const [member] = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active')))
-    .limit(1);
-  return member?.organizationId ?? null;
+  return (await listActiveOrganizationMemberships(userId))[0]?.organizationId ?? null;
 }
 
 function normalizeAssigneeFilter(

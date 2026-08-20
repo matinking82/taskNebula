@@ -21,7 +21,6 @@ import {
   issues,
   projects,
   organizations,
-  organizationMembers,
   eq,
   and,
   gte,
@@ -37,6 +36,7 @@ import {
 import { getSystemAgentControlSettingsFromDb } from '@/lib/agents/system';
 import { resolveProviderApiKeyFromSettings } from '@/lib/agents/credentials';
 import { normalizeWorkspaceAgentSettings } from '@/lib/agents/config';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -125,11 +125,7 @@ export async function GET(request: NextRequest) {
     // Resolve an LLM credential — Anthropic Haiku preferred, OpenAI as
     // fallback if that's what the workspace has wired up. We deliberately
     // do NOT throw when no key is present; the heuristic fills in.
-    const [membership] = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active')))
-      .limit(1);
+    const [membership] = await listActiveOrganizationMemberships(userId);
 
     let provider: 'native' | 'anthropic' | 'openai' = 'native';
     let apiKey: string | null = null;

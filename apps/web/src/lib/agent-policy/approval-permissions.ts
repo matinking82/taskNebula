@@ -1,6 +1,5 @@
-import { db, projectMembers } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
 import { hasPermission } from '@/lib/auth/permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 const PROJECT_MAINTAINER_ROLES = new Set(['product_owner', 'scrum_master', 'tech_lead']);
 
@@ -13,13 +12,10 @@ export async function canManageAgentApprovals(params: {
 
   if (!params.projectId) return false;
 
-  const [projectMember] = await db
-    .select({ role: projectMembers.role })
-    .from(projectMembers)
-    .where(
-      and(eq(projectMembers.userId, params.userId), eq(projectMembers.projectId, params.projectId))
-    )
-    .limit(1);
-
-  return PROJECT_MAINTAINER_ROLES.has(projectMember?.role ?? '');
+  const access = await resolveProjectCapabilityAccess(params.userId, params.projectId);
+  return (
+    access.canRead &&
+    access.project?.organizationId === params.workspaceId &&
+    (access.canManage || PROJECT_MAINTAINER_ROLES.has(access.role ?? ''))
+  );
 }

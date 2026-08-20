@@ -62,6 +62,12 @@ jest.mock('@tasknebula/db', () => ({
     insert: (...args: unknown[]) => dbInsertMock(...args),
     select: (...args: unknown[]) => dbSelectMock(...args),
     update: (...args: unknown[]) => dbUpdateMock(...args),
+    transaction: (callback: (tx: unknown) => unknown) =>
+      callback({
+        insert: (...args: unknown[]) => dbInsertMock(...args),
+        select: (...args: unknown[]) => dbSelectMock(...args),
+        update: (...args: unknown[]) => dbUpdateMock(...args),
+      }),
   },
   eq: (left: unknown, right: unknown) => ({ type: 'eq', left, right }),
   systemAuditLogs: 'systemAuditLogs',
@@ -84,7 +90,9 @@ function selectReturning(rows: unknown[]) {
 
 function insertResolving() {
   return {
-    values: jest.fn().mockResolvedValue(undefined),
+    values: jest.fn().mockReturnValue({
+      onConflictDoUpdate: jest.fn().mockResolvedValue(undefined),
+    }),
   };
 }
 
@@ -127,7 +135,7 @@ describe('/api/admin/system/registration route', () => {
   it('updates the policy and writes a system audit log', async () => {
     dbSelectMock
       .mockReturnValueOnce(selectReturning([{ value: { mode: 'allow_registration' } }]))
-      .mockReturnValueOnce(selectReturning([{ id: 'setting-1' }]));
+      .mockReturnValueOnce(selectReturning([{ value: { mode: 'allow_registration' } }]));
 
     const response = await PUT(
       new NextRequestCtor('http://localhost:3002/api/admin/system/registration', {
@@ -140,7 +148,7 @@ describe('/api/admin/system/registration route', () => {
     await expect(response.json()).resolves.toMatchObject({
       registration: { mode: 'invite_only', updatedBy: 'admin-1' },
     });
-    expect(dbUpdateMock).toHaveBeenCalledWith(
+    expect(dbInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ key: 'systemSettings.key' })
     );
     expect(dbInsertMock).toHaveBeenCalledWith('systemAuditLogs');

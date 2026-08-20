@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createId } from '@paralleldrive/cuid2';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
-import { db, eq, systemAuditLogs } from '@tasknebula/db';
+import { db, eq, sql, systemAuditLogs } from '@tasknebula/db';
 import { integrationClientCredentials } from '@tasknebula/db/src/schema/integration-client-credentials';
 import {
   INTEGRATION_PROVIDERS,
@@ -58,10 +58,7 @@ async function requireAdmin() {
   const admin = await isSuperAdmin();
   if (!admin) {
     return {
-      error: NextResponse.json(
-        { error: 'Super admin access required' },
-        { status: 403 }
-      ),
+      error: NextResponse.json({ error: 'Super admin access required' }, { status: 403 }),
     } as const;
   }
   return { userId: session.user.id } as const;
@@ -91,49 +88,53 @@ export async function POST(request: NextRequest) {
   const clientIdEnc = encryptToken(clientId);
   const clientSecretEnc = encryptToken(clientSecret);
 
-  const [existing] = await db
-    .select({ id: integrationClientCredentials.id })
-    .from(integrationClientCredentials)
-    .where(eq(integrationClientCredentials.provider, provider))
-    .limit(1);
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`tasknebula:integration-credential:${provider}`}))`
+    );
+    const [existing] = await tx
+      .select({ id: integrationClientCredentials.id })
+      .from(integrationClientCredentials)
+      .where(eq(integrationClientCredentials.provider, provider))
+      .limit(1);
 
-  if (existing) {
-    await db
-      .update(integrationClientCredentials)
-      .set({
+    await tx
+      .insert(integrationClientCredentials)
+      .values({
+        id: existing?.id ?? createId(),
+        provider,
         clientIdEnc,
         clientSecretEnc,
         redirectUri: redirectUri ?? null,
         scope: scope ?? null,
         updatedBy: authz.userId,
-        updatedAt: new Date(),
       })
-      .where(eq(integrationClientCredentials.id, existing.id));
-  } else {
-    await db.insert(integrationClientCredentials).values({
-      id: createId(),
-      provider,
-      clientIdEnc,
-      clientSecretEnc,
-      redirectUri: redirectUri ?? null,
-      scope: scope ?? null,
-      updatedBy: authz.userId,
-    });
-  }
+      .onConflictDoUpdate({
+        target: integrationClientCredentials.provider,
+        set: {
+          clientIdEnc,
+          clientSecretEnc,
+          redirectUri: redirectUri ?? null,
+          scope: scope ?? null,
+          updatedBy: authz.userId,
+          updatedAt: new Date(),
+        },
+      });
 
-  await db.insert(systemAuditLogs).values({
-    id: createId(),
-    userId: authz.userId,
-    action: existing
-      ? 'integration.client_credential_updated'
-      : 'integration.client_credential_created',
-    resourceType: 'integration_client_credential',
-    resourceId: provider,
-    metadata: {
-      provider,
-      hasRedirectUri: Boolean(redirectUri),
-      hasScope: Boolean(scope),
-    },
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: authz.userId,
+      action: existing
+        ? 'integration.client_credential_updated'
+        : 'integration.client_credential_created',
+      resourceType: 'integration_client_credential',
+      resourceId: provider,
+      metadata: {
+        provider,
+        hasRedirectUri: Boolean(redirectUri),
+        hasScope: Boolean(scope),
+      },
+    });
   });
 
   const providers = await listClientCredentialSummaries();
@@ -146,18 +147,32 @@ export async function DELETE(request: NextRequest) {
 
   const providerParam = new URL(request.url).searchParams.get('provider');
   if (!isIntegrationProvider(providerParam)) {
-    return NextResponse.json(
-      { error: 'Unknown provider' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Unknown provider' }, { status: 400 });
   }
 
   const provider = providerParam;
 
-  const deleted = await db
-    .delete(integrationClientCredentials)
-    .where(eq(integrationClientCredentials.provider, provider))
-    .returning({ id: integrationClientCredentials.id });
+  const deleted = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`tasknebula:integration-credential:${provider}`}))`
+    );
+    const rows = await tx
+      .delete(integrationClientCredentials)
+      .where(eq(integrationClientCredentials.provider, provider))
+      .returning({ id: integrationClientCredentials.id });
+
+    if (rows.length > 0) {
+      await tx.insert(systemAuditLogs).values({
+        id: createId(),
+        userId: authz.userId,
+        action: 'integration.client_credential_removed',
+        resourceType: 'integration_client_credential',
+        resourceId: provider,
+        metadata: { provider },
+      });
+    }
+    return rows;
+  });
 
   if (deleted.length === 0) {
     return NextResponse.json(
@@ -165,15 +180,6 @@ export async function DELETE(request: NextRequest) {
       { status: 404 }
     );
   }
-
-  await db.insert(systemAuditLogs).values({
-    id: createId(),
-    userId: authz.userId,
-    action: 'integration.client_credential_removed',
-    resourceType: 'integration_client_credential',
-    resourceId: provider,
-    metadata: { provider },
-  });
 
   const providers = await listClientCredentialSummaries();
   return NextResponse.json({ providers });

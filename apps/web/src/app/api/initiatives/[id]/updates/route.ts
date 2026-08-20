@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, initiatives, initiativeUpdates, organizationMembers, users } from '@tasknebula/db';
-import { eq, and, desc } from 'drizzle-orm';
+import { db, initiatives, initiativeUpdates, users } from '@tasknebula/db';
+import { eq, desc } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 async function loadInitiativeForUser(initiativeId: string, userId: string) {
   const [initiative] = await db
@@ -12,18 +13,9 @@ async function loadInitiativeForUser(initiativeId: string, userId: string) {
     .limit(1);
   if (!initiative) return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) };
 
-  const [member] = await db
-    .select()
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, initiative.workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (!member) return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  if (!(await resolveOrganizationAccess(userId, initiative.workspaceId)).allowed) {
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  }
 
   return { initiative };
 }

@@ -13,8 +13,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createId } from '@paralleldrive/cuid2';
 import { auth } from '@/auth';
-import { db, and, eq } from '@tasknebula/db';
+import { db, and, auditLogs, eq, ne, sql } from '@tasknebula/db';
 import { integrationConnections } from '@tasknebula/db/src/schema/integration-connections';
 import { encryptToken } from '@/lib/integrations/token-crypto';
 import { hasPermission } from '@/lib/auth/permissions';
@@ -32,6 +33,20 @@ interface StatePayload {
   n: string;
   o: string;
   u: string;
+}
+
+class SlackWorkspaceConflictError extends Error {
+  constructor(
+    readonly code: 'workspace_already_connected' | 'disconnect_existing_workspace_first'
+  ) {
+    super(code);
+    this.name = 'SlackWorkspaceConflictError';
+  }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  const candidate = error as { code?: string; cause?: { code?: string } };
+  return candidate?.code === '23505' || candidate?.cause?.code === '23505';
 }
 
 function decodeState(raw: string): StatePayload | null {
@@ -161,6 +176,12 @@ export async function GET(request: NextRequest) {
 
   const workspaceId = payload.team?.id || null;
   const workspaceLabel = payload.team?.name || null;
+  if (!workspaceId) {
+    return redirectResult({
+      integration: SLACK_PROVIDER,
+      error: 'workspace_identity_missing',
+    });
+  }
 
   // Provider-specific extras we need to keep around. `botUserId` lets us
   // filter our own bot's messages out of Events API handlers to avoid loops,
@@ -180,21 +201,68 @@ export async function GET(request: NextRequest) {
   const now = new Date();
 
   try {
-    const [existing] = await db
-      .select({ id: integrationConnections.id })
-      .from(integrationConnections)
-      .where(
-        and(
-          eq(integrationConnections.organizationId, organizationId),
-          eq(integrationConnections.provider, SLACK_PROVIDER)
-        )
-      )
-      .limit(1);
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`slack-workspace:${workspaceId}`}))`
+      );
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`slack-organization:${organizationId}`}))`
+      );
 
-    if (existing) {
-      await db
-        .update(integrationConnections)
-        .set({
+      const [otherOwner] = await tx
+        .select({ id: integrationConnections.id })
+        .from(integrationConnections)
+        .where(
+          and(
+            eq(integrationConnections.provider, SLACK_PROVIDER),
+            eq(integrationConnections.externalAccountId, workspaceId),
+            ne(integrationConnections.organizationId, organizationId)
+          )
+        )
+        .limit(1);
+      if (otherOwner) throw new SlackWorkspaceConflictError('workspace_already_connected');
+
+      const [existing] = await tx
+        .select({
+          id: integrationConnections.id,
+          workspaceId: integrationConnections.externalAccountId,
+        })
+        .from(integrationConnections)
+        .where(
+          and(
+            eq(integrationConnections.organizationId, organizationId),
+            eq(integrationConnections.provider, SLACK_PROVIDER)
+          )
+        )
+        .limit(1);
+
+      // Re-authenticating the same installation rotates credentials. Moving
+      // an organization to another Slack workspace must be an explicit
+      // disconnect/reconnect so old channel routes are never silently rebound.
+      if (existing?.workspaceId && existing.workspaceId !== workspaceId) {
+        throw new SlackWorkspaceConflictError('disconnect_existing_workspace_first');
+      }
+
+      const connectionId = existing?.id ?? createId();
+      if (existing) {
+        await tx
+          .update(integrationConnections)
+          .set({
+            externalAccountId: workspaceId,
+            externalAccountLabel: workspaceLabel,
+            accessTokenEnc,
+            refreshTokenEnc,
+            scope: payload.scope || null,
+            metadata,
+            connectedById: userId,
+            updatedAt: now,
+          })
+          .where(eq(integrationConnections.id, existing.id));
+      } else {
+        await tx.insert(integrationConnections).values({
+          id: connectionId,
+          organizationId,
+          provider: SLACK_PROVIDER,
           externalAccountId: workspaceId,
           externalAccountLabel: workspaceLabel,
           accessTokenEnc,
@@ -202,25 +270,38 @@ export async function GET(request: NextRequest) {
           scope: payload.scope || null,
           metadata,
           connectedById: userId,
+          createdAt: now,
           updatedAt: now,
-        })
-        .where(eq(integrationConnections.id, existing.id));
-    } else {
-      await db.insert(integrationConnections).values({
+        });
+      }
+
+      await tx.insert(auditLogs).values({
+        userId,
         organizationId,
-        provider: SLACK_PROVIDER,
-        externalAccountId: workspaceId,
-        externalAccountLabel: workspaceLabel,
-        accessTokenEnc,
-        refreshTokenEnc,
-        scope: payload.scope || null,
-        metadata,
-        connectedById: userId,
-        createdAt: now,
-        updatedAt: now,
+        action: 'organization.updated',
+        resourceType: 'integration_connection',
+        resourceId: connectionId,
+        metadata: {
+          kind: existing ? 'slack_reauthorized' : 'slack_connected',
+          provider: SLACK_PROVIDER,
+          workspaceId,
+          workspaceLabel,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof SlackWorkspaceConflictError) {
+      return redirectResult({
+        integration: SLACK_PROVIDER,
+        error: err.code,
       });
     }
-  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return redirectResult({
+        integration: SLACK_PROVIDER,
+        error: 'workspace_already_connected',
+      });
+    }
     console.error('Failed to persist Slack integration_connection', err);
     return redirectResult({
       integration: SLACK_PROVIDER,

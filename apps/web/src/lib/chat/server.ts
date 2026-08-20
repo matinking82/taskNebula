@@ -24,8 +24,6 @@ import {
   projectChannels,
   projectMembers,
   projects,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
   type ProjectRole,
   roomReadStates,
   sql,
@@ -36,8 +34,8 @@ import {
   buildLivekitRoomName,
   createLivekitRoomService,
   createLivekitToken,
-  getLivekitStatus,
   parseLivekitParticipantIdentity,
+  resolveLivekitStatus,
 } from '@/lib/chat/livekit';
 import { chatServerDebug, chatServerError } from '@/lib/chat/debug';
 import {
@@ -57,17 +55,7 @@ import {
 import { listRoomPresence, publishRoomEvent } from '@/lib/chat/realtime';
 import { resolveDocumentPageAccess } from '@/lib/docs/server';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
-
-type ChatPermissionSet = {
-  canBrowseProject: boolean;
-  canAdministerProject: boolean;
-  canBrowseChat: boolean;
-  canCreateChannels: boolean;
-  canPostMessages: boolean;
-  canModerateMessages: boolean;
-  canStartCalls: boolean;
-  canManageCalls: boolean;
-};
+import { resolveProjectChatPermissions, type ChatPermissionSet } from '@/lib/chat/access';
 
 type ProjectChatContext = {
   project: typeof projects.$inferSelect;
@@ -160,38 +148,6 @@ const DEFAULT_CHANNEL_DEFINITIONS = [
   },
 ] as const;
 
-function getAllChatPermissions(): ChatPermissionSet {
-  return {
-    canBrowseProject: true,
-    canAdministerProject: true,
-    canBrowseChat: true,
-    canCreateChannels: true,
-    canPostMessages: true,
-    canModerateMessages: true,
-    canStartCalls: true,
-    canManageCalls: true,
-  };
-}
-
-function getNoChatPermissions(): ChatPermissionSet {
-  return {
-    canBrowseProject: false,
-    canAdministerProject: false,
-    canBrowseChat: false,
-    canCreateChannels: false,
-    canPostMessages: false,
-    canModerateMessages: false,
-    canStartCalls: false,
-    canManageCalls: false,
-  };
-}
-
-function toPermissionValue(value: string | null | undefined, fallback = false) {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return fallback;
-}
-
 export async function resolveProjectIdOrThrow(projectIdOrKey: string, userId?: string) {
   const project = await resolveProjectByIdOrKey(projectIdOrKey, userId);
   if (!project) {
@@ -215,6 +171,7 @@ export async function getProjectChatContext(
       .select({
         id: users.id,
         isSuperAdmin: users.isSuperAdmin,
+        status: users.status,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -241,53 +198,18 @@ export async function getProjectChatContext(
       .limit(1),
   ]);
 
-  if (!organization) {
+  if (!organization || organization.status === 'suspended' || user?.status !== 'active') {
     throw new ChatAccessError('Organization not found', 404);
   }
 
   const isSuperAdmin = Boolean(user?.isSuperAdmin);
   const isOrgOwner = orgMember?.role === 'owner';
   const isOrgAdmin = orgMember?.role === 'admin';
-  const hasOrgProjectManagement = roleHasPermission(
-    orgMember?.role || '',
-    'project:manage',
-    isSuperAdmin
-  );
-  const roleDefaults = projectMember
-    ? ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole]
-    : null;
-
-  let permissions: ChatPermissionSet = getNoChatPermissions();
-
-  if (hasOrgProjectManagement) {
-    permissions = getAllChatPermissions();
-  } else if (projectMember) {
-    permissions = {
-      canBrowseProject: toPermissionValue(
-        projectMember.canBrowseProject,
-        roleDefaults?.canBrowseProject
-      ),
-      canAdministerProject: toPermissionValue(
-        projectMember.canAdministerProject,
-        roleDefaults?.canAdministerProject
-      ),
-      canBrowseChat: toPermissionValue(projectMember.canBrowseChat, roleDefaults?.canBrowseChat),
-      canCreateChannels: toPermissionValue(
-        projectMember.canCreateChannels,
-        roleDefaults?.canCreateChannels
-      ),
-      canPostMessages: toPermissionValue(
-        projectMember.canPostMessages,
-        roleDefaults?.canPostMessages
-      ),
-      canModerateMessages: toPermissionValue(
-        projectMember.canModerateMessages,
-        roleDefaults?.canModerateMessages
-      ),
-      canStartCalls: toPermissionValue(projectMember.canStartCalls, roleDefaults?.canStartCalls),
-      canManageCalls: toPermissionValue(projectMember.canManageCalls, roleDefaults?.canManageCalls),
-    };
-  }
+  const { permissions, hasOrgProjectManagement } = resolveProjectChatPermissions({
+    orgRole: orgMember?.role ?? null,
+    isSuperAdmin,
+    projectMembership: projectMember ?? null,
+  });
 
   const workspaceSettings = normalizeWorkspaceCommunicationsSettings(
     (organization.settings as Record<string, unknown> | null)?.communications
@@ -917,6 +839,31 @@ function extractMentions(
   return [...mentionedIds];
 }
 
+async function listActiveProjectMentionCandidates(projectId: string, organizationId: string) {
+  return db
+    .select({
+      userId: projectMembers.userId,
+      name: users.name,
+      email: users.email,
+    })
+    .from(projectMembers)
+    .innerJoin(users, eq(users.id, projectMembers.userId))
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.userId, projectMembers.userId),
+        eq(organizationMembers.organizationId, organizationId)
+      )
+    )
+    .where(
+      and(
+        eq(projectMembers.projectId, projectId),
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active')
+      )
+    );
+}
+
 export async function createConversationMessage(params: {
   roomId: string;
   userId: string;
@@ -937,15 +884,10 @@ export async function createConversationMessage(params: {
     throw new ChatAccessError('Attachments are disabled in this project.');
   }
 
-  const projectMemberList = await db
-    .select({
-      userId: projectMembers.userId,
-      name: users.name,
-      email: users.email,
-    })
-    .from(projectMembers)
-    .innerJoin(users, eq(users.id, projectMembers.userId))
-    .where(eq(projectMembers.projectId, access.context.project.id));
+  const projectMemberList = await listActiveProjectMentionCandidates(
+    access.context.project.id,
+    access.context.project.organizationId
+  );
 
   const mentions = extractMentions(params.body, projectMemberList);
   const now = new Date();
@@ -1110,15 +1052,10 @@ export async function updateConversationMessage(params: {
     throw new ChatAccessError('You do not have permission to edit this message.');
   }
 
-  const projectMemberList = await db
-    .select({
-      userId: projectMembers.userId,
-      name: users.name,
-      email: users.email,
-    })
-    .from(projectMembers)
-    .innerJoin(users, eq(users.id, projectMembers.userId))
-    .where(eq(projectMembers.projectId, access.context.project.id));
+  const projectMemberList = await listActiveProjectMentionCandidates(
+    access.context.project.id,
+    access.context.project.organizationId
+  );
   const mentions = extractMentions(params.body, projectMemberList);
 
   await db
@@ -2086,7 +2023,7 @@ export async function startConversationCall(roomId: string, userId: string) {
     throw new ChatAccessError('Voice rooms are disabled in this project.');
   }
 
-  const livekitStatus = getLivekitStatus();
+  const livekitStatus = await resolveLivekitStatus();
   if (!livekitStatus.ready) {
     throw new ChatAccessError(
       `LiveKit is not configured. Missing ${livekitStatus.missing.join(', ')}.`,
@@ -2451,7 +2388,7 @@ export async function createConversationCallToken(
     throw new ChatAccessError('Start a call before joining.', 409);
   }
 
-  const status = getLivekitStatus();
+  const status = await resolveLivekitStatus();
   if (!status.ready) {
     throw new ChatAccessError(
       `LiveKit is not configured. Missing ${status.missing.join(', ')}.`,

@@ -68,6 +68,46 @@ square-ish geometry, the single action blue, and its accountable work-topology
 signature. Competitor assets, wording, proprietary icons, brand color systems,
 and one-to-one shell anatomy are never implementation references.
 
+## Agentic workbench operating model
+
+TaskNebula is not made agentic by placing a chat window beside every page.
+Agents participate in the same accountable work graph as people. The interface
+therefore optimizes for supervision, judgment, and handoff:
+
+```text
+attention
+  -> human owner and delegated contributor
+    -> bounded run or proposal
+      -> evidence and proposed effects
+        -> review or requested input
+          -> durable apply, retry, cancel, revert, or end
+```
+
+The dashboard's primary question is **what needs judgment now?** Its dominant
+surface is an attention queue, not a grid of unrelated widgets. Human-owned
+work, blocked or overdue work, agent questions, approval requests, and failed
+runs may enter that queue when the product has real evidence for them. They are
+ranked with understandable state and priority rules; the interface must not
+invent a confidence score or fake precision.
+
+Agents remain attached to the records they affect:
+
+- A human assignee remains accountable when an issue is delegated to an agent.
+- Agent activity is attributable and filterable in the same issue, project,
+  inbox, and activity views used for human work.
+- “Running,” “waiting for input,” “proposed,” “approval required,” “applying,”
+  “applied,” “failed,” “cancelled,” and “reverted” are distinct states.
+- A review queue contains decisions, not generic notifications. It exposes the
+  scope, evidence, effects, risk or policy reason, and the next valid action.
+- A conversation may initiate or explain work, but the work item, proposal,
+  approval, run, effect, and audit record remain the durable product objects.
+
+The shell supports this model with one global command surface and clear scope.
+Search, create, agent invocation, and navigation share predictable access,
+while route-local filters remain attached to the data they affect. A
+collapsible context panel may expose project, teamspace, saved-view, settings,
+or agent-run scope, but it must not become a fourth competing navigation system.
+
 ## Audience and decisions
 
 The default user is an operator on a desktop or laptop asking a 60-second
@@ -464,6 +504,14 @@ and responsive composition cannot be proven by source scanning alone.
 
 ## Research basis
 
+- Impeccable,
+  [site](https://impeccable.style/#worlds) and
+  [open-source repository](https://github.com/pbakaus/impeccable) (reviewed
+  2026-08-20): define the surface mode before designing, preserve the incumbent
+  token/component system, remove unearned complexity, and combine deterministic
+  anti-pattern checks with rendered judgment. Its visual world is not a
+  TaskNebula implementation reference.
+
 - Linear,
   [“A calmer interface for a product in motion”](https://linear.app/now/behind-the-latest-design-refresh)
   (2026): recede navigation, reduce icon treatments, and let softened structure
@@ -494,10 +542,39 @@ and responsive composition cannot be proven by source scanning alone.
   layouts, and a work-item field refresh prioritize orientation and less visual
   clutter.
 - Plane,
-  [Navigation 2.0](https://plane.so/blog/introducing-plane-navigation-2) and
-  [July 2026 releases](https://plane.so/changelog?category=cloud): global versus
-  project context, a unified command surface, and work-aware AI inform scope
-  clarity without supplying a visual template.
+  [Navigation 2.0](https://plane.so/blog/introducing-plane-navigation-2),
+  [agentic workflows](https://plane.so/blog/how-modern-teams-run-agentic-workflows-in-plane),
+  and [AI actions](https://plane.so/blog/introducing-plane-ai-actions): global
+  versus project context, collapsible chrome, stateful work records, explicit
+  approvals, and activity trails inform scope and supervision without supplying
+  a visual template.
+- Atlassian,
+  [Jira Summer 2026](https://www.atlassian.com/blog/development/jira-summer-release)
+  and
+  [current Jira navigation](https://support.atlassian.com/jira-software-cloud/docs/what-is-the-new-navigation-in-jira/):
+  customizable chrome, rebuilt work views, and agent-readable work objects
+  reinforce the separation between navigation, command utilities, and work.
+- Linear,
+  [agents](https://linear.app/docs/agents-in-linear) and
+  [assignment/delegation](https://linear.app/docs/assigning-issues): agent
+  delegation does not remove human accountability, and agent contribution stays
+  visible in ordinary issue, inbox, search, and insight surfaces.
+- OpenAI,
+  [Codex app](https://openai.com/index/introducing-the-codex-app/) (2026):
+  project-grouped long-running threads, isolated parallel work, in-context diff
+  review, and a review queue inform the supervision model.
+- Devin,
+  [2026 release notes](https://docs.devin.ai/release-notes/2026): nested child
+  sessions, focus mode, waiting status, inline work logs, test evidence, and
+  review progress inform long-running run legibility.
+- Notion,
+  [Custom Agents](https://www.notion.com/help/custom-agents): explicit triggers,
+  tools/access, model choice, activity, permissions, and version history inform
+  configuration and governance surfaces.
+- Atlassian,
+  [Rovo walkthrough](https://www.atlassian.com/software/rovo/guides/admin-guide/rovo-walkthrough):
+  agent profiles expose creator, instructions, knowledge, actions, and starting
+  tasks before a user invokes them.
 - GitHub,
   [Projects](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
   and [June 2026 adjustable row heights](https://github.blog/changelog/2026-06-25-saved-views-for-repository-issues-and-adjustable-row-heights-in-projects/):

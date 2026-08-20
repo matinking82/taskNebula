@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================================================
-   TASKNEBULA DESIGN SYSTEM — minimal + warm + colorful-accented
+   TASKNEBULA DESIGN SYSTEM — calm, accountable agentic workbench
    Single source of truth. Do not duplicate tokens elsewhere.
    ============================================================================ */
 
@@ -53,7 +53,7 @@
     u+2000-206f, u+20ac, u+2122, u+2191, u+2193, u+2212, u+2215, u+feff, u+fffd;
 }
 
-/* Landing-only IBM Plex faces. Keep them local for self-hosted installs. */
+/* Default workbench, auth, and public-evidence faces. Kept local for self-hosted installs. */
 @font-face {
   font-family: 'IBM Plex Sans';
   font-style: normal;
@@ -194,7 +194,7 @@
 
 /* ----------------------------------------------------------------------------
    Core tokens — shadcn-compatible HSL variables
-   Light: warm off-white; Dark: soft near-black with subtle blue undertone
+   Light: quiet near-white; Dark: soft near-black with a subtle blue undertone
    Primary: blue (default; overridden per theme via data-theme attribute)
    ---------------------------------------------------------------------------- */
 @layer base {
@@ -559,8 +559,7 @@
 @layer components {
   /* Soft raised card */
   .surface-card {
-    @apply border-border bg-card relative rounded-lg border;
-    box-shadow: var(--shadow-xs);
+    @apply border-border bg-card relative rounded-lg border shadow-none;
   }
   .surface-card-hover {
     transition:
@@ -570,7 +569,7 @@
   }
   .surface-card-hover:hover {
     border-color: hsl(var(--border-strong));
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-xs);
   }
   /* Muted inset surface */
   .surface-inset {
@@ -588,7 +587,7 @@
   .workbench-canvas {
     background: hsl(var(--workbench-canvas));
     border-color: hsl(var(--border-strong) / 0.72);
-    box-shadow: 0 1px 2px hsl(224 22% 10% / 0.04);
+    box-shadow: 0 1px 2px hsl(224 22% 10% / 0.035);
   }
   .workbench-commandbar {
     background: hsl(var(--chrome));
@@ -601,6 +600,10 @@
   .workbench-rail {
     background: hsl(var(--rail));
     color: hsl(var(--rail-foreground));
+  }
+  .command-header {
+    background: hsl(var(--chrome));
+    border-color: hsl(var(--border));
   }
   @media (max-width: 767px) {
     .workbench-canvas {
@@ -633,20 +636,6 @@
     color-scheme: light;
     font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, var(--font-sans), sans-serif;
     word-spacing: 0;
-  }
-
-  .auth-carbon-grid {
-    background-image:
-      linear-gradient(90deg, rgb(22 22 22 / 0.06) 1px, transparent 1px),
-      linear-gradient(180deg, rgb(22 22 22 / 0.06) 1px, transparent 1px);
-    background-size: 64px 64px;
-  }
-
-  .auth-carbon-visual {
-    background-image:
-      linear-gradient(90deg, rgb(255 255 255 / 0.08) 1px, transparent 1px),
-      linear-gradient(180deg, rgb(255 255 255 / 0.08) 1px, transparent 1px);
-    background-size: 64px 64px;
   }
 
   .auth-carbon-heading {
@@ -1004,116 +993,53 @@
     box-shadow: 0 0 0 3px hsl(var(--accent-emerald) / 0.18);
   }
 
-  /* The project chrome is always zinc-950, even while the app uses its light
-     theme. Use a theme-independent foreground so the status remains AA. */
-  .live-pill-on-dark {
-    background: hsl(158 64% 54% / 0.12);
-    color: hsl(158 64% 64%);
-    border-color: hsl(158 64% 54% / 0.32);
-  }
-
-  /* Dashboard-only Carbon treatment: crisp panels, square controls, no lift. */
+  /* Dashboard is a calm work surface, not a separate visual theme. Keep the
+     product typography and geometry so users retain orientation across routes. */
   .dashboard-carbon {
-    font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, var(--font-sans), sans-serif;
     word-spacing: 0;
-    background-image:
-      linear-gradient(90deg, hsl(var(--border) / 0.42) 1px, transparent 1px),
-      linear-gradient(180deg, hsl(var(--border) / 0.42) 1px, transparent 1px);
-    background-size: 64px 64px;
-  }
-
-  .dark .dashboard-carbon {
-    background-image:
-      linear-gradient(90deg, hsl(var(--border) / 0.26) 1px, transparent 1px),
-      linear-gradient(180deg, hsl(var(--border) / 0.26) 1px, transparent 1px);
-  }
-
-  .dashboard-carbon :is(.surface-card, .surface-inset, .surface-glass) {
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .dashboard-carbon .surface-card {
     background:
-      linear-gradient(180deg, hsl(var(--foreground) / 0.018), transparent 64px), hsl(var(--card));
-  }
-
-  .dark .dashboard-carbon .surface-card {
-    background:
-      linear-gradient(180deg, hsl(var(--foreground) / 0.035), transparent 64px), hsl(var(--card));
-  }
-
-  .dashboard-carbon :is(.surface-card, .surface-card-hover):hover {
-    box-shadow: none !important;
-    transform: none !important;
-  }
-
-  .dashboard-carbon
-    :is(
-      .rounded,
-      .rounded-sm,
-      .rounded-md,
-      .rounded-lg,
-      .rounded-xl,
-      .rounded-2xl,
-      .rounded-3xl,
-      .rounded-full
-    ) {
-    border-radius: 0 !important;
-  }
-
-  .dashboard-carbon
-    :is(
-      .chip,
-      .chip-accent,
-      .chip-blue,
-      .chip-violet,
-      .chip-cyan,
-      .chip-emerald,
-      .chip-amber,
-      .chip-rose,
-      .live-pill,
-      .panel-info,
-      .panel-success,
-      .panel-warn,
-      .panel-danger,
-      .row-interactive,
-      .icon-tile
-    ) {
-    border-radius: 0 !important;
-  }
-
-  .dashboard-carbon .kicker {
-    font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, var(--font-sans), sans-serif;
-    font-weight: 600;
-    letter-spacing: 0;
-  }
-
-  .dashboard-carbon [class*='tracking-'] {
-    letter-spacing: 0 !important;
-  }
-
-  .dashboard-carbon .row-interactive {
-    background: transparent;
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
+      linear-gradient(180deg, hsl(var(--surface) / 0.42), transparent 180px),
+      hsl(var(--workbench-canvas));
   }
 
   .dashboard-carbon .row-interactive:hover {
-    background: hsl(var(--surface) / 0.72);
+    background: hsl(var(--surface) / 0.8);
   }
 
   .dashboard-carbon :is(button, a, [role='button'], [role='tab']):focus-visible {
     outline: 2px solid hsl(var(--primary));
-    outline-offset: -2px;
-    box-shadow: none !important;
+    outline-offset: 1px;
+  }
+
+  .metric-strip-item {
+    border-inline-end: 1px solid hsl(var(--border));
+  }
+
+  .metric-strip-item:nth-child(2n) {
+    border-inline-end: 0;
+  }
+
+  .metric-strip-item:nth-child(-n + 2) {
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  @media (min-width: 768px) {
+    .metric-strip-item:nth-child(2n) {
+      border-inline-end: 1px solid hsl(var(--border));
+    }
+
+    .metric-strip-item:nth-child(-n + 2) {
+      border-bottom: 0;
+    }
+
+    .metric-strip-item:last-child {
+      border-inline-end: 0;
+    }
   }
 }
 
 /* ----------------------------------------------------------------------------
-   Landing page - IBM Carbon-inspired light scope
+   Public evidence surfaces — editorial IBM Plex scope
    ---------------------------------------------------------------------------- */
 .landing-dark {
   --landing-font-sans: 'IBM Plex Sans', 'Helvetica Neue', Arial, var(--font-sans), sans-serif;
@@ -1274,63 +1200,6 @@ html:has(body > .landing-dark) {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-
-  /* Gradient text */
-  .text-gradient-primary {
-    background: none;
-    -webkit-text-fill-color: currentColor;
-    color: var(--landing-accent-blue);
-  }
-  .text-gradient-accent {
-    background: none;
-    -webkit-text-fill-color: currentColor;
-    color: var(--landing-accent-blue);
-  }
-
-  /* Subtle glow halos */
-  .glow-primary {
-    box-shadow:
-      0 0 0 1px hsl(var(--primary) / 0.25),
-      0 6px 24px -8px hsl(var(--primary) / 0.35);
-  }
-
-  /* Dot grid bg */
-  .dot-grid {
-    background-image: radial-gradient(
-      circle,
-      hsl(var(--muted-foreground) / 0.12) 1px,
-      transparent 1px
-    );
-    background-size: 24px 24px;
-  }
-  .dot-grid-dense {
-    background-image: radial-gradient(
-      circle,
-      hsl(var(--muted-foreground) / 0.12) 1px,
-      transparent 1px
-    );
-    background-size: 16px 16px;
-  }
-
-  /* Aurora / soft gradient mesh for hero backgrounds */
-  .bg-aurora {
-    background:
-      radial-gradient(at 20% 20%, hsl(var(--accent-violet) / 0.18) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsl(var(--accent-blue) / 0.15) 0px, transparent 50%),
-      radial-gradient(at 0% 80%, hsl(var(--accent-cyan) / 0.12) 0px, transparent 50%),
-      radial-gradient(at 80% 80%, hsl(var(--accent-emerald) / 0.1) 0px, transparent 50%);
-  }
-
-  .landing-dark .bg-aurora {
-    background:
-      linear-gradient(90deg, rgb(15 98 254 / 0.08) 1px, transparent 1px),
-      linear-gradient(180deg, rgb(15 98 254 / 0.08) 1px, transparent 1px);
-    background-position: -1px -1px;
-    background-size: 64px 64px;
-    -webkit-mask-image: linear-gradient(to bottom, black, transparent 86%);
-    mask-image: linear-gradient(to bottom, black, transparent 86%);
-    opacity: 0.68;
   }
 
   .landing-dark :is(.font-mono, .landing-kbd) {
@@ -1622,7 +1491,7 @@ html:has(body > .landing-dark) {
   animation: blur-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-pop-in {
-  animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: pop-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .animate-alert-in {
   animation: alert-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -1705,18 +1574,6 @@ html:has(body > .landing-dark) {
 }
 .stagger > *:nth-child(n + 9) {
   animation-delay: 480ms;
-}
-
-/* Dot grid separator pattern (landing) */
-.dot-grid-separator {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(8px, 1fr));
-  gap: 6px;
-  place-items: center;
-}
-.dot-bg {
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 20px 20px;
 }
 
 /* ----------------------------------------------------------------------------

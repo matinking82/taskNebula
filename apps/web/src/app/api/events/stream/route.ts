@@ -1,7 +1,8 @@
 import { auth } from '@/auth';
-import { db, organizationMembers, users } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { db, users } from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
 import { eventBus, ensureRealtimeBridge, type RealtimeEvent } from '@/lib/realtime/events';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 // SSE stream: one membership snapshot query at connect, then pure async
@@ -23,20 +24,16 @@ export async function GET(request: Request) {
   // Tenant isolation: snapshot the subscriber's active org memberships at
   // connect time and only forward events for those organizations.
   const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
+    .select({ isSuperAdmin: users.isSuperAdmin, status: users.status })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  const isSuperAdmin = Boolean(user?.isSuperAdmin);
+  if (user?.status !== 'active') {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const isSuperAdmin = Boolean(user.isSuperAdmin);
 
-  const memberships = isSuperAdmin
-    ? []
-    : await db
-        .select({ organizationId: organizationMembers.organizationId })
-        .from(organizationMembers)
-        .where(
-          and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active'))
-        );
+  const memberships = isSuperAdmin ? [] : await listActiveOrganizationMemberships(userId);
   const memberOrgIds = new Set(memberships.map((m) => m.organizationId));
 
   // Ensure cross-instance events (published over Redis by other web replicas)

@@ -1,5 +1,6 @@
 import { pgTable, text, timestamp, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { createId } from '@paralleldrive/cuid2';
+import { sql } from 'drizzle-orm';
 import { organizations } from './organizations';
 import { users } from './users';
 
@@ -17,7 +18,9 @@ import { users } from './users';
 export const integrationConnections = pgTable(
   'integration_connections',
   {
-    id: text('id').$defaultFn(() => createId()).primaryKey(),
+    id: text('id')
+      .$defaultFn(() => createId())
+      .primaryKey(),
 
     organizationId: text('organization_id')
       .notNull()
@@ -50,9 +53,13 @@ export const integrationConnections = pgTable(
       table.organizationId,
       table.provider
     ),
-    organizationIdx: index('integration_connections_organization_idx').on(
-      table.organizationId
-    ),
+    // Incoming Slack webhooks identify only the Slack workspace (`team_id`).
+    // Make that identity globally unambiguous so an event can never be routed
+    // to an arbitrary TaskNebula organization.
+    slackWorkspaceIdx: uniqueIndex('integration_connections_slack_workspace_idx')
+      .on(table.externalAccountId)
+      .where(sql`${table.provider} = 'slack' AND ${table.externalAccountId} IS NOT NULL`),
+    organizationIdx: index('integration_connections_organization_idx').on(table.organizationId),
     providerIdx: index('integration_connections_provider_idx').on(table.provider),
   })
 );

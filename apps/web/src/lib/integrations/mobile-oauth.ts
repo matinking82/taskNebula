@@ -1,13 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  db,
-  hasPermission as roleHasPermission,
-  organizationMembers,
-  users,
-  type Permission,
-} from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { hasPermission as roleHasPermission, type Permission } from '@tasknebula/db';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export type IntegrationOAuthProvider = 'github' | 'gitlab' | 'jira' | 'sentry' | 'slack';
 
@@ -131,26 +125,6 @@ export async function hasPermissionForUser(
   organizationId: string,
   permission: Permission
 ): Promise<boolean> {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  const [member] = await db
-    .select({ role: organizationMembers.role, status: organizationMembers.status })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, organizationId)
-      )
-    )
-    .limit(1);
-
-  return roleHasPermission(
-    member?.status === 'active' ? member.role || '' : '',
-    permission,
-    user?.isSuperAdmin || false
-  );
+  const access = await resolveOrganizationAccess(userId, organizationId);
+  return access.allowed && roleHasPermission(access.role || '', permission, access.isSuperAdmin);
 }

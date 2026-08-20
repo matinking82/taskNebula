@@ -21,12 +21,15 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import {
-  createAuditLog,
+  auditLogs,
   db,
   organizations,
   orgTokenBudgets,
+  sql,
+  systemAuditLogs,
 } from '@tasknebula/db';
 import { eq } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,10 +51,7 @@ export async function POST(request: NextRequest) {
   }
   const admin = await isSuperAdmin();
   if (!admin) {
-    return NextResponse.json(
-      { error: 'Super admin access required' },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'Super admin access required' }, { status: 403 });
   }
 
   let body: z.infer<typeof bodySchema>;
@@ -59,99 +59,110 @@ export async function POST(request: NextRequest) {
     body = bodySchema.parse(await request.json());
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: err.errors },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid input', details: err.errors }, { status: 400 });
     }
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const [org] = await db
-    .select({ id: organizations.id })
-    .from(organizations)
-    .where(eq(organizations.id, body.organizationId))
-    .limit(1);
-  if (!org) {
-    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-  }
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`tasknebula:ai-budget:${body.organizationId}`}))`
+    );
+    const [org] = await tx
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.id, body.organizationId))
+      .limit(1);
+    if (!org) return { kind: 'not_found' as const };
 
-  // Upsert the budget row.
-  const [existing] = await db
-    .select()
-    .from(orgTokenBudgets)
-    .where(eq(orgTokenBudgets.organizationId, body.organizationId))
-    .limit(1);
+    const [existing] = await tx
+      .select()
+      .from(orgTokenBudgets)
+      .where(eq(orgTokenBudgets.organizationId, body.organizationId))
+      .limit(1)
+      .for('update');
 
-  const previousState = existing?.killSwitchEnabled ?? false;
-
-  if (existing) {
-    await db
-      .update(orgTokenBudgets)
-      .set({
-        killSwitchEnabled: body.enabled,
-        dailyTokenLimit:
-          body.dailyTokenLimit === undefined
-            ? existing.dailyTokenLimit
-            : body.dailyTokenLimit,
-        monthlyTokenLimit:
-          body.monthlyTokenLimit === undefined
-            ? existing.monthlyTokenLimit
-            : body.monthlyTokenLimit,
-        dailyCostUsdLimit:
-          body.dailyCostUsdLimit === undefined
-            ? existing.dailyCostUsdLimit
-            : body.dailyCostUsdLimit === null
-              ? null
-              : body.dailyCostUsdLimit.toFixed(4),
-        monthlyCostUsdLimit:
-          body.monthlyCostUsdLimit === undefined
-            ? existing.monthlyCostUsdLimit
-            : body.monthlyCostUsdLimit === null
-              ? null
-              : body.monthlyCostUsdLimit.toFixed(4),
-        updatedAt: new Date(),
-      })
-      .where(eq(orgTokenBudgets.organizationId, body.organizationId));
-  } else {
-    await db.insert(orgTokenBudgets).values({
-      organizationId: body.organizationId,
+    const previousState = existing?.killSwitchEnabled ?? false;
+    const nextBudget = {
       killSwitchEnabled: body.enabled,
-      dailyTokenLimit: body.dailyTokenLimit ?? null,
-      monthlyTokenLimit: body.monthlyTokenLimit ?? null,
+      dailyTokenLimit:
+        body.dailyTokenLimit === undefined
+          ? (existing?.dailyTokenLimit ?? null)
+          : body.dailyTokenLimit,
+      monthlyTokenLimit:
+        body.monthlyTokenLimit === undefined
+          ? (existing?.monthlyTokenLimit ?? null)
+          : body.monthlyTokenLimit,
       dailyCostUsdLimit:
-        body.dailyCostUsdLimit === undefined || body.dailyCostUsdLimit === null
-          ? null
-          : body.dailyCostUsdLimit.toFixed(4),
+        body.dailyCostUsdLimit === undefined
+          ? (existing?.dailyCostUsdLimit ?? null)
+          : body.dailyCostUsdLimit === null
+            ? null
+            : body.dailyCostUsdLimit.toFixed(4),
       monthlyCostUsdLimit:
-        body.monthlyCostUsdLimit === undefined || body.monthlyCostUsdLimit === null
-          ? null
-          : body.monthlyCostUsdLimit.toFixed(4),
-    });
-  }
+        body.monthlyCostUsdLimit === undefined
+          ? (existing?.monthlyCostUsdLimit ?? null)
+          : body.monthlyCostUsdLimit === null
+            ? null
+            : body.monthlyCostUsdLimit.toFixed(4),
+    };
 
-  // Audit the toggle. We piggyback on `agent.config_updated` rather than
-  // adding a new enum value just for this; the metadata makes the
-  // intent unambiguous.
-  await createAuditLog({
-    userId: session.user.id,
-    organizationId: body.organizationId,
-    action: 'agent.config_updated',
-    resourceType: 'organization',
-    resourceId: body.organizationId,
-    metadata: {
+    if (existing) {
+      await tx
+        .update(orgTokenBudgets)
+        .set({ ...nextBudget, updatedAt: new Date() })
+        .where(eq(orgTokenBudgets.id, existing.id));
+    } else {
+      await tx.insert(orgTokenBudgets).values({
+        organizationId: body.organizationId,
+        ...nextBudget,
+      });
+    }
+
+    const metadata = {
       kind: 'ai_cost_guard_kill_switch',
       previous: previousState,
       next: body.enabled,
       reason: body.reason ?? null,
       limits: {
-        dailyTokenLimit: body.dailyTokenLimit ?? null,
-        monthlyTokenLimit: body.monthlyTokenLimit ?? null,
-        dailyCostUsdLimit: body.dailyCostUsdLimit ?? null,
-        monthlyCostUsdLimit: body.monthlyCostUsdLimit ?? null,
+        dailyTokenLimit: nextBudget.dailyTokenLimit,
+        monthlyTokenLimit: nextBudget.monthlyTokenLimit,
+        dailyCostUsdLimit: nextBudget.dailyCostUsdLimit,
+        monthlyCostUsdLimit: nextBudget.monthlyCostUsdLimit,
       },
-    },
-  }).catch(() => {});
+    };
+
+    await tx.insert(auditLogs).values({
+      id: createId(),
+      userId: session.user.id,
+      organizationId: body.organizationId,
+      action: 'agent.config_updated',
+      resourceType: 'organization',
+      resourceId: body.organizationId,
+      changes: {
+        killSwitchEnabled: { from: previousState, to: body.enabled },
+      },
+      metadata,
+    });
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: session.user.id,
+      action: 'ai_usage.kill_switch_updated',
+      resourceType: 'organization',
+      resourceId: body.organizationId,
+      organizationId: body.organizationId,
+      changes: {
+        killSwitchEnabled: { from: previousState, to: body.enabled },
+      },
+      metadata,
+    });
+
+    return { kind: 'updated' as const };
+  });
+
+  if (result.kind === 'not_found') {
+    return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+  }
 
   return NextResponse.json({
     ok: true,

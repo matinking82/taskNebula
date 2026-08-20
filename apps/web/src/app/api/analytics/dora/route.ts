@@ -22,11 +22,11 @@ import {
   integrationConnections,
   issueActivities,
   issues,
-  organizationMembers,
   projects,
   workflowStatuses,
 } from '@tasknebula/db';
 import { auth } from '@/auth';
+import { isActiveOrganizationMember } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,18 +82,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
   }
 
-  const [member] = await db
-    .select({ id: organizationMembers.id })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, session.user.id),
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (!member) {
+  if (!(await isActiveOrganizationMember(session.user.id, organizationId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

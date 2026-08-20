@@ -13,15 +13,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq, gte, sql } from 'drizzle-orm';
-import {
-  db,
-  issues,
-  sprints,
-  workflowStatuses,
-  organizationMembers,
-  organizations,
-} from '@tasknebula/db';
+import { db, issues, sprints, workflowStatuses, organizations } from '@tasknebula/db';
 import { auth } from '@/auth';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 import { resolveProjectAccess } from '@/lib/auth/project-access';
 import { getRedisClient, ensureRedisConnection, isRedisConfigured } from '@/lib/server/redis';
 import { normalizeWorkspaceAgentSettings } from '@/lib/agents/config';
@@ -267,21 +261,20 @@ export async function GET(request: NextRequest) {
   // If an organizationId was supplied without a scoped project, make sure the
   // caller is an active member before using workspace-level LLM credentials.
   if (organizationId) {
-    const [member] = await db
-      .select({ id: organizationMembers.id })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-    if (member && !safeOrgId) safeOrgId = organizationId;
+    if (safeOrgId && safeOrgId !== organizationId) {
+      return NextResponse.json(
+        { error: 'Project does not belong to organization' },
+        { status: 400 }
+      );
+    }
+    if (!(await resolveOrganizationAccess(session.user.id, organizationId)).allowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    safeOrgId = organizationId;
   }
 
-  const key = cacheKey(metric, period, safeScopeId);
+  // Workspace-only insights must never share a cache entry across tenants.
+  const key = cacheKey(metric, period, safeScopeId ?? safeOrgId);
   const cached = await readCache(key);
   if (cached) {
     return NextResponse.json({ summary: cached, cached: true });

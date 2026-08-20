@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, importJobs, organizationMembers, eq, and } from '@tasknebula/db';
+import { db, importJobs, eq } from '@tasknebula/db';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,18 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Import job not found' }, { status: 404 });
   }
 
-  const [membership] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, session.user.id),
-        eq(organizationMembers.organizationId, job.workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (!membership) {
+  if (!(await resolveOrganizationAccess(session.user.id, job.workspaceId)).allowed) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

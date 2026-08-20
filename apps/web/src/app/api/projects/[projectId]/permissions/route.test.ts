@@ -1,6 +1,5 @@
 const authMock = jest.fn();
-const resolveProjectByIdOrKeyMock = jest.fn();
-const canReadProjectMock = jest.fn();
+const resolveProjectCapabilityAccessMock = jest.fn();
 
 class MockNextResponse {
   constructor(
@@ -29,12 +28,9 @@ jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
 }));
 
-jest.mock('@/lib/projects/server', () => ({
-  resolveProjectByIdOrKey: (...args: unknown[]) => resolveProjectByIdOrKeyMock(...args),
-}));
-
-jest.mock('@/lib/auth/access-control', () => ({
-  canReadProject: (...args: unknown[]) => canReadProjectMock(...args),
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    resolveProjectCapabilityAccessMock(...args),
 }));
 
 jest.mock('@tasknebula/db', () => ({
@@ -72,22 +68,23 @@ describe('GET /api/projects/[projectId]/permissions', () => {
 
   beforeEach(() => {
     authMock.mockReset();
-    resolveProjectByIdOrKeyMock.mockReset();
-    canReadProjectMock.mockReset();
+    resolveProjectCapabilityAccessMock.mockReset();
   });
 
   it('resolves projects through the scoped project resolver and hides unreadable projects', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
     const project = { id: 'project-1', organizationId: 'org-1', key: 'TASK' };
-    resolveProjectByIdOrKeyMock.mockResolvedValue(project);
-    canReadProjectMock.mockResolvedValue(false);
+    resolveProjectCapabilityAccessMock.mockResolvedValue({
+      project,
+      canRead: false,
+      permissions: {},
+    });
 
     const response = await GET({} as never, {
       params: Promise.resolve({ projectId: 'TASK' }),
     });
 
-    expect(resolveProjectByIdOrKeyMock).toHaveBeenCalledWith('TASK', 'user-1');
-    expect(canReadProjectMock).toHaveBeenCalledWith('user-1', project);
+    expect(resolveProjectCapabilityAccessMock).toHaveBeenCalledWith('user-1', 'TASK');
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: 'Project not found' });
   });

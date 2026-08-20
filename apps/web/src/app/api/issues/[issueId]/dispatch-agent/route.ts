@@ -28,21 +28,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import {
-  agentProviders,
-  agentSessions,
-  and,
-  db,
-  eq,
-  getIssueById,
-  organizationMembers,
-  projectMembers,
-  projects,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  users,
-  type ProjectRole,
-} from '@tasknebula/db';
+import { agentProviders, agentSessions, and, db, eq, getIssueById } from '@tasknebula/db';
 import { auth } from '@/auth';
 import {
   AGENT_PROVIDERS,
@@ -52,7 +38,6 @@ import {
   type AgentProviderKind,
   type AgentSessionRequest,
 } from '@/lib/agents/sessions';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
 import {
   isLocalAgentEndpoint,
   resolveLocalAgentRunner,
@@ -63,6 +48,9 @@ import {
   validateAgentProviderEndpoint,
 } from '@/lib/agents/provider-endpoint';
 import { childLogger } from '@/lib/logger';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
+import { aiDisabledResponse, isAiFeatureEnabled } from '@/lib/ai/feature-gate';
+import { isProductFeatureEnabled, PRODUCT_FEATURE_FLAGS } from '@/lib/feature-flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,48 +73,16 @@ function getAppBaseUrl() {
 }
 
 async function userCanAssign(userId: string, projectId: string): Promise<boolean> {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (user?.isSuperAdmin) return true;
-
-  const [project] = await db
-    .select({ organizationId: projects.organizationId })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-  if (!project) return false;
-
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) return true;
-
-  const [pm] = await db
-    .select()
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-  if (!pm) return false;
-  const role = pm.role as ProjectRole;
-  const defaults = ROLE_DEFAULT_PERMISSIONS[role] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  return resolveProjectMemberPermission(pm.canAssignIssues, defaults.canAssignIssues);
+  const access = await resolveProjectCapabilityAccess(userId, projectId);
+  return access.canManage || access.permissions.canAssignIssues;
 }
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ issueId: string }> }
 ) {
+  if (!(await isAiFeatureEnabled())) return aiDisabledResponse();
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -150,6 +106,12 @@ export async function POST(
   const issue = await getIssueById(issueId);
   if (!issue) {
     return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
+  }
+
+  if (
+    !(await isProductFeatureEnabled(PRODUCT_FEATURE_FLAGS.AGENT_DISPATCH, issue.organizationId))
+  ) {
+    return aiDisabledResponse();
   }
 
   const allowed = await userCanAssign(session.user.id, issue.projectId);

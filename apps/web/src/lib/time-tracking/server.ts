@@ -11,16 +11,8 @@
  */
 
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
-import {
-  db,
-  issues,
-  organizationMembers,
-  projectMembers,
-  projects,
-  timeEntries,
-  users,
-  hasPermission as roleHasPermission,
-} from '@tasknebula/db';
+import { db, issues, timeEntries } from '@tasknebula/db';
+import { canReadIssue } from '@/lib/auth/access-control';
 
 export type IssueAccessIssue = {
   id: string;
@@ -52,54 +44,21 @@ export async function assertIssueAccess(
 ): Promise<IssueAccessResult | IssueAccessFailure> {
   if (!userId) return { ok: false, status: 401, reason: 'Unauthorized' };
 
-  const [issue] = await db
-    .select({
-      id: issues.id,
-      projectId: issues.projectId,
-      organizationId: issues.organizationId,
-      key: issues.key,
-      title: issues.title,
-    })
-    .from(issues)
-    .where(eq(issues.id, issueId))
-    .limit(1);
-  if (!issue) return { ok: false, status: 404, reason: 'Issue not found' };
-
-  // Super admin shortcut.
-  const [u] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (u?.isSuperAdmin) return { ok: true, issue };
-
-  // Org-wide project managers can view the issue.
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, issue.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
-    return { ok: true, issue };
-  }
-
-  // Otherwise the user needs to be a project member.
-  const [member] = await db
-    .select({ projectId: projectMembers.projectId })
-    .from(projectMembers)
-    .innerJoin(projects, eq(projects.id, projectMembers.projectId))
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, issue.projectId)))
-    .limit(1);
-  if (!member) {
+  const access = await canReadIssue(userId, issueId);
+  if (!access.issue) return { ok: false, status: 404, reason: 'Issue not found' };
+  if (!access.allowed) {
     return { ok: false, status: 403, reason: 'Not a project member' };
   }
-  return { ok: true, issue };
+  return {
+    ok: true,
+    issue: {
+      id: access.issue.id,
+      projectId: access.issue.projectId,
+      organizationId: access.issue.organizationId,
+      key: access.issue.key,
+      title: access.issue.title,
+    },
+  };
 }
 
 /**

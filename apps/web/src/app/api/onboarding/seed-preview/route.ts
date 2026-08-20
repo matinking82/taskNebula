@@ -13,8 +13,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, hasPermission as roleHasPermission, organizationMembers, users } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { db, hasPermission as roleHasPermission, users } from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
 import {
   generateWorkspaceSeed,
   BootstrapperError,
@@ -23,6 +23,7 @@ import {
   type OnboardingRole,
   type TeamSizeBucket,
 } from '@/lib/onboarding/bootstrapper';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -73,10 +74,7 @@ export async function POST(request: NextRequest) {
     .limit(1);
 
   if (!actor?.isSuperAdmin) {
-    const memberships = await db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active')));
+    const memberships = await listActiveOrganizationMemberships(userId);
     const canManageSettings = memberships.some((membership) =>
       roleHasPermission(membership.role || '', 'org:settings')
     );

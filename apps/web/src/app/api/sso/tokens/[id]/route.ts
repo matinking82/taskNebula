@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, scimTokens, eq } from '@tasknebula/db';
+import { auditLogs, db, scimTokens, eq, sql } from '@tasknebula/db';
 import { hasPermission } from '@/lib/auth/permissions';
 
 export const runtime = 'nodejs';
@@ -28,11 +28,34 @@ export async function DELETE(
     return NextResponse.json({ error: 'Token not found' }, { status: 404 });
   }
   if (!(await hasPermission(row.workspaceId, 'org:settings'))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ error: 'Token not found' }, { status: 404 });
   }
-  await db
-    .update(scimTokens)
-    .set({ revokedAt: new Date() })
-    .where(eq(scimTokens.id, id));
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`scim-token:${id}`}))`);
+    const [locked] = await tx
+      .select({
+        id: scimTokens.id,
+        workspaceId: scimTokens.workspaceId,
+        name: scimTokens.name,
+        tokenPrefix: scimTokens.tokenPrefix,
+        revokedAt: scimTokens.revokedAt,
+      })
+      .from(scimTokens)
+      .where(eq(scimTokens.id, id))
+      .limit(1)
+      .for('update');
+    if (!locked || locked.workspaceId !== row.workspaceId || locked.revokedAt) return;
+    const revokedAt = new Date();
+    await tx.update(scimTokens).set({ revokedAt }).where(eq(scimTokens.id, id));
+    await tx.insert(auditLogs).values({
+      userId: session.user.id,
+      organizationId: locked.workspaceId,
+      action: 'scim_token.revoked',
+      resourceType: 'scim_token',
+      resourceId: locked.id,
+      changes: { revokedAt: { from: null, to: revokedAt.toISOString() } },
+      metadata: { name: locked.name, tokenPrefix: locked.tokenPrefix },
+    });
+  });
   return NextResponse.json({ ok: true });
 }

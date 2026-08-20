@@ -12,6 +12,13 @@ import { and, count, eq, ne, sql } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import { createId } from '@paralleldrive/cuid2';
+import {
+  getAdminUserUpdateAuditAction,
+  getAdminUserDeleteInvariant,
+  getAdminUserUpdateInvariant,
+  type AdminUserStatus,
+} from '@/lib/admin/user-governance';
+import { shouldRotateSessionVersion } from '@/lib/auth/session-revocation';
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -91,76 +98,95 @@ export async function PATCH(
     const body = await request.json();
     const data = updateUserSchema.parse(body);
 
-    // Get current user
-    const [currentUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    const transactionResult = await db.transaction(async (tx) => {
+      // Serialize super-admin governance decisions so two concurrent demotions
+      // cannot both observe the other administrator and leave the installation
+      // without an active recovery account.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('tasknebula.admin-user-governance'))`
+      );
 
-    if (!currentUser) {
+      const [currentUser] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!currentUser) return { kind: 'not_found' as const };
+
+      const [remaining] = await tx
+        .select({ count: count() })
+        .from(users)
+        .where(and(eq(users.isSuperAdmin, true), eq(users.status, 'active'), ne(users.id, userId)));
+
+      const invariant = getAdminUserUpdateInvariant({
+        actorId: session.user.id,
+        targetId: userId,
+        current: {
+          isSuperAdmin: currentUser.isSuperAdmin,
+          status: currentUser.status as AdminUserStatus,
+        },
+        update: data,
+        remainingActiveSuperAdmins: Number(remaining?.count ?? 0),
+      });
+      if (invariant) return { kind: 'invariant' as const, invariant };
+
+      const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
+      if (data.isSuperAdmin === true && !currentUser.isSuperAdmin) {
+        updateData.superAdminGrantedAt = new Date();
+        updateData.superAdminGrantedBy = session.user.id;
+      }
+      if (data.isSuperAdmin === false && currentUser.isSuperAdmin) {
+        updateData.superAdminGrantedAt = null;
+        updateData.superAdminGrantedBy = null;
+      }
+      if (
+        shouldRotateSessionVersion(
+          currentUser.status as AdminUserStatus,
+          data.status as AdminUserStatus | undefined
+        )
+      ) {
+        updateData.sessionVersion = sql`${users.sessionVersion} + 1`;
+      }
+
+      const [updatedUser] = await tx
+        .update(users)
+        .set(updateData)
+        .where(eq(users.id, userId))
+        .returning();
+      if (!updatedUser) throw new Error('Failed to update user');
+
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      if (data.isSuperAdmin !== undefined && data.isSuperAdmin !== currentUser.isSuperAdmin) {
+        changes.isSuperAdmin = { from: currentUser.isSuperAdmin, to: data.isSuperAdmin };
+      }
+      if (data.status && data.status !== currentUser.status) {
+        changes.status = { from: currentUser.status, to: data.status };
+      }
+
+      if (Object.keys(changes).length > 0) {
+        await tx.insert(systemAuditLogs).values({
+          id: createId(),
+          userId: session.user.id,
+          action: getAdminUserUpdateAuditAction(changes),
+          resourceType: 'user',
+          resourceId: userId,
+          changes,
+          ipAddress:
+            request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+          userAgent: request.headers.get('user-agent') || undefined,
+        });
+      }
+
+      return { kind: 'updated' as const, updatedUser };
+    });
+
+    if (transactionResult.kind === 'not_found') {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-
-    // Prevent removing own super admin status
-    if (userId === session.user.id && data.isSuperAdmin === false) {
+    if (transactionResult.kind === 'invariant') {
       return NextResponse.json(
-        { error: 'Cannot remove your own super admin status' },
+        { error: transactionResult.invariant, code: transactionResult.invariant },
         { status: 400 }
       );
     }
 
-    // Update user
-    const updateData: any = {
-      ...data,
-      updatedAt: new Date(),
-    };
-
-    // If granting super admin, set granted fields
-    if (data.isSuperAdmin === true && !currentUser.isSuperAdmin) {
-      updateData.superAdminGrantedAt = new Date();
-      updateData.superAdminGrantedBy = session.user.id;
-    }
-
-    // If revoking super admin, clear granted fields
-    if (data.isSuperAdmin === false && currentUser.isSuperAdmin) {
-      updateData.superAdminGrantedAt = null;
-      updateData.superAdminGrantedBy = null;
-    }
-
-    const [updatedUser] = await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, userId))
-      .returning();
-
-    if (!updatedUser) {
-      throw new Error('Failed to update user');
-    }
-
-    // Create audit log
-    const changes: Record<string, { from: any; to: any }> = {};
-    if (data.isSuperAdmin !== undefined && data.isSuperAdmin !== currentUser.isSuperAdmin) {
-      changes.isSuperAdmin = { from: currentUser.isSuperAdmin, to: data.isSuperAdmin };
-    }
-    if (data.status && data.status !== currentUser.status) {
-      changes.status = { from: currentUser.status, to: data.status };
-    }
-
-    if (Object.keys(changes).length > 0) {
-      await db.insert(systemAuditLogs).values({
-        id: createId(),
-        userId: session.user.id,
-        action:
-          data.isSuperAdmin === true
-            ? 'user.promoted_to_super_admin'
-            : data.isSuperAdmin === false
-              ? 'user.revoked_super_admin'
-              : 'user.updated',
-        resourceType: 'user',
-        resourceId: userId,
-        changes,
-        ipAddress:
-          request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
-        userAgent: request.headers.get('user-agent') || undefined,
-      });
-    }
+    const { updatedUser } = transactionResult;
 
     return NextResponse.json({
       id: updatedUser.id,
@@ -201,38 +227,41 @@ export async function DELETE(
     }
 
     const { userId } = await params;
-    if (userId === session.user.id) {
-      return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
-    }
 
-    const [currentUser] = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        status: users.status,
-        isSuperAdmin: users.isSuperAdmin,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+    const transactionResult = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('tasknebula.admin-user-governance'))`
+      );
 
-    if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+      const [currentUser] = await tx
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          status: users.status,
+          isSuperAdmin: users.isSuperAdmin,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (!currentUser) return { kind: 'not_found' as const };
 
-    if (currentUser.isSuperAdmin) {
-      const [remainingSuperAdmins] = await db
+      const [remaining] = await tx
         .select({ count: count() })
         .from(users)
-        .where(and(eq(users.isSuperAdmin, true), ne(users.id, userId)));
+        .where(and(eq(users.isSuperAdmin, true), eq(users.status, 'active'), ne(users.id, userId)));
 
-      if (Number(remainingSuperAdmins?.count ?? 0) === 0) {
-        return NextResponse.json({ error: 'Cannot delete the last super admin' }, { status: 400 });
-      }
-    }
+      const invariant = getAdminUserDeleteInvariant({
+        actorId: session.user.id,
+        targetId: userId,
+        current: {
+          isSuperAdmin: currentUser.isSuperAdmin,
+          status: currentUser.status as AdminUserStatus,
+        },
+        remainingActiveSuperAdmins: Number(remaining?.count ?? 0),
+      });
+      if (invariant) return { kind: 'invariant' as const, invariant };
 
-    await db.transaction(async (tx) => {
       await detachUserReferences(tx, {
         userId,
         fallbackUserId: session.user.id,
@@ -258,7 +287,19 @@ export async function DELETE(
           request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
         userAgent: request.headers.get('user-agent') || undefined,
       });
+
+      return { kind: 'deleted' as const };
     });
+
+    if (transactionResult.kind === 'not_found') {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (transactionResult.kind === 'invariant') {
+      return NextResponse.json(
+        { error: transactionResult.invariant, code: transactionResult.invariant },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

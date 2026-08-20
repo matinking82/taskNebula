@@ -19,7 +19,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db, and, eq, slackChannelRoutes, integrationConnections } from '@tasknebula/db';
+import {
+  db,
+  and,
+  auditLogs,
+  eq,
+  integrationConnections,
+  ne,
+  organizations,
+  projects,
+  slackChannelRoutes,
+  sql,
+} from '@tasknebula/db';
 import { auth } from '@/auth';
 import { hasPermission } from '@/lib/auth/permissions';
 
@@ -60,10 +71,27 @@ export async function GET(request: NextRequest) {
   const guard = await requireIntegrationSettingsPermission(request, organizationId);
   if (guard instanceof NextResponse) return guard;
 
+  const [connection] = await db
+    .select({ slackTeamId: integrationConnections.externalAccountId })
+    .from(integrationConnections)
+    .where(
+      and(
+        eq(integrationConnections.organizationId, organizationId),
+        eq(integrationConnections.provider, 'slack')
+      )
+    )
+    .limit(1);
+  if (!connection?.slackTeamId) return NextResponse.json({ routes: [] });
+
   const rows = await db
     .select()
     .from(slackChannelRoutes)
-    .where(eq(slackChannelRoutes.organizationId, organizationId));
+    .where(
+      and(
+        eq(slackChannelRoutes.organizationId, organizationId),
+        eq(slackChannelRoutes.slackTeamId, connection.slackTeamId)
+      )
+    );
 
   return NextResponse.json({ routes: rows });
 }
@@ -85,69 +113,109 @@ export async function POST(request: NextRequest) {
   const guard = await requireIntegrationSettingsPermission(request, parsed.data.organizationId);
   if (guard instanceof NextResponse) return guard;
 
-  // Resolve the workspace id from the org's Slack connection. We require a
-  // connection because a route without one is meaningless — Slack events
-  // would never match.
-  const [conn] = await db
-    .select({ externalAccountId: integrationConnections.externalAccountId })
-    .from(integrationConnections)
-    .where(
-      and(
-        eq(integrationConnections.organizationId, parsed.data.organizationId),
-        eq(integrationConnections.provider, 'slack')
+  const result = await db.transaction(async (tx) => {
+    // Share the same lock as OAuth connect/disconnect. A route can therefore
+    // never be saved against a workspace while that workspace identity is
+    // being replaced or removed.
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`slack-organization:${parsed.data.organizationId}`}))`
+    );
+
+    const [[connection], [project]] = await Promise.all([
+      tx
+        .select({ slackTeamId: integrationConnections.externalAccountId })
+        .from(integrationConnections)
+        .where(
+          and(
+            eq(integrationConnections.organizationId, parsed.data.organizationId),
+            eq(integrationConnections.provider, 'slack')
+          )
+        )
+        .limit(1),
+      tx
+        .select({ id: projects.id })
+        .from(projects)
+        .innerJoin(organizations, eq(organizations.id, projects.organizationId))
+        .where(
+          and(
+            eq(projects.id, parsed.data.projectId),
+            eq(projects.organizationId, parsed.data.organizationId),
+            eq(projects.status, 'active'),
+            ne(organizations.status, 'suspended')
+          )
+        )
+        .limit(1),
+    ]);
+    if (!connection?.slackTeamId) return { error: 'slack_not_connected' as const };
+    if (!project) return { error: 'project_not_found' as const };
+
+    const [existing] = await tx
+      .select({ id: slackChannelRoutes.id })
+      .from(slackChannelRoutes)
+      .where(
+        and(
+          eq(slackChannelRoutes.organizationId, parsed.data.organizationId),
+          eq(slackChannelRoutes.slackTeamId, connection.slackTeamId),
+          eq(slackChannelRoutes.slackChannelId, parsed.data.slackChannelId)
+        )
       )
-    )
-    .limit(1);
-  if (!conn?.externalAccountId) {
-    return NextResponse.json({ error: 'slack_not_connected' }, { status: 400 });
-  }
+      .limit(1);
 
-  const slackTeamId = conn.externalAccountId;
-
-  // Upsert — drizzle does not expose ON CONFLICT cleanly across all dialects
-  // in our config, so we do a manual select-then-insert/update.
-  const [existing] = await db
-    .select({ id: slackChannelRoutes.id })
-    .from(slackChannelRoutes)
-    .where(
-      and(
-        eq(slackChannelRoutes.organizationId, parsed.data.organizationId),
-        eq(slackChannelRoutes.slackTeamId, slackTeamId),
-        eq(slackChannelRoutes.slackChannelId, parsed.data.slackChannelId)
-      )
-    )
-    .limit(1);
-
-  if (existing) {
-    await db
-      .update(slackChannelRoutes)
-      .set({
+    const [saved] = await tx
+      .insert(slackChannelRoutes)
+      .values({
+        organizationId: parsed.data.organizationId,
+        slackTeamId: connection.slackTeamId,
+        slackChannelId: parsed.data.slackChannelId,
         slackChannelName: parsed.data.slackChannelName ?? null,
         projectId: parsed.data.projectId,
         defaultLabel: parsed.data.defaultLabel ?? null,
         emojiTrigger: parsed.data.emojiTrigger ?? null,
         defaultPriority: parsed.data.defaultPriority,
-        updatedAt: new Date(),
       })
-      .where(eq(slackChannelRoutes.id, existing.id));
-    return NextResponse.json({ ok: true, id: existing.id, updated: true });
-  }
+      .onConflictDoUpdate({
+        target: [
+          slackChannelRoutes.organizationId,
+          slackChannelRoutes.slackTeamId,
+          slackChannelRoutes.slackChannelId,
+        ],
+        set: {
+          slackChannelName: parsed.data.slackChannelName ?? null,
+          projectId: parsed.data.projectId,
+          defaultLabel: parsed.data.defaultLabel ?? null,
+          emojiTrigger: parsed.data.emojiTrigger ?? null,
+          defaultPriority: parsed.data.defaultPriority,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({ id: slackChannelRoutes.id });
+    if (!saved) throw new Error('slack_route_save_failed');
 
-  const [inserted] = await db
-    .insert(slackChannelRoutes)
-    .values({
+    await tx.insert(auditLogs).values({
+      userId: guard.userId,
       organizationId: parsed.data.organizationId,
-      slackTeamId,
-      slackChannelId: parsed.data.slackChannelId,
-      slackChannelName: parsed.data.slackChannelName ?? null,
+      action: 'organization.updated',
+      resourceType: 'slack_channel_route',
+      resourceId: saved.id,
       projectId: parsed.data.projectId,
-      defaultLabel: parsed.data.defaultLabel ?? null,
-      emojiTrigger: parsed.data.emojiTrigger ?? null,
-      defaultPriority: parsed.data.defaultPriority,
-    })
-    .returning({ id: slackChannelRoutes.id });
+      metadata: {
+        kind: existing ? 'slack_route_updated' : 'slack_route_created',
+        slackTeamId: connection.slackTeamId,
+        slackChannelId: parsed.data.slackChannelId,
+      },
+    });
+    return { id: saved.id, created: !existing };
+  });
 
-  return NextResponse.json({ ok: true, id: inserted?.id, created: true });
+  if ('error' in result) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+  return NextResponse.json({
+    ok: true,
+    id: result.id,
+    created: result.created,
+    updated: !result.created,
+  });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -160,11 +228,31 @@ export async function DELETE(request: NextRequest) {
   const guard = await requireIntegrationSettingsPermission(request, organizationId);
   if (guard instanceof NextResponse) return guard;
 
-  await db
-    .delete(slackChannelRoutes)
-    .where(
-      and(eq(slackChannelRoutes.id, id), eq(slackChannelRoutes.organizationId, organizationId))
+  const deleted = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`slack-organization:${organizationId}`}))`
     );
+    const [existing] = await tx
+      .select({ id: slackChannelRoutes.id, projectId: slackChannelRoutes.projectId })
+      .from(slackChannelRoutes)
+      .where(
+        and(eq(slackChannelRoutes.id, id), eq(slackChannelRoutes.organizationId, organizationId))
+      )
+      .limit(1);
+    if (!existing) return false;
 
-  return NextResponse.json({ ok: true });
+    await tx.delete(slackChannelRoutes).where(eq(slackChannelRoutes.id, existing.id));
+    await tx.insert(auditLogs).values({
+      userId: guard.userId,
+      organizationId,
+      action: 'organization.updated',
+      resourceType: 'slack_channel_route',
+      resourceId: existing.id,
+      projectId: existing.projectId,
+      metadata: { kind: 'slack_route_deleted' },
+    });
+    return true;
+  });
+
+  return NextResponse.json({ ok: true, deleted });
 }

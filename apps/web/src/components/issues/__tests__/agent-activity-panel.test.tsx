@@ -44,10 +44,9 @@ describe('AgentActivityPanel', () => {
     expect(screen.getByText('Local CLI: codex')).toBeInTheDocument();
     expect(screen.getAllByText('Running').length).toBeGreaterThan(0);
     expect(screen.queryByText('running')).not.toBeInTheDocument();
-    expect(screen.getByText('Issue fields').closest('div')?.parentElement).toHaveClass(
-      'grid-cols-1',
-      'sm:grid-cols-3'
-    );
+    const issueContextRow = screen.getByText('Issue fields').closest('li');
+    expect(issueContextRow).toHaveClass('min-h-9', 'items-center');
+    expect(issueContextRow?.parentElement).toHaveClass('divide-y', 'border-y');
 
     fireEvent.change(screen.getByPlaceholderText('Optional instructions for this run...'), {
       target: { value: 'keep the patch small' },

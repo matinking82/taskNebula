@@ -233,9 +233,7 @@ type AdminAgentControlResponse = {
   };
   serviceStatus: Array<{
     key: string;
-    label: string;
     state: 'ready' | 'blocked' | 'disabled' | 'preview';
-    detail: string;
   }>;
   providerBreakdown: Record<
     string,

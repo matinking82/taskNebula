@@ -82,6 +82,7 @@ describe('resolveOAuthDatabaseUser', () => {
       name: 'New User',
       image: 'https://example.test/avatar.png',
       status: 'active',
+      sessionVersion: 0,
     });
     const accountInsert = insertAccount();
 
@@ -108,6 +109,7 @@ describe('resolveOAuthDatabaseUser', () => {
       name: 'New User',
       image: 'https://example.test/avatar.png',
       status: 'active',
+      sessionVersion: 0,
     });
     expect(insertMock).toHaveBeenCalledTimes(2);
 

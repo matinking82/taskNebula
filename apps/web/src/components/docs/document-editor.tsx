@@ -1096,7 +1096,7 @@ export function DocumentEditor({
   return (
     <div className="bg-background flex h-full min-h-0 flex-col overflow-hidden">
       {canEdit && editor && (
-        <div className="border-border bg-background shrink-0 border-b px-4 py-1.5">
+        <div className="command-header shrink-0 border-b px-4 py-1.5">
           <div className="flex flex-wrap items-center gap-0.5">
             <MenuBarButton
               onClick={() => editor.chain().focus().toggleBold().run()}

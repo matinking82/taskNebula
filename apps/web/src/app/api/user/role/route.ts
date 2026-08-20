@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, users, organizationMembers, eq, and } from '@tasknebula/db';
+import { db, users, eq } from '@tasknebula/db';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,19 +20,7 @@ export async function GET(request: NextRequest) {
       .limit(1);
 
     // Get first active organization membership (for now, users belong to one org)
-    const [orgMember] = await db
-      .select({
-        role: organizationMembers.role,
-        organizationId: organizationMembers.organizationId,
-      })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
+    const [orgMember] = await listActiveOrganizationMemberships(session.user.id);
 
     return NextResponse.json({
       isSuperAdmin: user?.isSuperAdmin || false,

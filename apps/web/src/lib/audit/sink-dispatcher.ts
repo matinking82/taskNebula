@@ -22,7 +22,8 @@
  */
 
 import crypto from 'crypto';
-import { db, auditLogSinks, eq, and } from '@tasknebula/db';
+import { db, auditLogSinks, eq, and, sql } from '@tasknebula/db';
+import { postPublicEndpoint } from '@/lib/agents/provider-endpoint';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,7 +54,7 @@ export interface SinkDispatchResult {
   error: string | null;
 }
 
-interface SinkRow {
+export interface SinkRow {
   id: string;
   workspaceId: string;
   type: SinkType;
@@ -63,6 +64,8 @@ interface SinkRow {
   successCount: string;
   failureCount: string;
 }
+
+type SinkOutcomeExecutor = Pick<typeof db, 'update'>;
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -85,15 +88,25 @@ interface DeliveryAttempt {
   durationMs: number;
 }
 
-async function timedFetch(
-  url: string,
-  init: RequestInit
-): Promise<DeliveryAttempt> {
+async function timedFetch(url: string, init: RequestInit): Promise<DeliveryAttempt> {
   const startedAt = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
+    const headers =
+      init.headers instanceof Headers
+        ? Object.fromEntries(init.headers.entries())
+        : Array.isArray(init.headers)
+          ? Object.fromEntries(init.headers)
+          : Object.fromEntries(
+              Object.entries(init.headers ?? {}).map(([key, value]) => [key, String(value)])
+            );
+    const body = typeof init.body === 'string' ? init.body : '';
+    const response = await postPublicEndpoint(
+      url,
+      { headers, body, signal: controller.signal },
+      { allowInsecureHttp: process.env.ALLOW_INSECURE_AUDIT_SINKS === 'true' }
+    );
     return {
       ok: response.ok,
       statusCode: response.status,
@@ -222,10 +235,7 @@ async function deliverDatadog(
  * `<prefix>/<workspaceId>/<YYYY-MM-DD>/<eventId>.json`. Operators who want
  * a true daily JSONL file should run a Lambda compactor on top.
  */
-async function deliverS3(
-  sink: SinkRow,
-  event: AuditLogEvent
-): Promise<DeliveryAttempt> {
+async function deliverS3(sink: SinkRow, event: AuditLogEvent): Promise<DeliveryAttempt> {
   const startedAt = Date.now();
   const config = sink.config as {
     bucket?: string;
@@ -335,25 +345,31 @@ export async function deliverToSink(
   };
 }
 
-async function recordOutcome(
+export async function persistSinkOutcome(
   sink: SinkRow,
-  result: SinkDispatchResult
+  result: SinkDispatchResult,
+  executor: SinkOutcomeExecutor = db
 ): Promise<void> {
+  await executor
+    .update(auditLogSinks)
+    .set({
+      ...(result.ok
+        ? {
+            successCount: sql<string>`((coalesce(${auditLogSinks.successCount}, '0'))::bigint + 1)::text`,
+          }
+        : {
+            failureCount: sql<string>`((coalesce(${auditLogSinks.failureCount}, '0'))::bigint + 1)::text`,
+          }),
+      lastDeliveryAt: new Date(),
+      lastError: result.ok ? null : result.error,
+      updatedAt: new Date(),
+    })
+    .where(eq(auditLogSinks.id, sink.id));
+}
+
+export async function recordSinkOutcome(sink: SinkRow, result: SinkDispatchResult): Promise<void> {
   try {
-    const successCount =
-      Number.parseInt(sink.successCount || '0', 10) + (result.ok ? 1 : 0);
-    const failureCount =
-      Number.parseInt(sink.failureCount || '0', 10) + (result.ok ? 0 : 1);
-    await db
-      .update(auditLogSinks)
-      .set({
-        successCount: String(successCount),
-        failureCount: String(failureCount),
-        lastDeliveryAt: new Date(),
-        lastError: result.ok ? null : result.error,
-        updatedAt: new Date(),
-      })
-      .where(eq(auditLogSinks.id, sink.id));
+    await persistSinkOutcome(sink, result);
   } catch (err) {
     console.error('[audit-sink] failed to record outcome', {
       sinkId: sink.id,
@@ -379,12 +395,7 @@ async function loadEnabledSinks(workspaceId: string): Promise<SinkRow[]> {
       failureCount: auditLogSinks.failureCount,
     })
     .from(auditLogSinks)
-    .where(
-      and(
-        eq(auditLogSinks.workspaceId, workspaceId),
-        eq(auditLogSinks.enabled, true)
-      )
-    );
+    .where(and(eq(auditLogSinks.workspaceId, workspaceId), eq(auditLogSinks.enabled, true)));
   return rows.map((row) => ({
     ...row,
     type: row.type as SinkType,
@@ -401,9 +412,7 @@ async function loadEnabledSinks(workspaceId: string): Promise<SinkRow[]> {
  *   - Bookkeeping (success_count, failure_count, last_error) is best-effort
  *     and never blocks the main response.
  */
-export async function dispatchAuditLogToSinks(
-  event: AuditLogEvent
-): Promise<SinkDispatchResult[]> {
+export async function dispatchAuditLogToSinks(event: AuditLogEvent): Promise<SinkDispatchResult[]> {
   let sinks: SinkRow[];
   try {
     sinks = await loadEnabledSinks(event.workspaceId);
@@ -420,7 +429,7 @@ export async function dispatchAuditLogToSinks(
     sinks.map(async (sink) => {
       try {
         const result = await deliverToSink(sink, event);
-        await recordOutcome(sink, result);
+        await recordSinkOutcome(sink, result);
         return result;
       } catch (err) {
         const errorResult: SinkDispatchResult = {
@@ -432,7 +441,7 @@ export async function dispatchAuditLogToSinks(
           error: err instanceof Error ? err.message : String(err),
         };
         // Best-effort: do not let a bookkeeping failure mask the error.
-        await recordOutcome(sink, errorResult).catch(() => undefined);
+        await recordSinkOutcome(sink, errorResult).catch(() => undefined);
         return errorResult;
       }
     })

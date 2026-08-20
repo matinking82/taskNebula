@@ -5,8 +5,10 @@
  */
 
 import {
+  digestScimToken,
   generateScimToken,
   hashScimToken,
+  scimTokenCan,
   verifyScimToken,
 } from '../tokens';
 
@@ -43,5 +45,19 @@ describe('SCIM token hashing', () => {
   it('returns false on empty inputs without throwing', async () => {
     expect(await verifyScimToken('', 'some-hash')).toBe(false);
     expect(await verifyScimToken('scim_x', '')).toBe(false);
+  });
+
+  it('builds a stable, non-secret lookup digest', () => {
+    const token = generateScimToken().token;
+    expect(digestScimToken(token)).toMatch(/^[a-f0-9]{64}$/);
+    expect(digestScimToken(token)).toBe(digestScimToken(token));
+    expect(digestScimToken(`${token.slice(0, -1)}x`)).not.toBe(digestScimToken(token));
+  });
+
+  it('enforces explicit scopes while retaining legacy empty-scope compatibility', () => {
+    const base = { tokenId: 'token_1', workspaceId: 'org_1' };
+    expect(scimTokenCan({ ...base, scopes: ['users:read'] }, 'users:read')).toBe(true);
+    expect(scimTokenCan({ ...base, scopes: ['users:read'] }, 'users:write')).toBe(false);
+    expect(scimTokenCan({ ...base, scopes: [] }, 'groups:write')).toBe(true);
   });
 });

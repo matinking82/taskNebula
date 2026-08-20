@@ -78,15 +78,22 @@ jest.mock('@tasknebula/db', () => ({
     organizationId: 'teams.organizationId',
     slug: 'teams.slug',
   },
+  users: {
+    id: 'users.id',
+    status: 'users.status',
+  },
 }));
 
 function limitBuilder(result: unknown) {
-  return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue(result),
-      }),
+  const query = {
+    innerJoin: jest.fn(),
+    where: jest.fn().mockReturnValue({
+      limit: jest.fn().mockResolvedValue(result),
     }),
+  };
+  query.innerJoin.mockReturnValue(query);
+  return {
+    from: jest.fn().mockReturnValue(query),
   };
 }
 

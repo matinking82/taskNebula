@@ -84,7 +84,7 @@ export default function ProjectBoardPage({ params }: { params: Promise<{ project
         {t('tabBoard')}
       </h1>
       {/* Board Header - single compact row */}
-      <div className="border-border bg-background shrink-0 border-b px-3 py-2 sm:px-4">
+      <div className="command-header shrink-0 border-b px-3 py-2 sm:px-4">
         <div
           className="flex flex-wrap items-center gap-x-2 gap-y-2 sm:gap-x-3"
           role="toolbar"

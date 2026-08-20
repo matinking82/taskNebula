@@ -16,18 +16,19 @@
  * Modal cancellations and other payload types are acknowledged with 200 OK.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { db, eq, and } from '@tasknebula/db';
 import { integrationConnections } from '@tasknebula/db/src/schema/integration-connections';
+import { getTranslations } from 'next-intl/server';
 import {
   callSlackApi,
   getSlackSigningSecret,
   verifySlackSignature,
 } from '@/lib/integrations/slack';
-import {
-  resolveSlackOrg,
-} from '@/lib/integrations/slack-commands';
+import { lookupTaskNebulaUserBySlackId, resolveSlackOrg } from '@/lib/integrations/slack-commands';
 import { createIssueFromSlackMessage } from '@/lib/integrations/slack-issue-bridge';
+import { defaultLocale } from '@/lib/i18n/config';
+import { postPublicEndpoint } from '@/lib/agents/provider-endpoint';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,22 +120,21 @@ export async function POST(request: NextRequest) {
 // Message action: "Create TaskNebula issue from this message"
 // ---------------------------------------------------------------------------
 
-async function handleMessageAction(
-  payload: MessageActionPayload
-): Promise<NextResponse> {
+async function handleMessageAction(payload: MessageActionPayload): Promise<NextResponse> {
   if (payload.callback_id !== 'tn_create_from_message') {
     return NextResponse.json({});
   }
 
   const org = await resolveSlackOrg(payload.team.id);
+  const t = await getTranslations({
+    locale: org?.locale ?? defaultLocale,
+    namespace: 'slackCommands',
+  });
   if (!org) {
     // Without a token we can't open a modal, so respond ephemerally via the
     // response_url. Slack will display the text directly to the actor.
     if (payload.response_url) {
-      await postEphemeralViaResponseUrl(
-        payload.response_url,
-        "TaskNebula isn't installed for this workspace yet."
-      );
+      await postEphemeralViaResponseUrl(payload.response_url, t('notInstalled'));
     }
     return NextResponse.json({});
   }
@@ -145,7 +145,8 @@ async function handleMessageAction(
     .where(
       and(
         eq(integrationConnections.organizationId, org.organizationId),
-        eq(integrationConnections.provider, 'slack')
+        eq(integrationConnections.provider, 'slack'),
+        eq(integrationConnections.externalAccountId, payload.team.id)
       )
     )
     .limit(1);
@@ -182,23 +183,26 @@ async function handleMessageAction(
       messageText: payload.message.text ?? '',
       permalink,
     }),
-    title: { type: 'plain_text', text: 'New issue from Slack' },
-    submit: { type: 'plain_text', text: 'Create' },
-    close: { type: 'plain_text', text: 'Cancel' },
+    title: { type: 'plain_text', text: t('modalTitle') },
+    submit: { type: 'plain_text', text: t('modalSubmit') },
+    close: { type: 'plain_text', text: t('modalCancel') },
     blocks: [
       {
         type: 'context',
         elements: [
           {
             type: 'mrkdwn',
-            text: `Creating an issue from <@${payload.message.user ?? '?'}>'s message in <#${payload.channel.id}>`,
+            text: t('modalContext', {
+              author: payload.message.user ?? '?',
+              channel: payload.channel.id,
+            }),
           },
         ],
       },
       {
         type: 'input',
         block_id: 'title',
-        label: { type: 'plain_text', text: 'Title' },
+        label: { type: 'plain_text', text: t('modalTitleLabel') },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -210,7 +214,7 @@ async function handleMessageAction(
         type: 'input',
         block_id: 'description',
         optional: true,
-        label: { type: 'plain_text', text: 'Description (extra context)' },
+        label: { type: 'plain_text', text: t('modalDescriptionLabel') },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -221,7 +225,7 @@ async function handleMessageAction(
         type: 'input',
         block_id: 'project',
         optional: true,
-        label: { type: 'plain_text', text: 'Project key (overrides channel mapping)' },
+        label: { type: 'plain_text', text: t('modalProjectLabel') },
         element: { type: 'plain_text_input', action_id: 'value' },
       },
     ],
@@ -241,9 +245,7 @@ async function handleMessageAction(
 // View submission: the "New issue" modal
 // ---------------------------------------------------------------------------
 
-async function handleViewSubmission(
-  payload: ViewSubmissionPayload
-): Promise<NextResponse> {
+async function handleViewSubmission(payload: ViewSubmissionPayload): Promise<NextResponse> {
   if (payload.view.callback_id !== 'tn_new_issue_modal') {
     return NextResponse.json({});
   }
@@ -252,14 +254,6 @@ async function handleViewSubmission(
   const title = readInput(values, 'title');
   const description = readInput(values, 'description');
   const projectKey = readInput(values, 'project');
-
-  if (!title) {
-    // Slack expects this exact shape to highlight the offending input.
-    return NextResponse.json({
-      response_action: 'errors',
-      errors: { title: 'Title is required.' },
-    });
-  }
 
   // Pull the meta the message_action handler stuffed in private_metadata.
   let meta: {
@@ -279,26 +273,47 @@ async function handleViewSubmission(
   }
 
   const teamId = meta.teamId ?? payload.team.id;
+  if (meta.teamId && meta.teamId !== payload.team.id) {
+    const t = await getTranslations({ locale: defaultLocale, namespace: 'slackCommands' });
+    return NextResponse.json({
+      response_action: 'errors',
+      errors: { title: t('workspaceDisconnected') },
+    });
+  }
   const org = await resolveSlackOrg(teamId);
+  const t = await getTranslations({
+    locale: org?.locale ?? defaultLocale,
+    namespace: 'slackCommands',
+  });
+  if (!title) {
+    // Slack expects this exact shape to highlight the offending input.
+    return NextResponse.json({
+      response_action: 'errors',
+      errors: { title: t('titleRequired') },
+    });
+  }
   if (!org) {
     return NextResponse.json({
       response_action: 'errors',
-      errors: { title: 'Slack workspace is no longer connected.' },
+      errors: { title: t('workspaceDisconnected') },
     });
   }
 
   // Resolve project id from the optional key field.
-  const projectId = projectKey
-    ? await resolveProjectByKey(org.organizationId, projectKey)
-    : null;
+  const projectId = projectKey ? await resolveProjectByKey(org.organizationId, projectKey) : null;
+  if (projectKey && !projectId) {
+    return NextResponse.json({
+      response_action: 'errors',
+      errors: { project: t('projectKeyNotFound', { projectKey }) },
+    });
+  }
 
-  // Look up a reporter user id — fall back to the installer when we can't
-  // map the submitting Slack user.
-  const reporterUserId = await resolveReporter(org.organizationId, payload.user.id);
+  // Match the Slack profile email to an active TaskNebula workspace member.
+  const reporterUserId = await resolveReporter(org.organizationId, payload.user.id, teamId);
   if (!reporterUserId) {
     return NextResponse.json({
       response_action: 'errors',
-      errors: { title: 'No TaskNebula user found to act as the reporter.' },
+      errors: { title: t('reporterUnmapped') },
     });
   }
 
@@ -320,13 +335,13 @@ async function handleViewSubmission(
       channelName: meta.channelName ?? null,
       reporterUserId,
       extraLabels: [],
+      scheduleAfterResponse: (task) => after(task),
     });
     if (!result) {
       return NextResponse.json({
         response_action: 'errors',
         errors: {
-          project:
-            'Could not resolve a project. Provide a project key or configure a channel mapping.',
+          project: t('projectResolutionFailed'),
         },
       });
     }
@@ -338,7 +353,7 @@ async function handleViewSubmission(
     return NextResponse.json({
       response_action: 'errors',
       errors: {
-        project: 'A project key is required when creating from /tn new.',
+        project: t('standaloneProjectRequired'),
       },
     });
   }
@@ -357,11 +372,12 @@ async function handleViewSubmission(
     channelName: null,
     reporterUserId,
     extraLabels: [],
+    scheduleAfterResponse: (task) => after(task),
   });
   if (!result) {
     return NextResponse.json({
       response_action: 'errors',
-      errors: { project: 'Could not create the issue.' },
+      errors: { project: t('issueCreateFailed') },
     });
   }
   return NextResponse.json({ response_action: 'clear' });
@@ -381,53 +397,40 @@ function readInput(
   return (first?.value ?? '').trim();
 }
 
-async function resolveProjectByKey(
-  organizationId: string,
-  key: string
-): Promise<string | null> {
+async function resolveProjectByKey(organizationId: string, key: string): Promise<string | null> {
   const { projects } = await import('@tasknebula/db');
   const [row] = await db
     .select({ id: projects.id })
     .from(projects)
-    .where(
-      and(
-        eq(projects.organizationId, organizationId),
-        eq(projects.key, key.toUpperCase())
-      )
-    )
+    .where(and(eq(projects.organizationId, organizationId), eq(projects.key, key.toUpperCase())))
     .limit(1);
   return row?.id ?? null;
 }
 
 async function resolveReporter(
   organizationId: string,
-  _slackUserId: string
+  slackUserId: string,
+  slackTeamId: string
 ): Promise<string | null> {
-  // Until we add a slack_user_id mapping column, fall back to the user that
-  // installed the integration. This guarantees we always have a valid FK.
-  const [conn] = await db
-    .select({ connectedById: integrationConnections.connectedById })
-    .from(integrationConnections)
-    .where(
-      and(
-        eq(integrationConnections.organizationId, organizationId),
-        eq(integrationConnections.provider, 'slack')
-      )
-    )
-    .limit(1);
-  return conn?.connectedById ?? null;
+  return lookupTaskNebulaUserBySlackId(organizationId, slackUserId, slackTeamId);
 }
 
-async function postEphemeralViaResponseUrl(
-  responseUrl: string,
-  text: string
-): Promise<void> {
+async function postEphemeralViaResponseUrl(responseUrl: string, text: string): Promise<void> {
   try {
-    await fetch(responseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ response_type: 'ephemeral', text }),
-    });
+    const response = await postPublicEndpoint(
+      responseUrl,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response_type: 'ephemeral', text }),
+        signal: AbortSignal.timeout(5_000),
+      },
+      { hostAllowlist: ['hooks.slack.com', 'hooks.slack-gov.com'] }
+    );
+    if (!response.ok) {
+      console.warn('[slack-interactivity] response_url returned a non-success status', {
+        status: response.status,
+      });
+    }
   } catch (err) {
     console.warn('[slack-interactivity] response_url post failed', err);
   }

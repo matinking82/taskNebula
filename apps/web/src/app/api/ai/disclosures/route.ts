@@ -11,24 +11,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
-import { aiDisclosuresAcknowledged, db, organizationMembers } from '@tasknebula/db';
+import { aiDisclosuresAcknowledged, db } from '@tasknebula/db';
 import { auth } from '@/auth';
+import { isActiveOrganizationMember } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
 async function assertWorkspaceMember(userId: string, workspaceId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: organizationMembers.id })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  return !!row;
+  return isActiveOrganizationMember(userId, workspaceId);
 }
 
 export async function GET(request: NextRequest) {

@@ -6,6 +6,8 @@ import { NextRequest } from 'next/server';
 
 const authMock = jest.fn();
 const dbSelectMock = jest.fn();
+const resolveProjectCapabilityAccessMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
 
 jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
@@ -22,6 +24,16 @@ jest.mock('@/lib/notifications/send-notification', () => ({ notifyIssueEvent: je
 jest.mock('@/lib/automation/evaluator', () => ({ runAutomations: jest.fn() }));
 jest.mock('@/lib/labels/sync', () => ({ syncIssueLabelsBestEffort: jest.fn() }));
 jest.mock('@/lib/agents/triage-enqueue', () => ({ enqueueTriageOnCreate: jest.fn() }));
+
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    resolveProjectCapabilityAccessMock(...args),
+}));
+
+jest.mock('@/lib/auth/access-control', () => ({
+  canReadProject: jest.fn().mockResolvedValue(true),
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
+}));
 
 jest.mock('drizzle-orm', () => ({
   and: (...args: unknown[]) => ({ op: 'and', args }),
@@ -109,6 +121,18 @@ describe('POST /api/issues relationship integrity', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     authMock.mockResolvedValue({ user: { id: 'user_1' } });
+    resolveProjectCapabilityAccessMock.mockResolvedValue({
+      project: { id: 'project_1', organizationId: 'org_1' },
+      canRead: true,
+      canManage: true,
+      permissions: { canCreateIssues: true },
+    });
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: true,
+      isSuperAdmin: false,
+      role: 'member',
+      membershipId: 'member_1',
+    });
   });
 
   it('rejects a parent from another project before insertion', async () => {
@@ -122,7 +146,6 @@ describe('POST /api/issues relationship integrity', () => {
           },
         ])
       )
-      .mockReturnValueOnce(chainable([{ isSuperAdmin: true }]))
       .mockReturnValueOnce(
         chainable([{ id: 'issue_2', projectId: 'project_2', organizationId: 'org_1' }])
       );
@@ -148,7 +171,6 @@ describe('POST /api/issues relationship integrity', () => {
           },
         ])
       )
-      .mockReturnValueOnce(chainable([{ isSuperAdmin: true }]))
       .mockReturnValueOnce(
         chainable([
           { id: 'status_backlog', workflowId: 'workflow_1', category: 'backlog', position: 0 },
@@ -176,7 +198,6 @@ describe('POST /api/issues relationship integrity', () => {
           },
         ])
       )
-      .mockReturnValueOnce(chainable([{ isSuperAdmin: true }]))
       .mockReturnValueOnce(chainable([]));
 
     const response = await POST(createRequest({ sprintId: 'sprint_foreign' }) as never, {
@@ -198,7 +219,6 @@ describe('POST /api/issues relationship integrity', () => {
           },
         ])
       )
-      .mockReturnValueOnce(chainable([{ isSuperAdmin: true }]))
       .mockReturnValueOnce(
         chainable([
           {
@@ -219,18 +239,21 @@ describe('POST /api/issues relationship integrity', () => {
   });
 
   it('rejects an assignee outside the active workspace membership', async () => {
-    dbSelectMock
-      .mockReturnValueOnce(
-        chainable([
-          {
-            id: 'project_1',
-            organizationId: 'org_1',
-            defaultWorkflowId: 'workflow_1',
-          },
-        ])
-      )
-      .mockReturnValueOnce(chainable([{ isSuperAdmin: true }]))
-      .mockReturnValueOnce(chainable([]));
+    dbSelectMock.mockReturnValueOnce(
+      chainable([
+        {
+          id: 'project_1',
+          organizationId: 'org_1',
+          defaultWorkflowId: 'workflow_1',
+        },
+      ])
+    );
+    resolveOrganizationAccessMock.mockResolvedValueOnce({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
 
     const response = await POST(createRequest({ assigneeId: 'user_foreign' }) as never, {
       params: Promise.resolve({}),

@@ -1,16 +1,14 @@
 import {
   db,
   automationRules,
-  organizationMembers,
-  users,
   hasPermission as roleHasPermission,
   type Permission,
 } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   canManageProject,
   canReadProject,
-  isActiveOrganizationMember,
+  resolveOrganizationAccess,
 } from '@/lib/auth/access-control';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
 
@@ -33,25 +31,10 @@ async function userHasOrganizationPermission(
   organizationId: string,
   permission: Permission
 ): Promise<boolean> {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  const [member] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  return roleHasPermission(member?.role || '', permission, user?.isSuperAdmin === true);
+  const access = await resolveOrganizationAccess(userId, organizationId);
+  return (
+    access.allowed && roleHasPermission(access.role || '', permission, access.isSuperAdmin === true)
+  );
 }
 
 export async function authorizeAutomationScope(
@@ -80,12 +63,9 @@ export async function authorizeAutomationScope(
     };
   }
 
-  if (!(await isActiveOrganizationMember(userId, organizationId))) {
-    return { status: 'not-found' };
-  }
-
   if (!(await userHasOrganizationPermission(userId, organizationId, 'org:settings'))) {
-    return { status: 'forbidden' };
+    const access = await resolveOrganizationAccess(userId, organizationId);
+    return { status: access.allowed ? 'forbidden' : 'not-found' };
   }
 
   return {

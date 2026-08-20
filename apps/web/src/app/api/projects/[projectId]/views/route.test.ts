@@ -1,5 +1,5 @@
 const authMock = jest.fn();
-const resolveProjectByIdOrKeyMock = jest.fn();
+const resolveProjectAccessMock = jest.fn();
 const dbSelectMock = jest.fn();
 const dbInsertMock = jest.fn();
 const dbUpdateMock = jest.fn();
@@ -57,8 +57,8 @@ jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
 }));
 
-jest.mock('@/lib/projects/server', () => ({
-  resolveProjectByIdOrKey: (...args: unknown[]) => resolveProjectByIdOrKeyMock(...args),
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectAccess: (...args: unknown[]) => resolveProjectAccessMock(...args),
 }));
 
 jest.mock('@tasknebula/db', () => ({
@@ -146,7 +146,10 @@ describe('Project views route', () => {
         private readonly _nextUrl: URL;
         private readonly bodyValue: string;
 
-        constructor(url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) {
+        constructor(
+          url: string,
+          init?: { method?: string; headers?: Record<string, string>; body?: string }
+        ) {
           this._url = url;
           this._method = init?.method || 'GET';
           this._headers = new MockHeaders(init?.headers);
@@ -219,9 +222,12 @@ describe('Project views route', () => {
   it('returns 401 when the user is not authenticated', async () => {
     authMock.mockResolvedValue(null);
 
-    const response = await GET(new NextRequestCtor('http://localhost:3002/api/projects/project-1/views'), {
-      params: Promise.resolve({ projectId: 'project-1' }),
-    });
+    const response = await GET(
+      new NextRequestCtor('http://localhost:3002/api/projects/project-1/views'),
+      {
+        params: Promise.resolve({ projectId: 'project-1' }),
+      }
+    );
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
@@ -229,24 +235,26 @@ describe('Project views route', () => {
 
   it('returns project views for an accessible project', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    resolveProjectByIdOrKeyMock.mockResolvedValue({
-      id: 'project-1',
-      key: 'API',
-      name: 'API Platform',
-      organizationId: 'org-1',
-      teamId: 'team-1',
+    resolveProjectAccessMock.mockResolvedValue({
+      canRead: true,
+      canManage: false,
+      project: {
+        id: 'project-1',
+        key: 'API',
+        name: 'API Platform',
+        organizationId: 'org-1',
+        teamId: 'team-1',
+      },
     });
-    dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ id: 'member-1' }]))
-      .mockReturnValueOnce(
-        orderBuilder([
-          {
-            id: 'view-1',
-            name: 'Release Board',
-            viewType: 'board',
-          },
-        ])
-      );
+    dbSelectMock.mockReturnValueOnce(
+      orderBuilder([
+        {
+          id: 'view-1',
+          name: 'Release Board',
+          viewType: 'board',
+        },
+      ])
+    );
 
     const response = await GET(
       new NextRequestCtor('http://localhost:3002/api/projects/project-1/views?includePublic=false'),
@@ -280,16 +288,20 @@ describe('Project views route', () => {
 
   it('creates a project-scoped saved view with the project defaults', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    resolveProjectByIdOrKeyMock.mockResolvedValue({
-      id: 'project-1',
-      key: 'API',
-      name: 'API Platform',
-      organizationId: 'org-1',
-      teamId: 'team-1',
+    resolveProjectAccessMock.mockResolvedValue({
+      canRead: true,
+      canManage: false,
+      project: {
+        id: 'project-1',
+        key: 'API',
+        name: 'API Platform',
+        organizationId: 'org-1',
+        teamId: 'team-1',
+      },
     });
-    dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ id: 'member-1' }]))
-      .mockReturnValueOnce({ from: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue([]) }) });
+    dbSelectMock.mockReturnValueOnce({
+      from: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue([]) }),
+    });
 
     dbUpdateMock.mockReturnValue({
       set: jest.fn().mockReturnValue({
@@ -355,14 +367,17 @@ describe('Project views route', () => {
 
   it('returns 400 for invalid view payloads', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    resolveProjectByIdOrKeyMock.mockResolvedValue({
-      id: 'project-1',
-      key: 'API',
-      name: 'API Platform',
-      organizationId: 'org-1',
-      teamId: 'team-1',
+    resolveProjectAccessMock.mockResolvedValue({
+      canRead: true,
+      canManage: false,
+      project: {
+        id: 'project-1',
+        key: 'API',
+        name: 'API Platform',
+        organizationId: 'org-1',
+        teamId: 'team-1',
+      },
     });
-    dbSelectMock.mockReturnValueOnce(limitBuilder([{ id: 'member-1' }]));
 
     const response = await POST(
       new NextRequestCtor('http://localhost:3002/api/projects/project-1/views', {

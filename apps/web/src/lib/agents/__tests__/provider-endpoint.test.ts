@@ -2,10 +2,16 @@ import {
   hostMatchesAllowlist,
   isPublicNetworkAddress,
   postAgentProviderEndpoint,
+  postPublicEndpoint,
   validateAgentProviderEndpoint,
 } from '../provider-endpoint';
 
 const mockHttpsRequest = jest.fn();
+const mockHttpRequest = jest.fn();
+
+jest.mock('node:http', () => ({
+  request: (...args: unknown[]) => mockHttpRequest(...args),
+}));
 
 jest.mock('node:https', () => ({
   request: (...args: unknown[]) => mockHttpsRequest(...args),
@@ -101,7 +107,7 @@ describe('agent provider endpoint network policy', () => {
       signal: new AbortController().signal,
     });
 
-    expect(result).toEqual({ ok: false, status: 302 });
+    expect(result).toEqual({ ok: false, status: 302, body: '' });
     expect(request.end).toHaveBeenCalledWith('{"run":true}');
     expect(response.resume).toHaveBeenCalled();
 
@@ -114,5 +120,76 @@ describe('agent provider endpoint network policy', () => {
       }
     );
     expect(lookupResult).toEqual({ address: '8.8.8.8', family: 4 });
+  });
+
+  it('only permits pinned public HTTP when an explicit caller policy allows it', async () => {
+    const response = { statusCode: 204, resume: jest.fn() };
+    const request = { once: jest.fn(), end: jest.fn() };
+    mockHttpRequest.mockImplementationOnce(
+      (_endpoint: URL, _options: unknown, callback: (value: typeof response) => void) => {
+        callback(response);
+        return request;
+      }
+    );
+
+    await expect(
+      postPublicEndpoint('http://8.8.8.8/audit', {
+        body: '{}',
+        headers: {},
+        signal: new AbortController().signal,
+      })
+    ).rejects.toThrow(/HTTPS/);
+
+    await expect(
+      postPublicEndpoint(
+        'http://127.0.0.1/audit',
+        { body: '{}', headers: {}, signal: new AbortController().signal },
+        { allowInsecureHttp: true }
+      )
+    ).rejects.toThrow(/public/);
+
+    await expect(
+      postPublicEndpoint(
+        'http://8.8.8.8/audit',
+        { body: '{}', headers: {}, signal: new AbortController().signal },
+        { allowInsecureHttp: true }
+      )
+    ).resolves.toEqual({ ok: true, status: 204, body: '' });
+    expect(request.end).toHaveBeenCalledWith('{}');
+  });
+
+  it('captures only the configured response prefix', async () => {
+    const listeners = new Map<string, (...args: unknown[]) => void>();
+    const response = {
+      statusCode: 200,
+      on: jest.fn((event: string, callback: (...args: unknown[]) => void) => {
+        listeners.set(event, callback);
+        return response;
+      }),
+      once: jest.fn((event: string, callback: (...args: unknown[]) => void) => {
+        listeners.set(event, callback);
+        return response;
+      }),
+    };
+    const request = { once: jest.fn(), end: jest.fn() };
+    mockHttpsRequest.mockImplementationOnce(
+      (_endpoint: URL, _options: unknown, callback: (value: typeof response) => void) => {
+        callback(response);
+        queueMicrotask(() => {
+          listeners.get('data')?.(Buffer.from('123456789'));
+          listeners.get('end')?.();
+        });
+        return request;
+      }
+    );
+
+    await expect(
+      postPublicEndpoint('https://8.8.8.8/hook', {
+        body: '{}',
+        headers: {},
+        signal: new AbortController().signal,
+        maxResponseBytes: 5,
+      })
+    ).resolves.toEqual({ ok: true, status: 200, body: '12345' });
   });
 });

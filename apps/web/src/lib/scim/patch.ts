@@ -64,9 +64,7 @@ function parsePath(path: string): PathSegment[] | null {
     const seg: PathSegment = { name };
     if (m[3]) {
       // Entra-style filter — only `<key> eq "<value>"`.
-      const f = /^([a-zA-Z_][a-zA-Z0-9_]*)\s+eq\s+["'](.+?)["']$/.exec(
-        m[3].trim()
-      );
+      const f = /^([a-zA-Z_][a-zA-Z0-9_]*)\s+eq\s+["'](.+?)["']$/.exec(m[3].trim());
       if (!f || !f[1] || f[2] === undefined) return null;
       seg.filter = { key: f[1], value: f[2] };
     }
@@ -118,8 +116,9 @@ export function applyUserPatch(
         }
       }
       if (Array.isArray(v.emails)) {
-        const primary = (v.emails as { value: string; primary?: boolean }[])
-          .find((e) => e.primary)?.value ?? (v.emails as { value: string }[])[0]?.value;
+        const primary =
+          (v.emails as { value: string; primary?: boolean }[]).find((e) => e.primary)?.value ??
+          (v.emails as { value: string }[])[0]?.value;
         if (primary) out.primaryEmail = primary;
       }
       continue;
@@ -139,8 +138,12 @@ export function applyUserPatch(
       out.active = raw.value === true || raw.value === 'true';
       continue;
     }
-    if (path === 'name.givenName' || path === 'name.formatted') {
+    if (path === 'name.givenName') {
       out.givenName = raw.value == null ? null : String(raw.value);
+      continue;
+    }
+    if (path === 'name.formatted') {
+      out.displayName = raw.value == null ? null : String(raw.value);
       continue;
     }
     if (path === 'name.familyName') {
@@ -181,9 +184,7 @@ export function applyUserPatch(
 }
 
 /** Apply a list of PATCH operations to a SCIM Group. */
-export function applyGroupPatch(
-  operations: PatchOperation[]
-): FlattenedGroupPatch {
+export function applyGroupPatch(operations: PatchOperation[]): FlattenedGroupPatch {
   const out: FlattenedGroupPatch = {};
 
   for (const raw of operations) {
@@ -194,9 +195,7 @@ export function applyGroupPatch(
       const v = (raw.value ?? {}) as Json;
       if (typeof v.displayName === 'string') out.displayName = v.displayName;
       if (Array.isArray(v.members)) {
-        out.replaceMembers = (v.members as { value: string }[]).map(
-          (m) => m.value
-        );
+        out.replaceMembers = (v.members as { value: string }[]).map((m) => m.value);
       }
       continue;
     }

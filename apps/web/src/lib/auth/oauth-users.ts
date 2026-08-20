@@ -9,6 +9,7 @@ type OAuthUserInput = {
   email?: string | null;
   name?: string | null;
   image?: string | null;
+  sessionVersion?: number;
 };
 
 type OAuthAccountInput = {
@@ -30,6 +31,7 @@ type OAuthDatabaseUser = {
   name: string | null;
   image: string | null;
   status: 'active' | 'inactive' | 'invited';
+  sessionVersion: number;
 };
 
 function normalizeEmail(value: unknown): string {
@@ -68,6 +70,7 @@ function toOAuthDatabaseUser(row: unknown): OAuthDatabaseUser | null {
     name: typeof candidate.name === 'string' ? candidate.name : null,
     image: typeof candidate.image === 'string' ? candidate.image : null,
     status,
+    sessionVersion: typeof candidate.sessionVersion === 'number' ? candidate.sessionVersion : 0,
   };
 }
 
@@ -90,6 +93,7 @@ async function findLinkedOAuthUser(
       name: users.name,
       image: users.image,
       status: users.status,
+      sessionVersion: users.sessionVersion,
     })
     .from(accounts)
     .innerJoin(users, eq(accounts.userId, users.id))
@@ -140,6 +144,7 @@ async function createOAuthUser(user: OAuthUserInput, email: string) {
       name: users.name,
       image: users.image,
       status: users.status,
+      sessionVersion: users.sessionVersion,
     });
 
   return toOAuthDatabaseUser(created) ?? findUserByEmail(email);
@@ -190,4 +195,5 @@ export function applyOAuthDatabaseUser(authUser: OAuthUserInput, databaseUser: O
   authUser.email = databaseUser.email;
   authUser.name = databaseUser.name;
   authUser.image = databaseUser.image;
+  authUser.sessionVersion = databaseUser.sessionVersion;
 }

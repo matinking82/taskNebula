@@ -10,6 +10,7 @@ import { TeamPageClient } from './team-page-client';
 import type { TeamMemberRow } from './team-members-list';
 import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('pagesWork');
@@ -30,15 +31,38 @@ export default async function TeamPage() {
     redirect('/auth/signin');
   }
 
-  const userOrgs = await db
-    .select()
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    );
+  const memberships = await listActiveOrganizationMemberships(session.user.id);
+  let access:
+    | {
+        organizationId: string;
+        canViewMembers: boolean;
+        canViewTeamspaces: boolean;
+        canInviteMembers: boolean;
+        canManageTeamspaces: boolean;
+      }
+    | undefined;
 
-  const primaryOrg = userOrgs[0];
-  if (!primaryOrg) {
+  for (const membership of memberships) {
+    const [canViewMembers, canViewTeamspaces, canInviteMembers, canManageTeamspaces] =
+      await Promise.all([
+        hasPermission(membership.organizationId, 'member:view'),
+        hasPermission(membership.organizationId, 'team:view'),
+        hasPermission(membership.organizationId, 'member:invite'),
+        hasPermission(membership.organizationId, 'org:settings'),
+      ]);
+    if (canViewMembers || canViewTeamspaces) {
+      access = {
+        organizationId: membership.organizationId,
+        canViewMembers,
+        canViewTeamspaces,
+        canInviteMembers,
+        canManageTeamspaces,
+      };
+      break;
+    }
+  }
+
+  if (!access) {
     return (
       <PageFrame>
         <PageHeader title={t('team.title')} />
@@ -55,17 +79,13 @@ export default async function TeamPage() {
     );
   }
 
-  const [canViewMembers, canViewTeamspaces, canInviteMembers, canManageTeamspaces] =
-    await Promise.all([
-      hasPermission(primaryOrg.organizationId, 'member:view'),
-      hasPermission(primaryOrg.organizationId, 'team:view'),
-      hasPermission(primaryOrg.organizationId, 'member:invite'),
-      hasPermission(primaryOrg.organizationId, 'org:settings'),
-    ]);
-
-  if (!canViewMembers && !canViewTeamspaces) {
-    redirect('/dashboard?error=insufficient-permission');
-  }
+  const {
+    organizationId,
+    canViewMembers,
+    canViewTeamspaces,
+    canInviteMembers,
+    canManageTeamspaces,
+  } = access;
 
   const allMembers = canViewMembers
     ? await db
@@ -73,7 +93,7 @@ export default async function TeamPage() {
         .from(organizationMembers)
         .where(
           and(
-            eq(organizationMembers.organizationId, primaryOrg.organizationId),
+            eq(organizationMembers.organizationId, organizationId),
             eq(organizationMembers.status, 'active')
           )
         )
@@ -107,7 +127,7 @@ export default async function TeamPage() {
 
   return (
     <TeamPageClient
-      organizationId={primaryOrg.organizationId}
+      organizationId={organizationId}
       canViewMembers={canViewMembers}
       canViewTeamspaces={canViewTeamspaces}
       canInviteMembers={canInviteMembers}

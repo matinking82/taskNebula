@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server';
 
 const mockResolveApiActor = jest.fn();
 const mockCanReadProject = jest.fn();
+const mockResolveProjectCapabilityAccess = jest.fn();
 const dbSelectMock = jest.fn();
 const inArrayMock = jest.fn((left: unknown, right: unknown) => ({
   op: 'inArray',
@@ -23,6 +24,11 @@ jest.mock('@/lib/auth/api-actor', () => ({
 
 jest.mock('@/lib/auth/access-control', () => ({
   canReadProject: (...args: unknown[]) => mockCanReadProject(...args),
+}));
+
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    mockResolveProjectCapabilityAccess(...args),
 }));
 
 jest.mock('@/lib/api-validation', () => ({
@@ -112,6 +118,7 @@ describe('GET /api/issues project visibility', () => {
     jest.clearAllMocks();
     dbSelectMock.mockReset();
     mockCanReadProject.mockReset();
+    mockResolveProjectCapabilityAccess.mockReset();
     mockResolveApiActor.mockReset();
     mockResolveApiActor.mockResolvedValue({
       userId: 'user-1',
@@ -217,21 +224,16 @@ describe('GET /api/issues project visibility', () => {
       organizationId: 'org-1',
       defaultWorkflowId: 'workflow-1',
     };
-    dbSelectMock
-      .mockReturnValueOnce(selectRows([project]))
-      .mockReturnValueOnce(selectRows([{ isSuperAdmin: false }]))
-      .mockReturnValueOnce(selectRows([project]))
-      .mockReturnValueOnce(selectRows([{ role: 'member' }]))
-      .mockReturnValueOnce(
-        selectRows([
-          {
-            role: 'developer',
-            canCreateIssues: 'false',
-            canEditIssues: 'true',
-            canDeleteIssues: 'true',
-          },
-        ])
-      );
+    dbSelectMock.mockReturnValueOnce(selectRows([project]));
+    mockResolveProjectCapabilityAccess.mockResolvedValue({
+      project,
+      canRead: true,
+      permissions: {
+        canCreateIssues: false,
+        canEditIssues: true,
+        canDeleteIssues: true,
+      },
+    });
 
     const response = await POST(
       new NextRequest('http://localhost/api/issues') as never,
@@ -250,7 +252,7 @@ describe('GET /api/issues project visibility', () => {
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
-      error: 'Insufficient permissions to create/edit issues',
+      error: 'Insufficient permissions to create issues',
     });
   });
 });

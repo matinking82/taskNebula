@@ -158,11 +158,12 @@ export function AuditLogStreamingClient({ organizationId }: { organizationId: st
   const handleToggle = useCallback(
     async (sink: Sink) => {
       try {
-        await fetch(`/api/admin/audit-log-sinks/${sink.id}`, {
+        const response = await fetch(`/api/admin/audit-log-sinks/${sink.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ enabled: !sink.enabled }),
         });
+        if (!response.ok) throw new Error('audit_sink_toggle_failed');
         await refresh();
       } catch {
         setError(t('audit.toggleFailed'));
@@ -175,9 +176,10 @@ export function AuditLogStreamingClient({ organizationId }: { organizationId: st
     async (sink: Sink) => {
       if (!window.confirm(t('audit.deleteConfirm', { name: sink.name }))) return;
       try {
-        await fetch(`/api/admin/audit-log-sinks/${sink.id}`, {
+        const response = await fetch(`/api/admin/audit-log-sinks/${sink.id}`, {
           method: 'DELETE',
         });
+        if (!response.ok) throw new Error('audit_sink_delete_failed');
         await refresh();
       } catch {
         setError(t('audit.deleteFailed'));

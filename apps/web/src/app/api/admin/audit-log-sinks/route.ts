@@ -20,18 +20,18 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { hasPermission } from '@/lib/auth/permissions';
-import { db, auditLogSinks, eq } from '@tasknebula/db';
-import { redactSinkConfig } from './utils';
+import { auditLogs, auditLogSinks, db, eq } from '@tasknebula/db';
+import { AUDIT_SINK_TYPES, redactSinkConfig, validateSinkConfig } from './utils';
 
 export const dynamic = 'force-dynamic';
 
-const sinkTypeEnum = z.enum(['webhook', 'splunk_hec', 'datadog', 's3']);
+const sinkTypeEnum = z.enum(AUDIT_SINK_TYPES);
 
 const createSinkSchema = z.object({
   organizationId: z.string().min(1),
   type: sinkTypeEnum,
   name: z.string().min(1).max(120),
-  config: z.record(z.any()).default({}),
+  config: z.unknown(),
   enabled: z.boolean().optional().default(true),
 });
 
@@ -109,26 +109,45 @@ export async function POST(request: NextRequest) {
   if (!canManage) {
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
-  const signingSecret = generateSigningSecret();
-  const [created] = await db
-    .insert(auditLogSinks)
-    .values({
-      workspaceId: data.organizationId,
-      type: data.type,
-      name: data.name,
-      config: data.config,
-      enabled: data.enabled,
-      signingSecret,
-      createdBy: session.user.id,
-    })
-    .returning();
-  if (!created) {
-    return NextResponse.json({ error: 'Failed to create sink' }, { status: 500 });
+  const parsedConfig = validateSinkConfig(data.type, data.config);
+  if (!parsedConfig.success) {
+    return NextResponse.json(
+      { error: 'audit_sink_config_invalid', details: parsedConfig.error.errors },
+      { status: 400 }
+    );
   }
+  const signingSecret = generateSigningSecret();
+  const created = await db.transaction(async (tx) => {
+    const [sink] = await tx
+      .insert(auditLogSinks)
+      .values({
+        workspaceId: data.organizationId,
+        type: data.type,
+        name: data.name,
+        config: parsedConfig.data,
+        enabled: data.enabled,
+        signingSecret,
+        createdBy: session.user.id,
+      })
+      .returning();
+    if (!sink) throw new Error('audit_sink_create_failed');
+
+    await tx.insert(auditLogs).values({
+      userId: session.user.id,
+      organizationId: data.organizationId,
+      action: 'organization.updated',
+      resourceType: 'audit_log_sink',
+      resourceId: sink.id,
+      changes: { enabled: { from: null, to: sink.enabled } },
+      metadata: { kind: 'audit_log_sink_created', type: sink.type, name: sink.name },
+    });
+    return sink;
+  });
   return NextResponse.json(
     {
       sink: {
         ...created,
+        config: redactSinkConfig(created.type, parsedConfig.data),
         // Show the signing secret exactly once.
         signingSecret,
       },

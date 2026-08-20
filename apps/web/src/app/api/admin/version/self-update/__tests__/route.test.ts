@@ -28,16 +28,18 @@ jest.mock('@/lib/version/self-update', () => {
       this.reason = reason;
     }
   }
+  class SelfUpdateStateError extends Error {}
   return {
     getSelfUpdateStatus: (...args: any[]) => getSelfUpdateStatusMock(...args),
     startSelfUpdate: (...args: any[]) => startSelfUpdateMock(...args),
     SelfUpdateError,
+    SelfUpdateStateError,
   };
 });
 
 import { NextRequest } from 'next/server';
 import { GET, POST } from '../route';
-import { SelfUpdateError } from '@/lib/version/self-update';
+import { SelfUpdateError, SelfUpdateStateError } from '@/lib/version/self-update';
 
 function request(body?: unknown) {
   return new NextRequest('http://localhost/api/admin/version/self-update', {
@@ -158,5 +160,21 @@ describe('/api/admin/version/self-update', () => {
       error: 'Self-update is not available: disabled',
       reason: 'disabled',
     });
+  });
+
+  it('reports persisted-state outages as unavailable on GET and POST', async () => {
+    authMock.mockResolvedValue({ user: { id: 'admin-1' } });
+    isSuperAdminMock.mockResolvedValue(true);
+    getSelfUpdateStatusMock.mockRejectedValueOnce(new SelfUpdateStateError('database unavailable'));
+
+    const getResponse = await GET(request());
+    expect(getResponse.status).toBe(503);
+
+    startSelfUpdateMock.mockRejectedValueOnce(new SelfUpdateStateError('database unavailable'));
+    const postResponse = await POST(
+      request({ targetVersion: '0.7.0', confirmedVersion: '0.7.0', acknowledged: true })
+    );
+    expect(postResponse.status).toBe(503);
+    await expect(postResponse.json()).resolves.toMatchObject({ reason: 'state_unavailable' });
   });
 });

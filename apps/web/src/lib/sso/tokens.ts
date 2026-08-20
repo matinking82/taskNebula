@@ -11,18 +11,13 @@
  */
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import {
-  db,
-  scimTokens,
-  organizationMembers,
-  hasPermission as roleHasPermission,
-  eq,
-  and,
-  isNull,
-} from '@tasknebula/db';
+import { db, scimTokens, organizations, eq, and, isNull, ne } from '@tasknebula/db';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
+import { hasScimScope, type ScimScope } from '@/lib/scim/scopes';
 
 const TOKEN_PREFIX = 'scim_';
 const BCRYPT_COST = 12;
+const TOKEN_PATTERN = /^scim_[A-Za-z0-9_-]{43}$/;
 
 export function generateScimToken(): { token: string; prefix: string } {
   const bytes = crypto.randomBytes(32).toString('base64url');
@@ -32,6 +27,10 @@ export function generateScimToken(): { token: string; prefix: string } {
 
 export async function hashScimToken(token: string): Promise<string> {
   return bcrypt.hash(token, BCRYPT_COST);
+}
+
+export function digestScimToken(token: string): string {
+  return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
 }
 
 export async function verifyScimToken(token: string, hash: string): Promise<boolean> {
@@ -46,14 +45,16 @@ export async function verifyScimToken(token: string, hash: string): Promise<bool
 export type ScimAuthContext = {
   tokenId: string;
   workspaceId: string;
+  scopes: string[];
 };
 
 /**
  * Look up & verify a Bearer token from a `Authorization` header value.
  *
- * Returns the matching workspace + token id on success, or null on failure.
- * The function is intentionally constant-shape (no early returns based on
- * whether the token exists) so we don't leak existence via timing.
+ * New tokens use a non-secret deterministic digest to select one bcrypt
+ * verifier. Legacy rows without a digest remain supported until rotated.
+ * The digest contains enough entropy that it cannot be used as an existence
+ * oracle without already knowing the full token.
  */
 export async function authenticateScimRequest(
   authorizationHeader: string | null | undefined
@@ -62,20 +63,38 @@ export async function authenticateScimRequest(
   const match = /^Bearer\s+(.+)$/i.exec(authorizationHeader.trim());
   if (!match || !match[1]) return null;
   const presented = match[1].trim();
-  if (!presented.startsWith(TOKEN_PREFIX)) return null;
+  if (!TOKEN_PATTERN.test(presented)) return null;
 
-  // We have to fetch all non-revoked tokens for any workspace and bcrypt-compare
-  // since the plaintext isn't reversible. In practice the table stays tiny
-  // (one or two tokens per workspace) so this is fine; for very large
-  // tenants we'd add a short HMAC index column to narrow the search.
-  const candidates = await db
-    .select({
-      id: scimTokens.id,
-      workspaceId: scimTokens.workspaceId,
-      tokenHash: scimTokens.tokenHash,
-    })
+  const columns = {
+    id: scimTokens.id,
+    workspaceId: scimTokens.workspaceId,
+    tokenHash: scimTokens.tokenHash,
+    scopes: scimTokens.scopes,
+  };
+  const active = and(isNull(scimTokens.revokedAt), ne(organizations.status, 'suspended'));
+  const digest = digestScimToken(presented);
+  const indexedCandidates = await db
+    .select(columns)
     .from(scimTokens)
-    .where(isNull(scimTokens.revokedAt));
+    .innerJoin(organizations, eq(organizations.id, scimTokens.workspaceId))
+    .where(and(active, eq(scimTokens.tokenDigest, digest)))
+    .limit(1);
+
+  // Existing installations cannot backfill a digest because plaintext
+  // secrets were intentionally never stored. Only those legacy rows use the
+  // old scan path, and disappear from it naturally as admins rotate tokens.
+  const candidates = indexedCandidates.length
+    ? indexedCandidates
+    : await db
+        .select({
+          id: scimTokens.id,
+          workspaceId: scimTokens.workspaceId,
+          tokenHash: scimTokens.tokenHash,
+          scopes: scimTokens.scopes,
+        })
+        .from(scimTokens)
+        .innerJoin(organizations, eq(organizations.id, scimTokens.workspaceId))
+        .where(and(active, isNull(scimTokens.tokenDigest)));
 
   for (const row of candidates) {
     // eslint-disable-next-line no-await-in-loop
@@ -90,10 +109,14 @@ export async function authenticateScimRequest(
       } catch {
         /* swallow — last_used_at is purely informational. */
       }
-      return { tokenId: row.id, workspaceId: row.workspaceId };
+      return { tokenId: row.id, workspaceId: row.workspaceId, scopes: row.scopes };
     }
   }
   return null;
+}
+
+export function scimTokenCan(auth: ScimAuthContext, required: ScimScope): boolean {
+  return hasScimScope(auth.scopes, required);
 }
 
 /**
@@ -102,12 +125,9 @@ export async function authenticateScimRequest(
  * handlers that mutate the table.
  */
 export async function isOrgAdmin(userId: string, workspaceId: string): Promise<boolean> {
-  const member = await db.query.organizationMembers.findFirst({
-    where: and(
-      eq(organizationMembers.userId, userId),
-      eq(organizationMembers.organizationId, workspaceId),
-      eq(organizationMembers.status, 'active')
-    ),
-  });
-  return roleHasPermission(member?.role || '', 'org:settings');
+  const access = await resolveOrganizationAccess(userId, workspaceId);
+  return (
+    access.allowed &&
+    (access.isSuperAdmin === true || access.role === 'owner' || access.role === 'admin')
+  );
 }

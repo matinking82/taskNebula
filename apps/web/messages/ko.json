@@ -503,7 +503,8 @@
         "invalid_target": "The selected target version is not valid for this install.",
         "active_job": "Another update request is already active. Wait for it to finish before starting a new one.",
         "missing_digest": "Docker Hub did not return an immutable image digest. Wait for tag metadata to settle, then check again.",
-        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request."
+        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request.",
+        "weak_secret": "TASKNEBULA_SELF_UPDATE_WEBHOOK_SECRET must contain at least 32 bytes of unpredictable secret material."
       },
       "jobStatus": {
         "queued": "Queued",
@@ -575,7 +576,8 @@
     "createFailed": "하위 이슈를 만들 수 없습니다. 다시 시도해 주세요.",
     "noSubtasks": "아직 하위 작업이 없습니다",
     "markComplete": "완료로 표시",
-    "markIncomplete": "미완료로 표시"
+    "markIncomplete": "미완료로 표시",
+    "transitionFailed": "하위 이슈 상태를 업데이트하지 못했습니다. 다시 시도해 주세요."
   },
   "issueRelations": {
     "dialogTitle": "이슈 연결",
@@ -1937,7 +1939,55 @@
       "token_created": "생성됨 {date}",
       "token_last_used": "마지막 사용 {date}",
       "token_revoked": "취소됨",
-      "revoke": "취소"
+      "revoke": "취소",
+      "token_scopes_label": "Access scopes",
+      "token_scopes_desc": "Grant only the operations this identity provider needs. At least one scope is required.",
+      "scope_users_read": "Read users",
+      "scope_users_read_desc": "List and inspect workspace users.",
+      "scope_users_write": "Manage users",
+      "scope_users_write_desc": "Provision, update, activate, and deactivate users.",
+      "scope_groups_read": "Read groups",
+      "scope_groups_read_desc": "List groups and their members.",
+      "scope_groups_write": "Manage groups",
+      "scope_groups_write_desc": "Create, update, and remove provisioned groups.",
+      "token_scope_required": "Select at least one access scope.",
+      "copy_token": "Copy token",
+      "token_copied_desc": "The SCIM token is now on your clipboard and has been hidden from this page.",
+      "token_copy_failed": "Token could not be copied",
+      "token_copy_failed_desc": "Copy the visible token manually before leaving this page.",
+      "token_created_toast": "SCIM token created",
+      "token_created_toast_desc": "Copy the secret now; only its hash will remain after you leave.",
+      "token_revoked_toast": "SCIM token revoked",
+      "token_revoked_toast_desc": "Requests using this token are no longer accepted.",
+      "tokens_loading": "Loading provisioning tokens…",
+      "token_active": "Active",
+      "token_legacy": "Rotate recommended",
+      "token_legacy_full_access": "Legacy token · full access until rotated",
+      "token_revoke_confirm": "Revoke the SCIM token “{name}”? This cannot be undone.",
+      "token_revoke_aria": "Revoke SCIM token {name}",
+      "idp_metadata_placeholder": "Paste an IdP EntityDescriptor XML document…",
+      "idp_metadata_file_label": "Or choose a metadata XML file",
+      "metadata_invalid": "Metadata could not be parsed",
+      "metadata_invalid_desc": "Provide a valid SAML IdP EntityDescriptor containing an issuer, SSO service, or signing certificate.",
+      "metadata_too_large": "Metadata XML must be smaller than 2 MB.",
+      "config_loading": "Loading SSO configuration…",
+      "cert_placeholder": "-----BEGIN CERTIFICATE-----",
+      "cert_invalid": "The IdP signing certificate is not a valid X.509 certificate.",
+      "entry_point_invalid": "Use an HTTPS IdP SSO URL without credentials or a fragment.",
+      "private_key_label": "SP request-signing private key (optional)",
+      "private_key_desc": "Used only to sign AuthnRequests. New keys are encrypted at rest and are never returned by the API.",
+      "private_key_configured": "Configured",
+      "private_key_placeholder": "-----BEGIN PRIVATE KEY-----",
+      "private_key_keep_placeholder": "Leave blank to keep the encrypted key already configured",
+      "private_key_remove": "Remove the configured request-signing key when saving",
+      "private_key_invalid": "The request-signing private key is not a valid PEM private key.",
+      "test_sso": "Test SSO in a new tab",
+      "delete_config": "Delete configuration",
+      "config_delete_confirm": "Delete this SSO configuration? Workspace SSO sign-in will stop immediately.",
+      "config_deleted": "SSO configuration deleted",
+      "config_deleted_desc": "Workspace SSO sign-in is no longer available.",
+      "config_delete_failed": "SSO configuration could not be deleted",
+      "config_delete_failed_desc": "No changes were applied. Try again or inspect the server logs."
     },
     "notifications": {
       "fetch_failed": "환경설정을 가져오지 못했습니다",
@@ -3709,7 +3759,7 @@
       },
       "localRunners": {
         "title": "Claude Code / Codex",
-        "description": "지금 진행 중인 모든 에이전트 실행의 실시간 상태와 로그.",
+        "description": "Manage the Claude Code or Codex CLI runner on this server for the selected workspace.",
         "loading": "에이전트 제어 불러오는 중...",
         "loadError": "에이전트 제어를 불러오지 못했습니다.",
         "updated": "에이전트 제어 업데이트됨",
@@ -3725,9 +3775,9 @@
           "codex": "Codex CLI"
         },
         "reason": {
-          "disabled": "에이전트 제어 업데이트에 실패했습니다: TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true",
-          "cwd_missing": "에이전트 제어를 불러오지 못했습니다: {value}",
-          "command_missing": "에이전트 제어를 불러오지 못했습니다: {value}"
+          "disabled": "Local CLI dispatch is off. Turn on this provider here, or set TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true as a server-wide default.",
+          "cwd_missing": "Working directory does not exist: {value}",
+          "command_missing": "Command is not available on PATH: {value}"
         }
       }
     },
@@ -3761,6 +3811,22 @@
       "optional": "(선택 사항)",
       "cancel": "취소",
       "saveCredentials": "자격 증명 저장",
+      "redirectHint": "https://your-domain{path}",
+      "providerLabel": {
+        "slack": "Slack",
+        "gitlab": "GitLab",
+        "jira": "Jira (Atlassian)",
+        "github": "GitHub",
+        "google": "Google",
+        "sentry": "Sentry"
+      },
+      "scopeHint": {
+        "slack": "channels:read,chat:write",
+        "gitlab": "read_api read_repository",
+        "jira": "read:jira-user read:jira-work write:jira-work offline_access",
+        "github": "repo read:user",
+        "sentry": "org:read project:read event:read"
+      },
       "providerDescription": {
         "slack": "Slack 워크스페이스를 TaskNebula에 연결하기 위한 OAuth 앱 자격 증명.",
         "gitlab": "병합 요청과 파이프라인을 미러링하기 위한 OAuth 애플리케이션.",
@@ -3832,6 +3898,8 @@
         "testError": "테스트 이메일 전송에 실패했습니다",
         "testSent": "테스트 이메일 전송됨",
         "testSentDescription": "{source} 구성을 통해 {recipient}에게 전달되었습니다.",
+        "testEmailSubject": "TaskNebula SMTP test email",
+        "testEmailText": "This is a TaskNebula SMTP test sent through the {source} configuration. If you received it, outbound email is working.",
         "host": "호스트",
         "port": "포트",
         "username": "사용자 이름",
@@ -3857,6 +3925,11 @@
         "testError": "LiveKit 토큰 발급에 실패했습니다",
         "tokenMinted": "LiveKit 토큰 발급됨",
         "tokenMintedDescription": "룸 {roomName} · {source} 구성.",
+        "connectionTestError": "LiveKit connection or credentials could not be verified",
+        "connectionVerified": "LiveKit connection verified",
+        "connectionVerifiedDescription": "Authenticated with the {source} configuration; {roomCount} active rooms are visible.",
+        "verifyTitle": "Verify server reachability and API credentials",
+        "verify": "Verify LiveKit",
         "secretPreview": "시크릿 {preview}",
         "serverUrl": "서버 URL",
         "apiKey": "API 키",
@@ -3886,7 +3959,20 @@
         "uploadsDirPlaceholder": "/var/tasknebula/uploads",
         "s3BucketPlaceholder": "tasknebula-prod",
         "s3RegionPlaceholder": "us-east-1",
-        "s3AccessKeyPlaceholder": "AKIA…"
+        "s3AccessKeyPlaceholder": "AKIA…",
+        "s3Endpoint": "사용자 지정 S3 엔드포인트",
+        "s3EndpointPlaceholder": "https://s3.example.com",
+        "s3ForcePathStyle": "경로 스타일 버킷 URL",
+        "s3ForcePathStyleDescription": "필요한 공급자에서는 경로 스타일 버킷 URL을 사용합니다.",
+        "backendChangeBlocked": "첨부 파일이 있는 동안에는 저장 위치를 변경할 수 없습니다. 기존 첨부 파일을 먼저 이전하거나 삭제하세요.",
+        "s3Incomplete": "S3를 활성화하기 전에 버킷, 리전, 액세스 키와 비밀 키를 모두 입력하세요.",
+        "localRootForbidden": "파일 시스템 루트는 업로드 디렉터리로 사용할 수 없습니다.",
+        "testPassed": "스토리지 테스트 통과",
+        "testPassedDescription": "{source} 구성으로 {mode} 스토리지를 읽고 쓸 수 있습니다.",
+        "testError": "쓰기, 읽기 및 삭제 테스트에 실패했습니다. 구성과 서버 로그를 확인하세요.",
+        "saveFirst": "먼저 완전한 스토리지 구성을 저장하세요",
+        "testTitle": "임시 테스트 파일 쓰기, 읽기 및 삭제",
+        "test": "스토리지 테스트"
       },
       "registration": {
         "title": "등록",
@@ -3967,6 +4053,12 @@
       "missingFields": "누락된 필드",
       "somethingWentWrong": "문제가 발생했습니다."
     },
+    "userGovernance": {
+      "admin_self_super_admin_revocation_forbidden": "You cannot remove your own super admin access.",
+      "admin_self_deactivation_forbidden": "You cannot deactivate your own administrator account.",
+      "admin_last_active_super_admin_required": "At least one active super admin must remain.",
+      "admin_self_deletion_forbidden": "You cannot delete your own administrator account."
+    },
     "createFlag": {
       "trigger": "새 플래그",
       "title": "기능 플래그 만들기",
@@ -4011,7 +4103,11 @@
       "missingFieldsDescription": "이름, 슬러그, 소유자는 필수입니다.",
       "toastCreatedTitle": "조직 생성됨",
       "toastCreatedDescription": "조직이 성공적으로 생성되었습니다.",
-      "toastFailedTitle": "조직 생성에 실패했습니다"
+      "toastFailedTitle": "조직 생성에 실패했습니다",
+      "ownerLoading": "Loading active users…",
+      "ownerSearchPlaceholder": "Search active users…",
+      "ownerEmpty": "No active users found.",
+      "ownerRetry": "Try again"
     },
     "editOrg": {
       "title": "조직 편집",
@@ -4024,6 +4120,8 @@
       "toastUpdatedTitle": "조직 업데이트됨",
       "toastUpdatedDescription": "변경 사항이 성공적으로 저장되었습니다.",
       "toastFailedTitle": "조직 업데이트에 실패했습니다",
+      "loadFailed": "Failed to load organization details.",
+      "retry": "Try again",
       "domainPlaceholder": "example.com"
     },
     "orgForm": {
@@ -4063,7 +4161,9 @@
       "superAdminWarning": "이 사용자는 모든 조직과 시스템 설정에 대한 전체 액세스 권한을 갖게 됩니다.",
       "toastUpdatedTitle": "사용자 업데이트됨",
       "toastUpdatedDescription": "사용자가 성공적으로 업데이트되었습니다.",
-      "toastFailedTitle": "사용자 업데이트에 실패했습니다"
+      "toastFailedTitle": "사용자 업데이트에 실패했습니다",
+      "loadFailed": "Failed to load user details.",
+      "retry": "Try again"
     },
     "userForm": {
       "superAdmin": "슈퍼 관리자",
@@ -7029,6 +7129,33 @@
     "assignmentSuccess": "*{issueKey}*을(를) <@{slackUserId}>에게 다시 할당했습니다(요청자: <@{requestedBy}>).",
     "statusSuccess": "*{issueKey}*을(를) *{statusName}* 상태로 이동했습니다(요청자: <@{requestedBy}>).",
     "newUsage": "사용법: `/tn new 제목` — 새 이슈 창을 엽니다.",
-    "newOpening": "다음 제목으로 새 이슈 창을 여는 중: _{title}_"
+    "newOpening": "다음 제목으로 새 이슈 창을 여는 중: _{title}_",
+    "bridgeFromSlack": "From Slack",
+    "bridgePermalink": "Permalink: {url}",
+    "bridgeAuthorInChannel": "Author: <@{author}> in #{channel}",
+    "bridgeAuthor": "Author: <@{author}>",
+    "bridgeEmptyMessage": "(no message text)",
+    "bridgeFallbackTitle": "Slack: {message}",
+    "untitledSlackMessage": "Untitled Slack message",
+    "bridgeConfirmationText": "Created TaskNebula issue *{issueKey}* — {issueUrl}",
+    "bridgeConfirmationBlock": ":white_check_mark: Created TaskNebula issue *<{issueUrl}|{issueKey}>*",
+    "reactionIssueTitle": ":{reaction}: {message}",
+    "modalTitle": "New issue from Slack",
+    "modalSubmit": "Create",
+    "modalCancel": "Cancel",
+    "modalContext": "Create an issue from <@{author}> in <#{channel}>",
+    "modalTitleLabel": "Title",
+    "modalDescriptionLabel": "Description (extra context)",
+    "modalProjectLabel": "Project key (overrides channel mapping)",
+    "titleRequired": "Title is required.",
+    "workspaceDisconnected": "This Slack workspace is no longer connected.",
+    "reporterUnmapped": "No TaskNebula user is mapped to this Slack profile.",
+    "projectResolutionFailed": "No project could be resolved. Enter a project key or configure a channel mapping.",
+    "standaloneProjectRequired": "A project key is required when creating from /tn new.",
+    "issueCreateFailed": "The issue could not be created.",
+    "projectKeyNotFound": "No active project matches `{projectKey}` in this workspace.",
+    "modalOpenFailed": "The new-issue modal could not be opened. Try again.",
+    "modalDescriptionStandaloneLabel": "Description",
+    "modalStandaloneProjectLabel": "Project key (required, e.g. TN)"
   }
 }

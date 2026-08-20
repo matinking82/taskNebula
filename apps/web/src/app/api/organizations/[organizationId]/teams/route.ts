@@ -73,11 +73,13 @@ async function validateLeadMembership(organizationId: string, leadId?: string | 
   const [member] = await db
     .select({ id: organizationMembers.id })
     .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
     .where(
       and(
         eq(organizationMembers.organizationId, organizationId),
         eq(organizationMembers.userId, leadId),
-        eq(organizationMembers.status, 'active')
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active')
       )
     )
     .limit(1);

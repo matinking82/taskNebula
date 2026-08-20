@@ -61,7 +61,7 @@ jest.mock('samlify', () => {
                 recipient: 'https://app.example.com/api/auth/saml/acme/callback',
               },
               conditions: {
-                audience: 'https://app.example.com/api/auth/saml/acme/metadata.xml',
+                audience: 'https://app.example.com',
                 notBefore: new Date(Date.now() - 5_000).toISOString(),
                 notOnOrAfter: new Date(Date.now() + 60_000).toISOString(),
               },
@@ -77,13 +77,7 @@ jest.mock('samlify', () => {
   };
 });
 
-import {
-  buildAuthnRequestUrl,
-  getSpMetadataXml,
-  parseLoginResponse,
-  spEntityId,
-  acsUrl,
-} from '../saml';
+import { buildAuthnRequestUrl, getSpMetadataXml, parseLoginResponse, acsUrl } from '../saml';
 import type { SsoConfig } from '@tasknebula/db';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import * as samlifyMockNs from 'samlify';
@@ -119,7 +113,7 @@ describe('SAML wrapper', () => {
   it('builds SP with the expected entityID + ACS URL', () => {
     const ctx = makeCtx();
     getSpMetadataXml(ctx);
-    expect(samlifyMock.__recorded.lastSp.entityID).toBe(spEntityId(ctx.baseUrl, ctx.workspaceSlug));
+    expect(samlifyMock.__recorded.lastSp.entityID).toBe(ctx.config.audience);
     expect(samlifyMock.__recorded.lastSp.assertionConsumerService[0].Location).toBe(
       acsUrl(ctx.baseUrl, ctx.workspaceSlug)
     );

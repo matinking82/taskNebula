@@ -19,7 +19,7 @@ export function WorkflowNarrative() {
   const t = useTranslations('publicPages.landing.workflow');
 
   return (
-    <section id="workflow" className="dot-grid relative border-t border-[var(--landing-border)]">
+    <section id="workflow" className="relative border-t border-[var(--landing-border)]">
       <Shell className="py-20 sm:py-24">
         <SectionHeader
           kicker={t('kicker')}

@@ -11,6 +11,7 @@ import {
 interface CommandPaletteProviderProps {
   children: React.ReactNode;
   hasWorkspaceAccess?: boolean;
+  defaultOrganizationId?: string | null;
 }
 
 /**
@@ -27,12 +28,42 @@ interface CommandPaletteProviderProps {
 export function CommandPaletteProvider({
   children,
   hasWorkspaceAccess = true,
+  defaultOrganizationId = null,
 }: CommandPaletteProviderProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const returnFocusRef = React.useRef<HTMLElement | null>(null);
 
-  const open = React.useCallback(() => setIsOpen(true), []);
+  const rememberFocus = React.useCallback(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement && activeElement !== document.body) {
+      returnFocusRef.current = activeElement;
+    }
+  }, []);
+
+  const open = React.useCallback(() => {
+    rememberFocus();
+    setIsOpen(true);
+  }, [rememberFocus]);
   const close = React.useCallback(() => setIsOpen(false), []);
-  const setOpen = React.useCallback((next: boolean) => setIsOpen(next), []);
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (next) rememberFocus();
+      setIsOpen(next);
+    },
+    [rememberFocus]
+  );
+
+  const restoreFocus = React.useCallback<
+    NonNullable<React.ComponentProps<typeof CommandPalette>['onCloseAutoFocus']>
+  >((event) => {
+    const returnTarget = returnFocusRef.current;
+    returnFocusRef.current = null;
+
+    if (returnTarget?.isConnected) {
+      event.preventDefault();
+      returnTarget.focus({ preventScroll: true });
+    }
+  }, []);
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -44,12 +75,13 @@ export function CommandPaletteProvider({
       if (event.shiftKey || event.altKey) return;
 
       event.preventDefault();
-      setIsOpen((prev) => !prev);
+      if (!isOpen) rememberFocus();
+      setIsOpen((previous) => !previous);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOpen, rememberFocus]);
 
   const value = React.useMemo<CommandPaletteContextValue>(
     () => ({ isOpen, open, close, setOpen }),
@@ -61,8 +93,10 @@ export function CommandPaletteProvider({
       {children}
       <CommandPalette
         open={isOpen}
-        onOpenChange={setIsOpen}
+        onOpenChange={setOpen}
+        onCloseAutoFocus={restoreFocus}
         hasWorkspaceAccess={hasWorkspaceAccess}
+        defaultOrganizationId={defaultOrganizationId}
       />
     </CommandPaletteContext.Provider>
   );

@@ -314,6 +314,12 @@ const ADMIN_LINKS: Array<{
     match: { path: '/admin', tab: 'agents' },
   },
   {
+    href: '/admin?tab=integrations',
+    i18nKey: 'integrations',
+    icon: Plug,
+    match: { path: '/admin', tab: 'integrations' },
+  },
+  {
     href: '/admin?tab=system',
     i18nKey: 'system',
     icon: Shield,
@@ -419,6 +425,7 @@ function isHomeSectionPath(pathname: string | null | undefined): boolean {
 const SIDEBAR_NAV_LINK_CLASS =
   'row-interactive text-muted-foreground ease-snap hover:bg-accent/70 hover:text-foreground data-[active=true]:bg-primary/[0.07] data-[active=true]:text-foreground min-h-8 w-full min-w-0 rounded-md px-2.5 text-[13px] font-medium transition-[color,background-color,box-shadow,opacity] duration-150';
 const SIDEBAR_NAV_LABEL_CLASS = 'min-w-0 flex-1 truncate';
+const CONTEXT_SIDEBAR_STORAGE_KEY = 'tasknebula.context-sidebar-collapsed';
 
 export function AppSidebar({
   hasWorkspaceAccess = true,
@@ -445,6 +452,7 @@ export function AppSidebar({
   const [isTeamspacesOpen, setIsTeamspacesOpen] = useState(true);
   const [isProjectsOpen, setIsProjectsOpen] = useState(true);
   const [isLiveCallsOpen, setIsLiveCallsOpen] = useState(true);
+  const [isContextCollapsed, setIsContextCollapsed] = useState(false);
   const {
     connectionState,
     currentSession,
@@ -468,6 +476,26 @@ export function AppSidebar({
   } = useStoredVoicePreferences();
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
   const autoOpenedRoomIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setIsContextCollapsed(window.localStorage.getItem(CONTEXT_SIDEBAR_STORAGE_KEY) === 'true');
+    } catch {
+      // Storage can be unavailable in hardened/private browser contexts.
+    }
+  }, []);
+
+  const toggleContextSidebar = useCallback(() => {
+    setIsContextCollapsed((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem(CONTEXT_SIDEBAR_STORAGE_KEY, String(next));
+      } catch {
+        // Keep the in-memory preference when persistent storage is unavailable.
+      }
+      return next;
+    });
+  }, []);
 
   const { data: userData } = useQuery({
     queryKey: ['current-user'],
@@ -573,383 +601,400 @@ export function AppSidebar({
 
   return (
     <div className="flex h-dvh">
-      <AppRail hasWorkspaceAccess={hasWorkspaceAccess} isSuperAdmin={isSuperAdmin} />
-      <div className="workbench-context border-border flex w-[248px] flex-col border-e">
-        <div className="border-border flex h-12 items-center border-b px-3">
-          <div className="flex w-full items-center px-1 py-1.5 text-sm font-medium">
-            <div className="flex items-center gap-2.5">
-              <div className="bg-primary shadow-xs flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white">
-                <TaskNebulaLogo compact className="h-5 w-5" />
+      <AppRail
+        hasWorkspaceAccess={hasWorkspaceAccess}
+        isSuperAdmin={isSuperAdmin}
+        contextCollapsed={isContextCollapsed}
+        onToggleContext={toggleContextSidebar}
+      />
+      {!isContextCollapsed ? (
+        <div
+          id="workbench-context-panel"
+          className="workbench-context border-border flex w-[228px] flex-col border-e"
+        >
+          <div className="border-border flex h-11 items-center border-b px-3">
+            <div className="flex w-full items-center px-1 py-1.5 text-sm font-medium">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-primary shadow-xs flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white">
+                  <TaskNebulaLogo compact className="h-5 w-5" />
+                </div>
+                <span className="text-context-foreground font-semibold tracking-tight">
+                  TaskNebula
+                </span>
               </div>
-              <span className="text-context-foreground font-semibold tracking-tight">
-                TaskNebula
-              </span>
             </div>
           </div>
-        </div>
 
-        <nav
-          aria-label={tLayout('section')}
-          className={cn(
-            'min-h-0 flex-1',
-            hasPageSidebar
-              ? 'flex flex-col overflow-hidden'
-              : 'custom-scrollbar overflow-y-auto pb-3'
-          )}
-        >
-          <PageSidebarSlotTarget
+          <nav
+            aria-label={tLayout('section')}
             className={cn(
-              'flex min-h-0 flex-1 flex-col overflow-hidden',
-              !hasPageSidebar && 'hidden'
+              'min-h-0 flex-1',
+              hasPageSidebar
+                ? 'flex flex-col overflow-hidden'
+                : 'custom-scrollbar overflow-y-auto pb-3'
             )}
-          />
+          >
+            <PageSidebarSlotTarget
+              className={cn(
+                'flex min-h-0 flex-1 flex-col overflow-hidden',
+                !hasPageSidebar && 'hidden'
+              )}
+            />
 
-          <div className={cn('px-2.5 py-3', hasPageSidebar && 'hidden')}>
-            {isSettingsRoute || isAdminRoute ? null : (
-              <div className="mb-2 px-3">
-                <div className="kicker">{tNav(getSectionKey(pathname))}</div>
-              </div>
-            )}
+            <div className={cn('px-2.5 py-3', hasPageSidebar && 'hidden')}>
+              {isSettingsRoute || isAdminRoute ? null : (
+                <div className="mb-2 px-3">
+                  <div className="kicker">{tNav(getSectionKey(pathname))}</div>
+                </div>
+              )}
 
-            {hasWorkspaceAccess &&
-            (normalizedPathname.startsWith('/my-issues') ||
-              normalizedPathname.startsWith('/issues')) ? (
-              <div className="space-y-0.5">
-                {MY_ISSUES_VIEWS.map((view) => {
-                  const isActive =
-                    normalizedPathname.startsWith('/my-issues') &&
-                    (searchParams?.get('view') ?? 'assigned') === view.value;
-                  return (
-                    <Link
-                      key={view.value}
-                      href={`/my-issues?view=${view.value}`}
-                      data-active={isActive ? 'true' : undefined}
-                      className={SIDEBAR_NAV_LINK_CLASS}
-                    >
-                      <view.icon className="h-4 w-4 shrink-0" />
-                      <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(view.i18nKey)}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
+              {hasWorkspaceAccess &&
+              (normalizedPathname.startsWith('/my-issues') ||
+                normalizedPathname.startsWith('/issues')) ? (
+                <div className="space-y-0.5">
+                  {MY_ISSUES_VIEWS.map((view) => {
+                    const isActive =
+                      normalizedPathname.startsWith('/my-issues') &&
+                      (searchParams?.get('view') ?? 'assigned') === view.value;
+                    return (
+                      <Link
+                        key={view.value}
+                        href={`/my-issues?view=${view.value}`}
+                        data-active={isActive ? 'true' : undefined}
+                        className={SIDEBAR_NAV_LINK_CLASS}
+                      >
+                        <view.icon className="h-4 w-4 shrink-0" />
+                        <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(view.i18nKey)}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
 
-            {hasWorkspaceAccess && normalizedPathname.startsWith('/inbox') ? (
-              <div className="space-y-0.5">
-                {INBOX_LINKS.map((link) => {
-                  const isActive = isInboxLinkActive(link, searchParams);
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      data-active={isActive ? 'true' : undefined}
-                      className={SIDEBAR_NAV_LINK_CLASS}
-                    >
-                      <link.icon className="h-4 w-4 shrink-0" />
-                      <span className={SIDEBAR_NAV_LABEL_CLASS}>{tHome(link.pageHomeKey)}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
+              {hasWorkspaceAccess && normalizedPathname.startsWith('/inbox') ? (
+                <div className="space-y-0.5">
+                  {INBOX_LINKS.map((link) => {
+                    const isActive = isInboxLinkActive(link, searchParams);
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        data-active={isActive ? 'true' : undefined}
+                        className={SIDEBAR_NAV_LINK_CLASS}
+                      >
+                        <link.icon className="h-4 w-4 shrink-0" />
+                        <span className={SIDEBAR_NAV_LABEL_CLASS}>{tHome(link.pageHomeKey)}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
 
-            {isHomeSectionPath(pathname) ? (
-              <div className="space-y-0.5">
-                {visibleDashboardLinks.map((link) => {
-                  const isActive =
-                    link.href === normalizedPathname ||
-                    (link.href === '/dashboard' && normalizedPathname === '/');
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      data-active={isActive ? 'true' : undefined}
-                      className={SIDEBAR_NAV_LINK_CLASS}
-                    >
-                      <link.icon className="h-4 w-4 shrink-0" />
-                      <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
+              {isHomeSectionPath(pathname) ? (
+                <div className="space-y-0.5">
+                  {visibleDashboardLinks.map((link) => {
+                    const isActive =
+                      link.href === normalizedPathname ||
+                      (link.href === '/dashboard' && normalizedPathname === '/');
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        data-active={isActive ? 'true' : undefined}
+                        className={SIDEBAR_NAV_LINK_CLASS}
+                      >
+                        <link.icon className="h-4 w-4 shrink-0" />
+                        <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
 
-            {hasWorkspaceAccess && normalizedPathname.startsWith('/team') ? (
-              <div className="space-y-0.5">
-                {visibleTeamLinks.map((link) => {
-                  const isActive = isNavLinkActive(link, pathname, searchParams?.get('tab'));
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      data-active={isActive ? 'true' : undefined}
-                      className={SIDEBAR_NAV_LINK_CLASS}
-                    >
-                      <link.icon className="h-4 w-4 shrink-0" />
-                      <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
+              {hasWorkspaceAccess && normalizedPathname.startsWith('/team') ? (
+                <div className="space-y-0.5">
+                  {visibleTeamLinks.map((link) => {
+                    const isActive = isNavLinkActive(link, pathname, searchParams?.get('tab'));
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        data-active={isActive ? 'true' : undefined}
+                        className={SIDEBAR_NAV_LINK_CLASS}
+                      >
+                        <link.icon className="h-4 w-4 shrink-0" />
+                        <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
 
-            {isSettingsRoute || isAdminRoute ? (
-              <>
-                {isSettingsRoute && visibleSettingsLinks.length > 0 ? (
-                  <>
-                    <div className="mb-1 flex items-center gap-2 px-3 pt-1">
-                      <Settings className="text-muted-foreground h-3 w-3" />
-                      <span className="kicker">{tNav('settings')}</span>
-                    </div>
-                    <div className="space-y-0.5">
-                      {visibleSettingsLinks.map((link) => {
-                        const isActive = isNavLinkActive(link, pathname, searchParams?.get('tab'));
-                        return (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            data-active={isActive ? 'true' : undefined}
-                            className={SIDEBAR_NAV_LINK_CLASS}
-                          >
-                            <link.icon className="h-4 w-4 shrink-0" />
-                            <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : null}
+              {isSettingsRoute || isAdminRoute ? (
+                <>
+                  {isSettingsRoute && visibleSettingsLinks.length > 0 ? (
+                    <>
+                      <div className="mb-1 flex items-center gap-2 px-3 pt-1">
+                        <Settings className="text-muted-foreground h-3 w-3" />
+                        <span className="kicker">{tNav('settings')}</span>
+                      </div>
+                      <div className="space-y-0.5">
+                        {visibleSettingsLinks.map((link) => {
+                          const isActive = isNavLinkActive(
+                            link,
+                            pathname,
+                            searchParams?.get('tab')
+                          );
+                          return (
+                            <Link
+                              key={link.href}
+                              href={link.href}
+                              data-active={isActive ? 'true' : undefined}
+                              className={SIDEBAR_NAV_LINK_CLASS}
+                            >
+                              <link.icon className="h-4 w-4 shrink-0" />
+                              <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : null}
 
-                {isAdminRoute && isSuperAdmin ? (
-                  <>
-                    <div className="mb-1 flex items-center gap-2 px-3 pt-1">
-                      <Shield className="text-muted-foreground h-3 w-3" />
-                      <span className="kicker">{tNav('admin')}</span>
-                    </div>
-                    <div className="space-y-0.5">
-                      {ADMIN_LINKS.map((link) => {
-                        const isActive = isNavLinkActive(link, pathname, searchParams?.get('tab'));
-                        return (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            data-active={isActive ? 'true' : undefined}
-                            className={SIDEBAR_NAV_LINK_CLASS}
-                          >
-                            <link.icon className="h-4 w-4 shrink-0" />
-                            <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : null}
-              </>
-            ) : null}
+                  {isAdminRoute && isSuperAdmin ? (
+                    <>
+                      <div className="mb-1 flex items-center gap-2 px-3 pt-1">
+                        <Shield className="text-muted-foreground h-3 w-3" />
+                        <span className="kicker">{tNav('admin')}</span>
+                      </div>
+                      <div className="space-y-0.5">
+                        {ADMIN_LINKS.map((link) => {
+                          const isActive = isNavLinkActive(
+                            link,
+                            pathname,
+                            searchParams?.get('tab')
+                          );
+                          return (
+                            <Link
+                              key={link.href}
+                              href={link.href}
+                              data-active={isActive ? 'true' : undefined}
+                              className={SIDEBAR_NAV_LINK_CLASS}
+                            >
+                              <link.icon className="h-4 w-4 shrink-0" />
+                              <span className={SIDEBAR_NAV_LABEL_CLASS}>{tNav(link.i18nKey)}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : null}
+                </>
+              ) : null}
 
-            {hasWorkspaceAccess &&
-            (normalizedPathname.startsWith('/projects') || isHomeSectionPath(pathname)) ? (
-              <div>
-                {canViewTeamspaces ? (
-                  <>
+              {hasWorkspaceAccess && normalizedPathname.startsWith('/projects') ? (
+                <div>
+                  {canViewTeamspaces ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsTeamspacesOpen((open) => !open)}
+                        aria-expanded={isTeamspacesOpen}
+                        className="hover:text-foreground mb-1 mt-4 flex w-full items-center gap-1 px-3 text-start transition-colors duration-150"
+                      >
+                        {isTeamspacesOpen ? (
+                          <ChevronDown className="text-muted-foreground h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="text-muted-foreground h-3 w-3" />
+                        )}
+                        <span className="kicker">{tNav('teamspaces')}</span>
+                      </button>
+                      {isTeamspacesOpen ? (
+                        <div className="px-1 pb-2">
+                          <TeamspaceSwitcher />
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  <div className="mb-1 mt-4 flex items-center justify-between px-3">
                     <button
                       type="button"
-                      onClick={() => setIsTeamspacesOpen((open) => !open)}
-                      aria-expanded={isTeamspacesOpen}
-                      className="hover:text-foreground mb-1 mt-4 flex w-full items-center gap-1 px-3 text-start transition-colors duration-150"
+                      onClick={() => setIsProjectsOpen((open) => !open)}
+                      aria-expanded={isProjectsOpen}
+                      className="hover:text-foreground flex flex-1 items-center gap-1 text-start transition-colors duration-150"
                     >
-                      {isTeamspacesOpen ? (
+                      {isProjectsOpen ? (
                         <ChevronDown className="text-muted-foreground h-3 w-3" />
                       ) : (
                         <ChevronRight className="text-muted-foreground h-3 w-3" />
                       )}
-                      <span className="kicker">{tNav('teamspaces')}</span>
+                      <span className="kicker">{tNav('projects')}</span>
                     </button>
-                    {isTeamspacesOpen ? (
-                      <div className="px-1 pb-2">
-                        <TeamspaceSwitcher />
-                      </div>
-                    ) : null}
-                  </>
-                ) : null}
-
-                <div className="mb-1 mt-4 flex items-center justify-between px-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsProjectsOpen((open) => !open)}
-                    aria-expanded={isProjectsOpen}
-                    className="hover:text-foreground flex flex-1 items-center gap-1 text-start transition-colors duration-150"
-                  >
-                    {isProjectsOpen ? (
-                      <ChevronDown className="text-muted-foreground h-3 w-3" />
-                    ) : (
-                      <ChevronRight className="text-muted-foreground h-3 w-3" />
-                    )}
-                    <span className="kicker">{tNav('projects')}</span>
-                  </button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-foreground h-6 w-6 rounded-sm"
-                  >
-                    <Link href="/projects" aria-label={tNav('projects')}>
-                      <Plus className="h-3 w-3" />
-                    </Link>
-                  </Button>
-                </div>
-                {isProjectsOpen ? (
-                  <div className="space-y-0.5">
-                    {projectsLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <span role="status" aria-live="polite" aria-busy="true">
-                          <span className="sr-only">{tCommon('loading')}</span>
-                          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                        </span>
-                      </div>
-                    ) : projects && projects.length > 0 ? (
-                      projects.slice(0, 5).map((project) => {
-                        const projectPath = project.key?.toLowerCase() || project.id;
-                        const isActive = normalizedPathname.includes(`/projects/${projectPath}`);
-                        const projectIcon = (project as { icon?: string | null }).icon;
-                        return (
-                          <Link
-                            key={project.id}
-                            href={`/projects/${projectPath}/views`}
-                            data-active={isActive ? 'true' : undefined}
-                            className={cn(SIDEBAR_NAV_LINK_CLASS, 'group')}
-                          >
-                            <div className="bg-card border-border flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border">
-                              {projectIcon ? (
-                                <span className="text-xs leading-none" aria-hidden="true">
-                                  {projectIcon}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground text-[9px] font-bold">
-                                  {project.name.substring(0, 2).toUpperCase()}
-                                </span>
-                              )}
-                            </div>
-                            <span className="flex-1 truncate">{project.name}</span>
-                            <span className="text-muted-foreground font-mono text-[10px] opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                              {project.key}
-                            </span>
-                          </Link>
-                        );
-                      })
-                    ) : (
-                      <div className="px-3 py-4 text-center">
-                        <p className="text-muted-foreground text-xs">{tCommon('no_projects')}</p>
-                      </div>
-                    )}
-                    {projects && projects.length > 5 ? (
-                      <Link
-                        href="/projects"
-                        className="row-interactive text-muted-foreground ease-snap hover:text-foreground rounded-md text-xs transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
-                      >
-                        {tCommon('view_all_projects', { count: projects.length })}
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground h-6 w-6 rounded-sm"
+                    >
+                      <Link href="/projects" aria-label={tNav('projects')}>
+                        <Plus className="h-3 w-3" />
                       </Link>
-                    ) : null}
+                    </Button>
                   </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </nav>
+                  {isProjectsOpen ? (
+                    <div className="space-y-0.5">
+                      {projectsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <span role="status" aria-live="polite" aria-busy="true">
+                            <span className="sr-only">{tCommon('loading')}</span>
+                            <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                          </span>
+                        </div>
+                      ) : projects && projects.length > 0 ? (
+                        projects.slice(0, 5).map((project) => {
+                          const projectPath = project.key?.toLowerCase() || project.id;
+                          const isActive = normalizedPathname.includes(`/projects/${projectPath}`);
+                          const projectIcon = (project as { icon?: string | null }).icon;
+                          return (
+                            <Link
+                              key={project.id}
+                              href={`/projects/${projectPath}/views`}
+                              data-active={isActive ? 'true' : undefined}
+                              className={cn(SIDEBAR_NAV_LINK_CLASS, 'group')}
+                            >
+                              <div className="bg-card border-border flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border">
+                                {projectIcon ? (
+                                  <span className="text-xs leading-none" aria-hidden="true">
+                                    {projectIcon}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-[9px] font-bold">
+                                    {project.name.substring(0, 2).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="flex-1 truncate">{project.name}</span>
+                              <span className="text-muted-foreground font-mono text-[10px] opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                                {project.key}
+                              </span>
+                            </Link>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-4 text-center">
+                          <p className="text-muted-foreground text-xs">{tCommon('no_projects')}</p>
+                        </div>
+                      )}
+                      {projects && projects.length > 5 ? (
+                        <Link
+                          href="/projects"
+                          className="row-interactive text-muted-foreground ease-snap hover:text-foreground rounded-md text-xs transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
+                        >
+                          {tCommon('view_all_projects', { count: projects.length })}
+                        </Link>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </nav>
 
-        {currentTarget || otherActiveCalls.length > 0 || sidebarRuntimeError ? (
-          <div className="border-border bg-card/70 space-y-1.5 border-t px-3 py-3">
-            <button
-              type="button"
-              onClick={() => setIsLiveCallsOpen((open) => !open)}
-              aria-expanded={isLiveCallsOpen}
-              className="hover:text-foreground flex w-full items-center gap-1 text-start transition-colors duration-150"
-            >
-              {isLiveCallsOpen ? (
-                <ChevronDown className="text-muted-foreground h-3 w-3" />
-              ) : (
-                <ChevronRight className="text-muted-foreground h-3 w-3" />
-              )}
-              <span className="kicker px-0">{tNav('live_calls')}</span>
-            </button>
+          {currentTarget || otherActiveCalls.length > 0 || sidebarRuntimeError ? (
+            <div className="border-border bg-card/70 space-y-1.5 border-t px-3 py-3">
+              <button
+                type="button"
+                onClick={() => setIsLiveCallsOpen((open) => !open)}
+                aria-expanded={isLiveCallsOpen}
+                className="hover:text-foreground flex w-full items-center gap-1 text-start transition-colors duration-150"
+              >
+                {isLiveCallsOpen ? (
+                  <ChevronDown className="text-muted-foreground h-3 w-3" />
+                ) : (
+                  <ChevronRight className="text-muted-foreground h-3 w-3" />
+                )}
+                <span className="kicker px-0">{tNav('live_calls')}</span>
+              </button>
 
-            {isLiveCallsOpen && currentTarget && currentSession ? (
-              room ? (
-                <RoomContext.Provider value={room}>
-                  <SidebarVoiceWorkspace
+              {isLiveCallsOpen && currentTarget && currentSession ? (
+                room ? (
+                  <RoomContext.Provider value={room}>
+                    <SidebarVoiceWorkspace
+                      connectionState={connectionState}
+                      currentTarget={currentTarget}
+                      effectiveParticipantCount={effectiveParticipantCount}
+                      isMicrophoneEnabled={isMicrophoneEnabled}
+                      isTogglingMicrophone={isTogglingMicrophone}
+                      isVoiceSettingsOpen={isVoiceSettingsOpen}
+                      runtimeError={sidebarRuntimeError}
+                      selectedAudioDeviceId={selectedAudioDeviceId}
+                      storedAudioDeviceGroupId={storedAudioDeviceGroupId}
+                      storedAudioDeviceLabel={storedAudioDeviceLabel}
+                      sessionUserImage={session?.user?.image}
+                      sessionUserName={session?.user?.name}
+                      onChangeAudioDevice={handleChangeAudioDevice}
+                      onStoreAudioDevicePreference={storeAudioDevicePreference}
+                      onVoiceSettingsOpenChange={setIsVoiceSettingsOpen}
+                      onEndCurrentCall={() => void endCurrentCall()}
+                      onLeaveCurrentCall={() => void leaveCurrentCall()}
+                      onOpenVoiceSettings={() => setIsVoiceSettingsOpen(true)}
+                      onToggleMicrophone={() => void toggleMicrophone()}
+                    />
+                  </RoomContext.Provider>
+                ) : (
+                  <SidebarVoiceFallbackCard
                     connectionState={connectionState}
                     currentTarget={currentTarget}
                     effectiveParticipantCount={effectiveParticipantCount}
                     isMicrophoneEnabled={isMicrophoneEnabled}
                     isTogglingMicrophone={isTogglingMicrophone}
-                    isVoiceSettingsOpen={isVoiceSettingsOpen}
                     runtimeError={sidebarRuntimeError}
-                    selectedAudioDeviceId={selectedAudioDeviceId}
-                    storedAudioDeviceGroupId={storedAudioDeviceGroupId}
-                    storedAudioDeviceLabel={storedAudioDeviceLabel}
-                    sessionUserImage={session?.user?.image}
-                    sessionUserName={session?.user?.name}
-                    onChangeAudioDevice={handleChangeAudioDevice}
-                    onStoreAudioDevicePreference={storeAudioDevicePreference}
-                    onVoiceSettingsOpenChange={setIsVoiceSettingsOpen}
                     onEndCurrentCall={() => void endCurrentCall()}
                     onLeaveCurrentCall={() => void leaveCurrentCall()}
                     onOpenVoiceSettings={() => setIsVoiceSettingsOpen(true)}
                     onToggleMicrophone={() => void toggleMicrophone()}
                   />
-                </RoomContext.Provider>
-              ) : (
-                <SidebarVoiceFallbackCard
-                  connectionState={connectionState}
-                  currentTarget={currentTarget}
-                  effectiveParticipantCount={effectiveParticipantCount}
-                  isMicrophoneEnabled={isMicrophoneEnabled}
-                  isTogglingMicrophone={isTogglingMicrophone}
-                  runtimeError={sidebarRuntimeError}
-                  onEndCurrentCall={() => void endCurrentCall()}
-                  onLeaveCurrentCall={() => void leaveCurrentCall()}
-                  onOpenVoiceSettings={() => setIsVoiceSettingsOpen(true)}
-                  onToggleMicrophone={() => void toggleMicrophone()}
-                />
-              )
-            ) : null}
+                )
+              ) : null}
 
-            {isLiveCallsOpen && liveCallsLoading ? (
-              <div className="text-muted-foreground flex items-center gap-2 px-2 py-2 text-xs">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {tLayout('checkingActiveCalls')}
-              </div>
-            ) : null}
+              {isLiveCallsOpen && liveCallsLoading ? (
+                <div className="text-muted-foreground flex items-center gap-2 px-2 py-2 text-xs">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {tLayout('checkingActiveCalls')}
+                </div>
+              ) : null}
 
-            {isLiveCallsOpen
-              ? otherActiveCalls.map((call) => (
-                  <Link
-                    key={call.id}
-                    href={call.room.href}
-                    className="bg-surface-2 ease-snap hover:bg-accent/60 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-start transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
-                  >
-                    <span className="realtime-ping shrink-0">
-                      <span className="status-dot status-live" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-foreground truncate text-[11px] font-medium">
-                        {call.room.title}
+              {isLiveCallsOpen
+                ? otherActiveCalls.map((call) => (
+                    <Link
+                      key={call.id}
+                      href={call.room.href}
+                      className="bg-surface-2 ease-snap hover:bg-accent/60 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-start transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
+                    >
+                      <span className="realtime-ping shrink-0">
+                        <span className="status-dot status-live" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-foreground truncate text-[11px] font-medium">
+                          {call.room.title}
+                        </div>
+                        <div className="text-muted-foreground truncate text-[10px]">
+                          {call.project.key} · {call.participantCount}
+                          {call.isParticipant ? ` · ${tLayout('joined')}` : ''}
+                        </div>
                       </div>
-                      <div className="text-muted-foreground truncate text-[10px]">
-                        {call.project.key} · {call.participantCount}
-                        {call.isParticipant ? ` · ${tLayout('joined')}` : ''}
+                      <div className="text-muted-foreground flex items-center gap-1 text-[10px]">
+                        <Users2 className="h-3 w-3 shrink-0" />
+                        <span>{call.participantCount}</span>
                       </div>
-                    </div>
-                    <div className="text-muted-foreground flex items-center gap-1 text-[10px]">
-                      <Users2 className="h-3 w-3 shrink-0" />
-                      <span>{call.participantCount}</span>
-                    </div>
-                  </Link>
-                ))
-              : null}
-          </div>
-        ) : null}
-      </div>
+                    </Link>
+                  ))
+                : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

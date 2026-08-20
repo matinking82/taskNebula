@@ -2,6 +2,7 @@ import {
   db,
   issues,
   organizationMembers,
+  organizations,
   projectMembers,
   projects,
   users,
@@ -9,7 +10,7 @@ import {
   hasPermission as roleHasPermission,
   type ProjectRole,
 } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, ne } from 'drizzle-orm';
 
 /** Resolve a nullable per-member override without letting explicit denials fall through. */
 export function resolvePermission(value: unknown, fallback: boolean): boolean {
@@ -18,30 +19,115 @@ export function resolvePermission(value: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
-export async function isActiveOrganizationMember(
-  userId: string,
-  organizationId: string
-): Promise<boolean> {
+async function getActiveActor(userId: string) {
   const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
+    .select({ isSuperAdmin: users.isSuperAdmin, status: users.status })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  if (user?.isSuperAdmin) return true;
 
+  return user?.status === 'active' ? user : null;
+}
+
+async function getActiveOrganizationMembership(userId: string, organizationId: string) {
   const [member] = await db
-    .select({ id: organizationMembers.id })
+    .select({ id: organizationMembers.id, role: organizationMembers.role })
     .from(organizationMembers)
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
     .where(
       and(
         eq(organizationMembers.userId, userId),
         eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
+        eq(organizationMembers.status, 'active'),
+        ne(organizations.status, 'suspended')
       )
     )
     .limit(1);
 
-  return Boolean(member);
+  return member ?? null;
+}
+
+export type ActiveOrganizationMembership = {
+  id: string;
+  organizationId: string;
+  role: string;
+};
+
+/** Return only memberships that are usable at runtime. */
+export async function listActiveOrganizationMemberships(
+  userId: string
+): Promise<ActiveOrganizationMembership[]> {
+  const actor = await getActiveActor(userId);
+  if (!actor) return [];
+
+  return db
+    .select({
+      id: organizationMembers.id,
+      organizationId: organizationMembers.organizationId,
+      role: organizationMembers.role,
+    })
+    .from(organizationMembers)
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .where(
+      and(
+        eq(organizationMembers.userId, userId),
+        eq(organizationMembers.status, 'active'),
+        ne(organizations.status, 'suspended')
+      )
+    )
+    .orderBy(asc(organizationMembers.createdAt), asc(organizationMembers.id));
+}
+
+/**
+ * Resolve one workspace boundary for request-time authorization. Platform
+ * super administrators retain recovery access to existing suspended
+ * workspaces; ordinary memberships do not.
+ */
+export async function resolveOrganizationAccess(
+  userId: string,
+  organizationId: string,
+  options?: { allowSuperAdmin?: boolean }
+): Promise<{
+  allowed: boolean;
+  isSuperAdmin: boolean;
+  role: string | null;
+  membershipId: string | null;
+}> {
+  const [actor, organization] = await Promise.all([
+    getActiveActor(userId),
+    db
+      .select({ id: organizations.id, status: organizations.status })
+      .from(organizations)
+      .where(eq(organizations.id, organizationId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
+
+  const isSuperAdmin = Boolean(actor?.isSuperAdmin);
+  if (!actor || !organization) {
+    return { allowed: false, isSuperAdmin, role: null, membershipId: null };
+  }
+  if (isSuperAdmin && options?.allowSuperAdmin !== false) {
+    return { allowed: true, isSuperAdmin: true, role: null, membershipId: null };
+  }
+  if (organization.status === 'suspended') {
+    return { allowed: false, isSuperAdmin, role: null, membershipId: null };
+  }
+
+  const membership = await getActiveOrganizationMembership(userId, organizationId);
+  return {
+    allowed: Boolean(membership),
+    isSuperAdmin,
+    role: membership?.role ?? null,
+    membershipId: membership?.id ?? null,
+  };
+}
+
+export async function isActiveOrganizationMember(
+  userId: string,
+  organizationId: string
+): Promise<boolean> {
+  return (await resolveOrganizationAccess(userId, organizationId)).allowed;
 }
 
 async function getProjectMembership(userId: string, projectId: string) {
@@ -65,24 +151,11 @@ export async function canReadProject(
   project: typeof projects.$inferSelect,
   options?: { allowSuperAdmin?: boolean }
 ): Promise<boolean> {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+  const user = await getActiveActor(userId);
+  if (!user) return false;
   if (user?.isSuperAdmin && options?.allowSuperAdmin !== false) return true;
 
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
+  const orgMember = await getActiveOrganizationMembership(userId, project.organizationId);
 
   if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
     return true;
@@ -103,28 +176,20 @@ export async function canManageProject(
   userId: string,
   project: typeof projects.$inferSelect
 ): Promise<boolean> {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+  const user = await getActiveActor(userId);
+  if (!user) return false;
   if (user?.isSuperAdmin) return true;
 
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
+  const orgMember = await getActiveOrganizationMembership(userId, project.organizationId);
 
   if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
     return true;
   }
+
+  // Project membership is subordinate to organization membership. A stale
+  // project_members row must not preserve management access after workspace
+  // removal or while the organization is suspended.
+  if (!orgMember) return false;
 
   const projectMember = await getProjectMembership(userId, project.id);
   if (!projectMember) return false;

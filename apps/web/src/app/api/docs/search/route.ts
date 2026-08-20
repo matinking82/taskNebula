@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  and,
-  db,
-  documentPages,
-  documentSpaces,
-  eq,
-  inArray,
-  sql,
-} from '@tasknebula/db';
+import { and, db, documentPages, documentSpaces, eq, inArray, sql } from '@tasknebula/db';
 import {
   listAccessibleDocumentSpaces,
   resolveOrganizationIdForUser,
@@ -24,9 +16,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.trim() || '';
-    const organizationId = await resolveOrganizationIdForUser(session.user.id, searchParams.get('organizationId'));
+    const organizationId = await resolveOrganizationIdForUser(
+      session.user.id,
+      searchParams.get('organizationId')
+    );
     const resolvedProjectId = searchParams.get('projectId')
-      ? await resolveProjectId(searchParams.get('projectId')!)
+      ? await resolveProjectId(searchParams.get('projectId')!, session.user.id)
       : null;
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50);
 
@@ -34,7 +29,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ results: [] });
     }
 
-    const spaces = await listAccessibleDocumentSpaces(session.user.id, organizationId, resolvedProjectId);
+    const spaces = await listAccessibleDocumentSpaces(
+      session.user.id,
+      organizationId,
+      resolvedProjectId
+    );
     const accessibleSpaceIds = spaces.map((space) => space.id);
 
     if (accessibleSpaceIds.length === 0) {
@@ -67,7 +66,10 @@ export async function GET(request: NextRequest) {
               sql`${searchVector} @@ ${searchQuery}`
             )
           )
-          .orderBy(sql`ts_rank(${searchVector}, ${searchQuery}) desc`, sql`${documentPages.updatedAt} desc`)
+          .orderBy(
+            sql`ts_rank(${searchVector}, ${searchQuery}) desc`,
+            sql`${documentPages.updatedAt} desc`
+          )
           .limit(limit)
       : await db
           .select({

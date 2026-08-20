@@ -21,6 +21,7 @@ jest.mock('@tasknebula/db', () => {
     issues: table('issues'),
     issueStatusHistory: table('issue_status_history'),
     organizationMembers: table('organization_members'),
+    organizations: table('organizations'),
     projectMembers: table('project_members'),
     projects: table('projects'),
     users: table('users'),
@@ -130,6 +131,7 @@ function queuePolicy(
   overrides: {
     issue?: Row;
     project?: Row;
+    organizationStatus?: string;
     transition?: Row | null;
     statusRows?: Row[];
     actor?: Row;
@@ -141,11 +143,17 @@ function queuePolicy(
   const issueRow = overrides.issue ?? issue();
   const projectRow = overrides.project ?? project();
   mockSelectQueue.push(
-    [{ issue: issueRow, project: projectRow }],
+    [
+      {
+        issue: issueRow,
+        project: projectRow,
+        organizationStatus: overrides.organizationStatus ?? 'active',
+      },
+    ],
     [{ id: 'workflow-a' }],
     overrides.statusRows ?? [{ id: 'status-a' }, { id: 'status-b' }],
     overrides.transition === null ? [] : [overrides.transition ?? transition()],
-    [overrides.actor ?? { isSuperAdmin: false }]
+    [overrides.actor ?? { isSuperAdmin: false, status: 'active' }]
   );
   if (!(overrides.actor?.isSuperAdmin ?? false)) {
     mockSelectQueue.push(
@@ -209,6 +217,22 @@ describe('prepareIssueStatusTransition', () => {
     });
   });
 
+  it('rejects every transition while the workspace is suspended', async () => {
+    queuePolicy({ organizationStatus: 'suspended' });
+
+    await expect(prepareIssueStatusTransition(mockTx as never, baseInput)).rejects.toMatchObject({
+      code: 'workflow_transition_issue_not_found',
+    });
+  });
+
+  it('rejects an inactive transition actor even when membership remains active', async () => {
+    queuePolicy({ actor: { id: 'user-a', isSuperAdmin: false, status: 'inactive' } });
+
+    await expect(prepareIssueStatusTransition(mockTx as never, baseInput)).rejects.toMatchObject({
+      code: 'workflow_transition_actor_forbidden',
+    });
+  });
+
   it('requires an exact persisted from-to edge', async () => {
     queuePolicy({ transition: null });
 
@@ -220,7 +244,7 @@ describe('prepareIssueStatusTransition', () => {
   it('fails closed when the exact from-to edge is duplicated', async () => {
     const issueRow = issue();
     mockSelectQueue.push(
-      [{ issue: issueRow, project: project() }],
+      [{ issue: issueRow, project: project(), organizationStatus: 'active' }],
       [{ id: 'workflow-a' }],
       [{ id: 'status-a' }, { id: 'status-b' }],
       [transition(), transition({ id: 'transition-a-b-duplicate', allowedRoles: ['guest'] })]
@@ -256,11 +280,11 @@ describe('prepareIssueStatusTransition', () => {
 
   it('allows a trusted system actor without project membership but still applies admin policy', async () => {
     mockSelectQueue.push(
-      [{ issue: issue(), project: project() }],
+      [{ issue: issue(), project: project(), organizationStatus: 'active' }],
       [{ id: 'workflow-a' }],
       [{ id: 'status-a' }, { id: 'status-b' }],
       [transition({ allowedRoles: ['admin'] })],
-      [{ id: 'system-janitor', isSuperAdmin: false }]
+      [{ id: 'system-janitor', isSuperAdmin: false, status: 'active' }]
     );
 
     await expect(

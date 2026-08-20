@@ -11,7 +11,24 @@ import {
 } from '@/lib/admin/system-settings';
 
 const bodySchema = z.object({
-  url: z.string().trim().max(512).default(''),
+  url: z
+    .string()
+    .trim()
+    .max(512)
+    .refine((value) => {
+      if (!value) return true;
+      try {
+        const url = new URL(value);
+        return (
+          ['ws:', 'wss:', 'http:', 'https:'].includes(url.protocol) &&
+          !url.username &&
+          !url.password
+        );
+      } catch {
+        return false;
+      }
+    }, 'livekit_url_invalid')
+    .default(''),
   apiKey: z.string().trim().max(255).default(''),
   // Optional on update — leaving blank keeps the existing envelope.
   apiSecret: z.string().optional(),
@@ -51,19 +68,21 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const saved = await upsertLivekitConfig(parsed.data, authz.userId);
-
-  await db.insert(systemAuditLogs).values({
-    id: createId(),
-    userId: authz.userId,
-    action: 'system.livekit_config_updated',
-    resourceType: 'system_setting',
-    resourceId: 'livekit_config',
-    metadata: {
-      url: saved.url,
-      apiKey: saved.apiKey,
-      secretRotated: Boolean(parsed.data.apiSecret && parsed.data.apiSecret.trim()),
-    },
+  const saved = await db.transaction(async (tx) => {
+    const next = await upsertLivekitConfig(parsed.data, authz.userId, tx);
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: authz.userId,
+      action: 'system.livekit_config_updated',
+      resourceType: 'system_setting',
+      resourceId: 'livekit_config',
+      metadata: {
+        url: next.url,
+        apiKey: next.apiKey,
+        secretRotated: Boolean(parsed.data.apiSecret?.trim()),
+      },
+    });
+    return next;
   });
 
   return NextResponse.json({ livekit: sanitizeLivekitConfig(saved) });

@@ -15,10 +15,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, organizationMembers } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
 import { workspaceSeedSchema } from '@/lib/onboarding/bootstrapper';
 import { applyWorkspaceSeed, ApplySeedError } from '@/lib/onboarding/apply-seed';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -52,11 +51,7 @@ export async function POST(request: NextRequest) {
   // Resolve organizationId — explicit body override or the user's first org.
   let organizationId = typeof bodyObj.organizationId === 'string' ? bodyObj.organizationId : null;
   if (!organizationId) {
-    const [membership] = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active')))
-      .limit(1);
+    const [membership] = await listActiveOrganizationMemberships(userId);
     if (!membership) {
       return NextResponse.json(
         { error: 'No organization found for the current user.' },

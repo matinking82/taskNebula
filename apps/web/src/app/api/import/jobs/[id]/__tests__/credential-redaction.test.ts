@@ -11,6 +11,7 @@
 
 const authMock = jest.fn();
 const dbSelectMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
 
 class MockNextRequest {
   constructor(public readonly url: string) {}
@@ -42,6 +43,10 @@ jest.mock('next/server', () => ({
 
 jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
+}));
+
+jest.mock('@/lib/auth/access-control', () => ({
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
 }));
 
 jest.mock('drizzle-orm', () => ({
@@ -76,10 +81,7 @@ jest.mock('@tasknebula/db', () => ({
 }));
 
 /**
- * The route issues two selects in order:
- *   1) importJobs by id   — returns the job row (or [])
- *   2) organizationMembers — returns the membership row (or [])
- * Both terminate in `.limit(1)`. This helper builds a chain that
+ * The route selects the import job by id. This helper builds a chain that
  * resolves at `.limit(...)`.
  */
 function limitBuilder(rows: unknown[]) {
@@ -98,7 +100,12 @@ function queueSelects(opts: {
 }) {
   const { job = null, membership = null } = opts;
   dbSelectMock.mockReturnValueOnce(limitBuilder(job ? [job] : []));
-  dbSelectMock.mockReturnValueOnce(limitBuilder(membership ? [membership] : []));
+  resolveOrganizationAccessMock.mockResolvedValue({
+    allowed: Boolean(membership),
+    isSuperAdmin: false,
+    role: membership?.role ?? null,
+    membershipId: membership ? 'membership-1' : null,
+  });
 }
 
 function makeJob(mapping: unknown) {
@@ -127,6 +134,12 @@ describe('GET /api/import/jobs/[id] — credential redaction', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
   });
 
   function callGet(id = 'job-1') {

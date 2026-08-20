@@ -36,6 +36,7 @@ const fake: FakeState = {
     issues: [],
     users: [],
     organization_members: [],
+    organizations: [],
     workflows: [],
     workflow_statuses: [],
     agent_session_webhook_deliveries: [],
@@ -173,6 +174,7 @@ jest.mock('@tasknebula/db', () => {
     workflows: table('workflows'),
     workflowStatuses: table('workflow_statuses'),
     organizationMembers: table('organization_members'),
+    organizations: table('organizations'),
     users: table('users'),
   };
 });
@@ -238,6 +240,7 @@ function seed(
     },
   ];
   fake.rows.users = [];
+  fake.rows.organizations = [{ id: 'org_1', status: 'active' }];
   fake.rows.workflows = [];
   fake.rows.workflow_statuses = [];
   fake.rows.agent_session_webhook_deliveries = [];
@@ -277,6 +280,26 @@ describe('POST /api/webhooks/agent-session/[provider]', () => {
       { params: Promise.resolve({ provider: 'cursor' }) }
     );
     expect(res.status).toBe(401);
+  });
+
+  it('rejects valid callbacks while the workspace is suspended', async () => {
+    seed({ signedSecret: 'top-secret' });
+    fake.rows.organizations = [{ id: 'org_1', status: 'suspended' }];
+    const body = { state: 'active', sessionId: 'sess_1' };
+    const raw = JSON.stringify(body);
+    const sig = signAgentPayload(raw, 'top-secret');
+
+    const response = await receiveHandler(
+      reqWith(body, {
+        'x-tasknebula-session-id': 'sess_1',
+        'x-tasknebula-signature': `sha256=${sig}`,
+      }) as never,
+      { params: Promise.resolve({ provider: 'cursor' }) }
+    );
+
+    expect(response.status).toBe(403);
+    expect(fake.updated).toHaveLength(0);
+    expect(fake.inserted).toHaveLength(0);
   });
 
   it('rejects an invalid AgentSessionEvent body with 400', async () => {

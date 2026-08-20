@@ -1,5 +1,5 @@
 const authMock = jest.fn();
-const resolveProjectByIdOrKeyMock = jest.fn();
+const resolveProjectAccessMock = jest.fn();
 const dbSelectMock = jest.fn();
 const dbUpdateMock = jest.fn();
 const dbDeleteMock = jest.fn();
@@ -53,8 +53,8 @@ jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
 }));
 
-jest.mock('@/lib/projects/server', () => ({
-  resolveProjectByIdOrKey: (...args: unknown[]) => resolveProjectByIdOrKeyMock(...args),
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectAccess: (...args: unknown[]) => resolveProjectAccessMock(...args),
 }));
 
 jest.mock('@tasknebula/db', () => ({
@@ -107,14 +107,13 @@ describe('project view detail route', () => {
 
   it('updates a saved project view and returns serialized metadata', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    resolveProjectByIdOrKeyMock.mockResolvedValue({
-      id: 'project-1',
-      key: 'API',
-      organizationId: 'org-1',
+    resolveProjectAccessMock.mockResolvedValue({
+      canRead: true,
+      canManage: false,
+      project: { id: 'project-1', key: 'API', organizationId: 'org-1' },
     });
 
     dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ id: 'member-1' }]))
       .mockReturnValueOnce(
         limitBuilder([
           {
@@ -137,7 +136,9 @@ describe('project view detail route', () => {
           },
         ])
       )
-      .mockReturnValueOnce({ from: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue([]) }) });
+      .mockReturnValueOnce({
+        from: jest.fn().mockReturnValue({ where: jest.fn().mockResolvedValue([]) }),
+      });
 
     const updateSetMock = jest.fn().mockReturnValue({
       where: jest.fn().mockReturnValue({
@@ -167,14 +168,17 @@ describe('project view detail route', () => {
     dbUpdateMock.mockReturnValue({ set: updateSetMock });
 
     const response = await PATCH(
-      new NextRequestCtor('http://localhost:3002/api/projects/project-1/views/view-1?teamId=team-1', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          name: 'Pinned board',
-          isPinned: true,
-          isDefault: true,
-        }),
-      }),
+      new NextRequestCtor(
+        'http://localhost:3002/api/projects/project-1/views/view-1?teamId=team-1',
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: 'Pinned board',
+            isPinned: true,
+            isDefault: true,
+          }),
+        }
+      ),
       {
         params: Promise.resolve({ projectId: 'project-1', viewId: 'view-1' }),
       }
@@ -195,31 +199,32 @@ describe('project view detail route', () => {
 
   it('deletes an owned view', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    resolveProjectByIdOrKeyMock.mockResolvedValue({
-      id: 'project-1',
-      key: 'API',
-      organizationId: 'org-1',
+    resolveProjectAccessMock.mockResolvedValue({
+      canRead: true,
+      canManage: false,
+      project: { id: 'project-1', key: 'API', organizationId: 'org-1' },
     });
 
-    dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ id: 'member-1' }]))
-      .mockReturnValueOnce(
-        limitBuilder([
-          {
-            id: 'view-1',
-            userId: 'user-1',
-            projectId: 'project-1',
-            organizationId: 'org-1',
-          },
-        ])
-      );
+    dbSelectMock.mockReturnValueOnce(
+      limitBuilder([
+        {
+          id: 'view-1',
+          userId: 'user-1',
+          projectId: 'project-1',
+          organizationId: 'org-1',
+        },
+      ])
+    );
 
     const whereMock = jest.fn().mockResolvedValue(undefined);
     dbDeleteMock.mockReturnValue({ where: whereMock });
 
-    const response = await DELETE(new NextRequestCtor('http://localhost:3002/api/projects/project-1/views/view-1'), {
-      params: Promise.resolve({ projectId: 'project-1', viewId: 'view-1' }),
-    });
+    const response = await DELETE(
+      new NextRequestCtor('http://localhost:3002/api/projects/project-1/views/view-1'),
+      {
+        params: Promise.resolve({ projectId: 'project-1', viewId: 'view-1' }),
+      }
+    );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });

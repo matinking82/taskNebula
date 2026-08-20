@@ -10,6 +10,8 @@ type Condition =
   | undefined;
 
 const authMock = jest.fn();
+const listActiveOrganizationMembershipsMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
 
 const fake = {
   rows: {
@@ -68,6 +70,12 @@ function projectRows(rows: Row[], selection?: Record<string, unknown>) {
 
 jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
+}));
+
+jest.mock('@/lib/auth/access-control', () => ({
+  listActiveOrganizationMemberships: (...args: unknown[]) =>
+    listActiveOrganizationMembershipsMock(...args),
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
 }));
 
 jest.mock('@tasknebula/db', () => {
@@ -171,6 +179,15 @@ describe('GET /api/templates', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    listActiveOrganizationMembershipsMock.mockResolvedValue([
+      { id: 'member-1', organizationId: 'org-1', role: 'admin' },
+    ]);
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
     fake.rows.users = [{ id: 'user-1', isSuperAdmin: false }];
     fake.rows.organization_members = [
       { userId: 'user-1', organizationId: 'org-1', role: 'admin', status: 'active' },
@@ -208,6 +225,7 @@ describe('GET /api/templates', () => {
   it('reports every returned organization as administrable for super admins', async () => {
     fake.rows.users = [{ id: 'user-1', isSuperAdmin: true }];
     fake.rows.organization_members = [];
+    listActiveOrganizationMembershipsMock.mockResolvedValue([]);
     fake.rows.project_templates = [
       template({ id: 'org-a-template', organizationId: 'org-a' }),
       template({ id: 'org-b-template', organizationId: 'org-b' }),
@@ -226,6 +244,13 @@ describe('GET /api/templates/[id]', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    listActiveOrganizationMembershipsMock.mockResolvedValue([]);
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
     fake.rows.users = [{ id: 'user-1', isSuperAdmin: false }];
     fake.rows.organization_members = [];
     fake.rows.project_templates = [];

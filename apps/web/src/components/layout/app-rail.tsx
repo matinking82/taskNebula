@@ -9,6 +9,8 @@ import {
   Inbox,
   Layers,
   LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Shield,
   Users,
@@ -49,14 +51,19 @@ const railItems: (Omit<RailItem, 'name'> & { key: RailItemKey })[] = [
 export function AppRail({
   hasWorkspaceAccess = true,
   isSuperAdmin = false,
+  contextCollapsed = false,
+  onToggleContext,
 }: {
   hasWorkspaceAccess?: boolean;
   isSuperAdmin?: boolean;
+  contextCollapsed?: boolean;
+  onToggleContext?: () => void;
 }) {
   const pathname = usePathname();
   const normalizedPathname = stripLocalePrefix(pathname);
   const tNav = useTranslations('nav');
   const tLayout = useTranslations('layoutNav');
+  const tShell = useTranslations('collab.shell');
   const { currentOrganizationId } = useOrganization();
   const { hasAny: hasAnyOrgPermission, isLoading: isLoadingOrgPermissions } =
     useOrganizationPermissions(currentOrganizationId ?? undefined);
@@ -83,9 +90,33 @@ export function AppRail({
     <TooltipProvider delayDuration={150}>
       <nav
         aria-label={tLayout('workspaceRail')}
-        className="workbench-rail flex h-dvh w-[52px] shrink-0 flex-col items-center border-e border-white/10 py-2"
+        className="workbench-rail flex h-dvh w-12 shrink-0 flex-col items-center border-e border-white/[0.08] py-2"
       >
-        <ul className="flex flex-1 flex-col items-center gap-1.5">
+        {onToggleContext ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onToggleContext}
+                aria-label={contextCollapsed ? tShell('expand') : tShell('collapse')}
+                aria-expanded={!contextCollapsed}
+                aria-controls="workbench-context-panel"
+                className="ease-snap text-rail-foreground mb-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45"
+              >
+                {contextCollapsed ? (
+                  <PanelLeftOpen className="h-[18px] w-[18px]" aria-hidden="true" />
+                ) : (
+                  <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden="true" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {contextCollapsed ? tShell('expand') : tShell('collapse')}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+
+        <ul className="flex flex-1 flex-col items-center gap-1">
           {visibleRailItems.map((item) => {
             const label = tNav(item.key);
             const isActive =
@@ -110,7 +141,7 @@ export function AppRail({
                       aria-label={showInboxBadge ? `${label} · ${unreadLabel}` : label}
                       aria-current={isActive ? 'page' : undefined}
                       className={cn(
-                        'ease-snap text-rail-foreground group relative mx-auto flex h-10 w-10 items-center justify-center rounded-md transition-[color,background-color,border-color,box-shadow,opacity] duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45',
+                        'ease-snap text-rail-foreground group relative mx-auto flex h-9 w-9 items-center justify-center rounded-md transition-[color,background-color,border-color,box-shadow,opacity] duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45',
                         isActive &&
                           'bg-white/[0.11] text-white hover:bg-white/[0.14] hover:text-white'
                       )}
@@ -118,7 +149,7 @@ export function AppRail({
                       {isActive ? (
                         <span
                           aria-hidden="true"
-                          className="bg-primary absolute inset-y-2 start-[-6px] w-0.5 rounded-e-sm"
+                          className="bg-primary absolute inset-y-2 start-[-7px] w-0.5 rounded-e-sm"
                         />
                       ) : null}
                       <Icon className="h-[18px] w-[18px] shrink-0" />
@@ -153,7 +184,7 @@ export function AppRail({
                   data-active={normalizedPathname.startsWith('/admin') ? 'true' : undefined}
                   aria-label={tNav('admin')}
                   className={cn(
-                    'ease-snap text-rail-foreground group relative mx-auto flex h-10 w-10 items-center justify-center rounded-md transition-[color,background-color,border-color,box-shadow,opacity] duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45',
+                    'ease-snap text-rail-foreground group relative mx-auto flex h-9 w-9 items-center justify-center rounded-md transition-[color,background-color,border-color,box-shadow,opacity] duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45',
                     normalizedPathname.startsWith('/admin') &&
                       'bg-white/[0.11] text-white hover:bg-white/[0.14] hover:text-white'
                   )}
@@ -161,7 +192,7 @@ export function AppRail({
                   {normalizedPathname.startsWith('/admin') ? (
                     <span
                       aria-hidden="true"
-                      className="bg-primary absolute inset-y-2 start-[-6px] w-0.5 rounded-e-sm"
+                      className="bg-primary absolute inset-y-2 start-[-7px] w-0.5 rounded-e-sm"
                     />
                   ) : null}
                   <Shield className="h-[18px] w-[18px] shrink-0" />

@@ -33,11 +33,7 @@ export function scimResponse(body: unknown, status = 200): NextResponse {
   });
 }
 
-export function scimError(
-  status: number,
-  detail: string,
-  scimType?: string
-): NextResponse {
+export function scimError(status: number, detail: string, scimType?: string): NextResponse {
   const body: ScimError = {
     schemas: [SCIM_SCHEMAS.error],
     status: String(status),
@@ -45,6 +41,18 @@ export function scimError(
   };
   if (scimType) body.scimType = scimType;
   return scimResponse(body, status);
+}
+
+export function parseScimPagination(searchParams: URLSearchParams): {
+  startIndex: number;
+  count: number;
+} {
+  const rawStart = Number.parseInt(searchParams.get('startIndex') ?? '1', 10);
+  const rawCount = Number.parseInt(searchParams.get('count') ?? '100', 10);
+  return {
+    startIndex: Number.isFinite(rawStart) ? Math.max(1, rawStart) : 1,
+    count: Number.isFinite(rawCount) ? Math.min(200, Math.max(0, rawCount)) : 100,
+  };
 }
 
 export type ScimUserRecord = {

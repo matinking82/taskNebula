@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { normalizeClaimedSessionVersion } from './lib/auth/session-revocation';
 
 /**
  * Edge-compatible auth configuration
@@ -61,6 +62,7 @@ export const authConfig: NextAuthConfig = {
         session.user.email = token.email as string;
         session.user.name = token.name as string;
         session.user.image = token.picture as string;
+        session.user.sessionVersion = normalizeClaimedSessionVersion(token.sessionVersion);
       }
       return session;
     },
@@ -70,6 +72,7 @@ export const authConfig: NextAuthConfig = {
         token.email = user.email;
         token.name = user.name;
         token.picture = user.image;
+        token.sessionVersion = normalizeClaimedSessionVersion(user.sessionVersion);
       }
       return token;
     },

@@ -26,6 +26,7 @@ const parseJQLMock = jest.fn();
 const hybridSearchMock = jest.fn();
 const looksLikeFreeTextMock = jest.fn();
 const canReadProjectMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
 const inArrayMock = jest.fn((left: unknown, right: unknown) => ({
   type: 'inArray',
   left,
@@ -83,6 +84,7 @@ jest.mock('@/auth', () => ({
 
 jest.mock('@/lib/auth/access-control', () => ({
   canReadProject: (...args: unknown[]) => canReadProjectMock(...args),
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
 }));
 
 jest.mock('@paralleldrive/cuid2', () => ({
@@ -295,6 +297,12 @@ describe('/api/search membership guard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     canReadProjectMock.mockResolvedValue(true);
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: true,
+      isSuperAdmin: false,
+      role: 'member',
+      membershipId: 'member-1',
+    });
     dbInsertMock.mockReturnValue({
       values: jest.fn().mockResolvedValue(undefined),
     });
@@ -338,8 +346,12 @@ describe('/api/search membership guard', () => {
 
   it('rejects an org query from a non-member with 403', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    // First (and only) DB call is the org-member lookup → no row.
-    dbSelectMock.mockReturnValueOnce(limitBuilder([]));
+    resolveOrganizationAccessMock.mockResolvedValueOnce({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
 
     const response = await GET(
       new NextRequestCtor('http://localhost:3002/api/search?q=foo&organizationId=org-1')
@@ -347,13 +359,13 @@ describe('/api/search membership guard', () => {
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({ error: 'Forbidden' });
-    expect(dbSelectMock).toHaveBeenCalledTimes(1);
+    expect(dbSelectMock).not.toHaveBeenCalled();
     expect(parseJQLMock).not.toHaveBeenCalled();
   });
 
   it('limits an organization search to projects the member can read', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    dbSelectMock.mockReturnValueOnce(limitBuilder([{ role: 'member' }])).mockReturnValueOnce(
+    dbSelectMock.mockReturnValueOnce(
       whereBuilder([
         { id: 'proj-1', organizationId: 'org-1' },
         { id: 'proj-private', organizationId: 'org-1' },
@@ -397,16 +409,13 @@ describe('/api/search membership guard', () => {
     );
     expect(parseJQLMock).not.toHaveBeenCalled();
     expect(canReadProjectMock).toHaveBeenCalledTimes(2);
-    expect(dbSelectMock).toHaveBeenCalledTimes(2);
+    expect(dbSelectMock).toHaveBeenCalledTimes(1);
   });
 
   it('rejects an org member who is not a member of the requested project', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    dbSelectMock
-      // Org membership: present.
-      .mockReturnValueOnce(limitBuilder([{ role: 'member' }]))
-      // The project exists inside the org, but canonical access denies it.
-      .mockReturnValueOnce(whereBuilder([{ id: 'proj-1', organizationId: 'org-1' }]));
+    // The project exists inside the org, but canonical access denies it.
+    dbSelectMock.mockReturnValueOnce(whereBuilder([{ id: 'proj-1', organizationId: 'org-1' }]));
     canReadProjectMock.mockResolvedValue(false);
 
     const response = await GET(
@@ -417,16 +426,14 @@ describe('/api/search membership guard', () => {
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({ error: 'Forbidden' });
-    expect(dbSelectMock).toHaveBeenCalledTimes(2);
+    expect(dbSelectMock).toHaveBeenCalledTimes(1);
     // Should not reach JQL parsing on a guard failure.
     expect(parseJQLMock).not.toHaveBeenCalled();
   });
 
   it('passes the guard when canonical project access permits the requested project', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ role: 'member' }]))
-      .mockReturnValueOnce(whereBuilder([{ id: 'proj-1', organizationId: 'org-1' }]));
+    dbSelectMock.mockReturnValueOnce(whereBuilder([{ id: 'proj-1', organizationId: 'org-1' }]));
 
     const response = await GET(
       new NextRequestCtor(
@@ -448,14 +455,12 @@ describe('/api/search membership guard', () => {
       })
     );
     expect(parseJQLMock).not.toHaveBeenCalled();
-    expect(dbSelectMock).toHaveBeenCalledTimes(2);
+    expect(dbSelectMock).toHaveBeenCalledTimes(1);
   });
 
   it('keeps structured JQL on the parser path after the guard passes', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-    dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ role: 'member' }]))
-      .mockReturnValueOnce(whereBuilder([{ id: 'proj-1', organizationId: 'org-1' }]));
+    dbSelectMock.mockReturnValueOnce(whereBuilder([{ id: 'proj-1', organizationId: 'org-1' }]));
     looksLikeFreeTextMock.mockReturnValue(false);
 
     const response = await GET(
@@ -471,13 +476,12 @@ describe('/api/search membership guard', () => {
     });
     expect(parseJQLMock).toHaveBeenCalledWith('status = done');
     expect(hybridSearchMock).not.toHaveBeenCalled();
-    expect(dbSelectMock).toHaveBeenCalledTimes(2);
+    expect(dbSelectMock).toHaveBeenCalledTimes(1);
   });
 
   it('constrains structured JQL to canonical readable project ids', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
     dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ role: 'member' }]))
       .mockReturnValueOnce(
         whereBuilder([
           { id: 'proj-1', organizationId: 'org-1' },

@@ -64,6 +64,7 @@ export interface SelfUpdateStatus {
     | 'disabled'
     | 'missing_webhook'
     | 'missing_secret'
+    | 'weak_secret'
     | 'checks_disabled'
     | 'no_update'
     | 'missing_docker_image'

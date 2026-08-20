@@ -3,7 +3,7 @@
  */
 
 const authMock = jest.fn();
-const dbSelectMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
 
 class MockNextResponse {
   constructor(
@@ -32,11 +32,12 @@ jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
 }));
 
+jest.mock('@/lib/auth/access-control', () => ({
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
+}));
+
 jest.mock('@tasknebula/db', () => ({
   and: (...args: unknown[]) => ({ type: 'and', args }),
-  db: {
-    select: (...args: unknown[]) => dbSelectMock(...args),
-  },
   eq: (left: unknown, right: unknown) => ({ type: 'eq', left, right }),
   getRolePermissions: (role: string) =>
     role === 'admin' ? ['org:view', 'project:create'] : ['org:view'],
@@ -53,19 +54,6 @@ jest.mock('@tasknebula/db', () => ({
   },
 }));
 
-function limitBuilder(result: unknown, captureWhere?: (condition: unknown) => void) {
-  return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn((condition: unknown) => {
-        captureWhere?.(condition);
-        return {
-          limit: jest.fn().mockResolvedValue(result),
-        };
-      }),
-    }),
-  };
-}
-
 describe('GET /api/user/me/permissions', () => {
   let GET: typeof import('./route').GET;
 
@@ -77,13 +65,14 @@ describe('GET /api/user/me/permissions', () => {
     jest.clearAllMocks();
   });
 
-  it('only resolves permissions from active organization memberships', async () => {
+  it('returns no permissions when the canonical organization boundary denies access', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
-
-    let membershipWhere: unknown;
-    dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ isSuperAdmin: false }]))
-      .mockReturnValueOnce(limitBuilder([], (condition) => (membershipWhere = condition)));
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
 
     const response = await GET(
       new Request('http://localhost/api/user/me/permissions?organizationId=org-1') as never
@@ -96,7 +85,26 @@ describe('GET /api/user/me/permissions', () => {
       isSuperAdmin: false,
       permissions: [],
     });
-    expect(JSON.stringify(membershipWhere)).toContain('organizationMembers.status');
-    expect(JSON.stringify(membershipWhere)).toContain('active');
+    expect(resolveOrganizationAccessMock).toHaveBeenCalledWith('user-1', 'org-1');
+  });
+
+  it('resolves role permissions from an allowed active organization access result', async () => {
+    authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: true,
+      isSuperAdmin: false,
+      role: 'admin',
+      membershipId: 'membership-1',
+    });
+
+    const response = await GET(
+      new Request('http://localhost/api/user/me/permissions?organizationId=org-1') as never
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      organizationId: 'org-1',
+      role: 'admin',
+      permissions: ['org:view', 'project:create'],
+    });
   });
 });

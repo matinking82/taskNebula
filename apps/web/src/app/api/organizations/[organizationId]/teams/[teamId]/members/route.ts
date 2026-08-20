@@ -23,11 +23,13 @@ async function ensureOrgMember(organizationId: string, userId: string) {
   const [member] = await db
     .select({ id: organizationMembers.id })
     .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
     .where(
       and(
         eq(organizationMembers.organizationId, organizationId),
         eq(organizationMembers.userId, userId),
-        eq(organizationMembers.status, 'active')
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active')
       )
     )
     .limit(1);

@@ -503,7 +503,8 @@
         "invalid_target": "The selected target version is not valid for this install.",
         "active_job": "Another update request is already active. Wait for it to finish before starting a new one.",
         "missing_digest": "Docker Hub did not return an immutable image digest. Wait for tag metadata to settle, then check again.",
-        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request."
+        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request.",
+        "weak_secret": "TASKNEBULA_SELF_UPDATE_WEBHOOK_SECRET must contain at least 32 bytes of unpredictable secret material."
       },
       "jobStatus": {
         "queued": "Queued",
@@ -575,7 +576,8 @@
     "createFailed": "Impossible de créer le sous-ticket. Veuillez réessayer.",
     "noSubtasks": "Aucune sous-tâche pour le moment",
     "markComplete": "Marquer comme terminé",
-    "markIncomplete": "Marquer comme non terminé"
+    "markIncomplete": "Marquer comme non terminé",
+    "transitionFailed": "Impossible de mettre à jour le statut de la sous-tâche. Réessayez."
   },
   "issueRelations": {
     "dialogTitle": "Lier un ticket",
@@ -1937,7 +1939,55 @@
       "token_created": "Créé le {date}",
       "token_last_used": "Dernière utilisation le {date}",
       "token_revoked": "Révoqué",
-      "revoke": "Révoquer"
+      "revoke": "Révoquer",
+      "token_scopes_label": "Access scopes",
+      "token_scopes_desc": "Grant only the operations this identity provider needs. At least one scope is required.",
+      "scope_users_read": "Read users",
+      "scope_users_read_desc": "List and inspect workspace users.",
+      "scope_users_write": "Manage users",
+      "scope_users_write_desc": "Provision, update, activate, and deactivate users.",
+      "scope_groups_read": "Read groups",
+      "scope_groups_read_desc": "List groups and their members.",
+      "scope_groups_write": "Manage groups",
+      "scope_groups_write_desc": "Create, update, and remove provisioned groups.",
+      "token_scope_required": "Select at least one access scope.",
+      "copy_token": "Copy token",
+      "token_copied_desc": "The SCIM token is now on your clipboard and has been hidden from this page.",
+      "token_copy_failed": "Token could not be copied",
+      "token_copy_failed_desc": "Copy the visible token manually before leaving this page.",
+      "token_created_toast": "SCIM token created",
+      "token_created_toast_desc": "Copy the secret now; only its hash will remain after you leave.",
+      "token_revoked_toast": "SCIM token revoked",
+      "token_revoked_toast_desc": "Requests using this token are no longer accepted.",
+      "tokens_loading": "Loading provisioning tokens…",
+      "token_active": "Active",
+      "token_legacy": "Rotate recommended",
+      "token_legacy_full_access": "Legacy token · full access until rotated",
+      "token_revoke_confirm": "Revoke the SCIM token “{name}”? This cannot be undone.",
+      "token_revoke_aria": "Revoke SCIM token {name}",
+      "idp_metadata_placeholder": "Paste an IdP EntityDescriptor XML document…",
+      "idp_metadata_file_label": "Or choose a metadata XML file",
+      "metadata_invalid": "Metadata could not be parsed",
+      "metadata_invalid_desc": "Provide a valid SAML IdP EntityDescriptor containing an issuer, SSO service, or signing certificate.",
+      "metadata_too_large": "Metadata XML must be smaller than 2 MB.",
+      "config_loading": "Loading SSO configuration…",
+      "cert_placeholder": "-----BEGIN CERTIFICATE-----",
+      "cert_invalid": "The IdP signing certificate is not a valid X.509 certificate.",
+      "entry_point_invalid": "Use an HTTPS IdP SSO URL without credentials or a fragment.",
+      "private_key_label": "SP request-signing private key (optional)",
+      "private_key_desc": "Used only to sign AuthnRequests. New keys are encrypted at rest and are never returned by the API.",
+      "private_key_configured": "Configured",
+      "private_key_placeholder": "-----BEGIN PRIVATE KEY-----",
+      "private_key_keep_placeholder": "Leave blank to keep the encrypted key already configured",
+      "private_key_remove": "Remove the configured request-signing key when saving",
+      "private_key_invalid": "The request-signing private key is not a valid PEM private key.",
+      "test_sso": "Test SSO in a new tab",
+      "delete_config": "Delete configuration",
+      "config_delete_confirm": "Delete this SSO configuration? Workspace SSO sign-in will stop immediately.",
+      "config_deleted": "SSO configuration deleted",
+      "config_deleted_desc": "Workspace SSO sign-in is no longer available.",
+      "config_delete_failed": "SSO configuration could not be deleted",
+      "config_delete_failed_desc": "No changes were applied. Try again or inspect the server logs."
     },
     "notifications": {
       "fetch_failed": "Échec de la récupération des préférences",
@@ -3709,7 +3759,7 @@
       },
       "localRunners": {
         "title": "Claude Code / Codex",
-        "description": "État et journaux en temps réel de chaque exécution d'agent en cours en ce moment.",
+        "description": "Manage the Claude Code or Codex CLI runner on this server for the selected workspace.",
         "loading": "Chargement du contrôle des agents...",
         "loadError": "Échec du chargement du contrôle des agents.",
         "updated": "Contrôle des agents mis à jour",
@@ -3725,9 +3775,9 @@
           "codex": "Codex CLI"
         },
         "reason": {
-          "disabled": "Échec de la mise à jour du contrôle des agents: TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true",
-          "cwd_missing": "Échec du chargement du contrôle des agents: {value}",
-          "command_missing": "Échec du chargement du contrôle des agents: {value}"
+          "disabled": "Local CLI dispatch is off. Turn on this provider here, or set TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true as a server-wide default.",
+          "cwd_missing": "Working directory does not exist: {value}",
+          "command_missing": "Command is not available on PATH: {value}"
         }
       }
     },
@@ -3761,6 +3811,22 @@
       "optional": "(facultatif)",
       "cancel": "Annuler",
       "saveCredentials": "Enregistrer les identifiants",
+      "redirectHint": "https://your-domain{path}",
+      "providerLabel": {
+        "slack": "Slack",
+        "gitlab": "GitLab",
+        "jira": "Jira (Atlassian)",
+        "github": "GitHub",
+        "google": "Google",
+        "sentry": "Sentry"
+      },
+      "scopeHint": {
+        "slack": "channels:read,chat:write",
+        "gitlab": "read_api read_repository",
+        "jira": "read:jira-user read:jira-work write:jira-work offline_access",
+        "github": "repo read:user",
+        "sentry": "org:read project:read event:read"
+      },
       "providerDescription": {
         "slack": "Identifiants d'application OAuth pour connecter les espaces de travail Slack à TaskNebula.",
         "gitlab": "Application OAuth pour la mise en miroir des demandes de fusion et des pipelines.",
@@ -3832,6 +3898,8 @@
         "testError": "Échec de l'envoi de l'e-mail de test",
         "testSent": "E-mail de test envoyé",
         "testSentDescription": "Livré à {recipient} via la configuration {source}.",
+        "testEmailSubject": "TaskNebula SMTP test email",
+        "testEmailText": "This is a TaskNebula SMTP test sent through the {source} configuration. If you received it, outbound email is working.",
         "host": "Hôte",
         "port": "Port",
         "username": "Nom d'utilisateur",
@@ -3857,6 +3925,11 @@
         "testError": "Échec de l'émission du jeton LiveKit",
         "tokenMinted": "Jeton LiveKit émis",
         "tokenMintedDescription": "Salle {roomName} · configuration {source}.",
+        "connectionTestError": "LiveKit connection or credentials could not be verified",
+        "connectionVerified": "LiveKit connection verified",
+        "connectionVerifiedDescription": "Authenticated with the {source} configuration; {roomCount} active rooms are visible.",
+        "verifyTitle": "Verify server reachability and API credentials",
+        "verify": "Verify LiveKit",
         "secretPreview": "secret {preview}",
         "serverUrl": "URL du serveur",
         "apiKey": "Clé API",
@@ -3886,7 +3959,20 @@
         "uploadsDirPlaceholder": "/var/tasknebula/uploads",
         "s3BucketPlaceholder": "tasknebula-prod",
         "s3RegionPlaceholder": "us-east-1",
-        "s3AccessKeyPlaceholder": "AKIA…"
+        "s3AccessKeyPlaceholder": "AKIA…",
+        "s3Endpoint": "Endpoint S3 personnalisé",
+        "s3EndpointPlaceholder": "https://s3.example.com",
+        "s3ForcePathStyle": "URL de bucket avec chemin",
+        "s3ForcePathStyleDescription": "Utilisez des URL de bucket avec chemin pour les fournisseurs qui les exigent.",
+        "backendChangeBlocked": "L’emplacement de stockage ne peut pas être modifié tant que des pièces jointes existent. Migrez ou supprimez-les d’abord.",
+        "s3Incomplete": "Renseignez le compartiment, la région, la clé d’accès et la clé secrète avant d’activer S3.",
+        "localRootForbidden": "La racine du système de fichiers ne peut pas servir de dossier de téléversement.",
+        "testPassed": "Test du stockage réussi",
+        "testPassedDescription": "Le stockage {mode} est accessible en lecture et en écriture via la configuration {source}.",
+        "testError": "Le test d’écriture, de lecture et de suppression a échoué. Vérifiez la configuration et les journaux du serveur.",
+        "saveFirst": "Enregistrez d’abord une configuration de stockage complète",
+        "testTitle": "Écrire, lire et supprimer un fichier de test temporaire",
+        "test": "Tester le stockage"
       },
       "registration": {
         "title": "Inscription",
@@ -3967,6 +4053,12 @@
       "missingFields": "Champs manquants",
       "somethingWentWrong": "Une erreur s'est produite."
     },
+    "userGovernance": {
+      "admin_self_super_admin_revocation_forbidden": "You cannot remove your own super admin access.",
+      "admin_self_deactivation_forbidden": "You cannot deactivate your own administrator account.",
+      "admin_last_active_super_admin_required": "At least one active super admin must remain.",
+      "admin_self_deletion_forbidden": "You cannot delete your own administrator account."
+    },
     "createFlag": {
       "trigger": "Nouveau drapeau",
       "title": "Créer un drapeau de fonctionnalité",
@@ -4011,7 +4103,11 @@
       "missingFieldsDescription": "Le nom, le slug et le propriétaire sont obligatoires.",
       "toastCreatedTitle": "Organisation créée",
       "toastCreatedDescription": "L'organisation a été créée avec succès.",
-      "toastFailedTitle": "Échec de la création de l'organisation"
+      "toastFailedTitle": "Échec de la création de l'organisation",
+      "ownerLoading": "Loading active users…",
+      "ownerSearchPlaceholder": "Search active users…",
+      "ownerEmpty": "No active users found.",
+      "ownerRetry": "Try again"
     },
     "editOrg": {
       "title": "Modifier l'organisation",
@@ -4024,6 +4120,8 @@
       "toastUpdatedTitle": "Organisation mise à jour",
       "toastUpdatedDescription": "Les modifications ont été enregistrées avec succès.",
       "toastFailedTitle": "Échec de la mise à jour de l'organisation",
+      "loadFailed": "Failed to load organization details.",
+      "retry": "Try again",
       "domainPlaceholder": "example.com"
     },
     "orgForm": {
@@ -4063,7 +4161,9 @@
       "superAdminWarning": "Cet utilisateur aura un accès complet à toutes les organisations et aux paramètres système.",
       "toastUpdatedTitle": "Utilisateur mis à jour",
       "toastUpdatedDescription": "L'utilisateur a été mis à jour avec succès.",
-      "toastFailedTitle": "Échec de la mise à jour de l'utilisateur"
+      "toastFailedTitle": "Échec de la mise à jour de l'utilisateur",
+      "loadFailed": "Failed to load user details.",
+      "retry": "Try again"
     },
     "userForm": {
       "superAdmin": "Super administrateur",
@@ -7029,6 +7129,33 @@
     "assignmentSuccess": "*{issueKey}* a été réattribué à <@{slackUserId}> (demande de <@{requestedBy}>).",
     "statusSuccess": "*{issueKey}* a été déplacé vers *{statusName}* (demande de <@{requestedBy}>).",
     "newUsage": "Utilisation : `/tn new titre` — ouvre la fenêtre de création d’un ticket.",
-    "newOpening": "Ouverture de la fenêtre de création pour : _{title}_"
+    "newOpening": "Ouverture de la fenêtre de création pour : _{title}_",
+    "bridgeFromSlack": "From Slack",
+    "bridgePermalink": "Permalink: {url}",
+    "bridgeAuthorInChannel": "Author: <@{author}> in #{channel}",
+    "bridgeAuthor": "Author: <@{author}>",
+    "bridgeEmptyMessage": "(no message text)",
+    "bridgeFallbackTitle": "Slack: {message}",
+    "untitledSlackMessage": "Untitled Slack message",
+    "bridgeConfirmationText": "Created TaskNebula issue *{issueKey}* — {issueUrl}",
+    "bridgeConfirmationBlock": ":white_check_mark: Created TaskNebula issue *<{issueUrl}|{issueKey}>*",
+    "reactionIssueTitle": ":{reaction}: {message}",
+    "modalTitle": "New issue from Slack",
+    "modalSubmit": "Create",
+    "modalCancel": "Cancel",
+    "modalContext": "Create an issue from <@{author}> in <#{channel}>",
+    "modalTitleLabel": "Title",
+    "modalDescriptionLabel": "Description (extra context)",
+    "modalProjectLabel": "Project key (overrides channel mapping)",
+    "titleRequired": "Title is required.",
+    "workspaceDisconnected": "This Slack workspace is no longer connected.",
+    "reporterUnmapped": "No TaskNebula user is mapped to this Slack profile.",
+    "projectResolutionFailed": "No project could be resolved. Enter a project key or configure a channel mapping.",
+    "standaloneProjectRequired": "A project key is required when creating from /tn new.",
+    "issueCreateFailed": "The issue could not be created.",
+    "projectKeyNotFound": "No active project matches `{projectKey}` in this workspace.",
+    "modalOpenFailed": "The new-issue modal could not be opened. Try again.",
+    "modalDescriptionStandaloneLabel": "Description",
+    "modalStandaloneProjectLabel": "Project key (required, e.g. TN)"
   }
 }

@@ -7,6 +7,7 @@ import { auth } from '@/auth';
 import {
   db,
   organizationMembers,
+  organizations,
   users,
   Permission,
   hasPermission as checkPermission,
@@ -16,6 +17,7 @@ import {
 } from '@tasknebula/db';
 import { eq, and } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 /**
  * Get current user's organization role and super admin status
@@ -36,13 +38,19 @@ export async function getUserRole(organizationId: string) {
     .where(eq(users.id, session.user.id))
     .limit(1);
 
+  if (user?.status !== 'active') {
+    return null;
+  }
+
   // Get user's organization role
   const [member] = await db
     .select({
       role: organizationMembers.role,
       status: organizationMembers.status,
+      organizationStatus: organizations.status,
     })
     .from(organizationMembers)
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
     .where(
       and(
         eq(organizationMembers.userId, session.user.id),
@@ -52,8 +60,9 @@ export async function getUserRole(organizationId: string) {
     .limit(1);
 
   return {
-    role: member?.status === 'active' ? member.role : null,
-    isSuperAdmin: user?.isSuperAdmin || false,
+    role:
+      member?.status === 'active' && member.organizationStatus !== 'suspended' ? member.role : null,
+    isSuperAdmin: user.isSuperAdmin,
   };
 }
 
@@ -114,12 +123,13 @@ export async function isSuperAdmin(): Promise<boolean> {
   const [user] = await db
     .select({
       isSuperAdmin: users.isSuperAdmin,
+      status: users.status,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  return user?.isSuperAdmin || false;
+  return user?.status === 'active' && user.isSuperAdmin;
 }
 
 /**
@@ -148,6 +158,35 @@ export async function requirePermission(
   if (!hasAccess) {
     redirect('/dashboard?error=insufficient-permission');
   }
+}
+
+/**
+ * Return the caller's usable organizations for a permission in deterministic
+ * membership order. Suspended organizations, inactive memberships and an
+ * inactive actor are filtered by the canonical runtime access resolver.
+ *
+ * This is the page-level counterpart to `hasPermission`: settings surfaces
+ * should not select an unusable "first membership" and accidentally hide a
+ * later workspace the user can administer.
+ */
+export async function getPermittedOrganizationIds(
+  userId: string,
+  permission: Permission
+): Promise<string[]> {
+  const [[actor], memberships] = await Promise.all([
+    db
+      .select({ isSuperAdmin: users.isSuperAdmin, status: users.status })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1),
+    listActiveOrganizationMemberships(userId),
+  ]);
+
+  if (actor?.status !== 'active') return [];
+
+  return memberships
+    .filter((membership) => checkPermission(membership.role || '', permission, actor.isSuperAdmin))
+    .map((membership) => membership.organizationId);
 }
 
 /**

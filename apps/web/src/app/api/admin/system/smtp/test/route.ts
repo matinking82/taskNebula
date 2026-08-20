@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import { db, systemAuditLogs, users, eq } from '@tasknebula/db';
 import { resolveSmtpConfig } from '@/lib/admin/system-settings';
+import { getTranslations } from 'next-intl/server';
 
 const bodySchema = z
   .object({
@@ -31,7 +32,13 @@ export async function POST(request: NextRequest) {
   if ('error' in authz) return authz.error;
 
   const parsedBody = bodySchema.safeParse(await request.json().catch(() => ({})));
-  const desiredTo = parsedBody.success ? parsedBody.data?.to : undefined;
+  if (!parsedBody.success) {
+    return NextResponse.json(
+      { success: false, error: 'smtp_test_recipient_invalid', code: 'smtp_test_recipient_invalid' },
+      { status: 400 }
+    );
+  }
+  const desiredTo = parsedBody.data?.to;
 
   // Default to the admin's own email when no explicit recipient given.
   let recipient = desiredTo;
@@ -46,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   if (!recipient) {
     return NextResponse.json(
-      { success: false, error: 'No recipient email available' },
+      { success: false, error: 'smtp_test_recipient_missing', code: 'smtp_test_recipient_missing' },
       { status: 400 }
     );
   }
@@ -56,12 +63,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'SMTP is not configured. Save an SMTP config first or set SMTP_HOST in the environment.',
+        error: 'smtp_not_configured',
+        code: 'smtp_not_configured',
       },
       { status: 400 }
     );
   }
 
+  const testId = createId();
+  const insecureTls = process.env.SMTP_ALLOW_INSECURE_TLS === 'true';
+  await db.insert(systemAuditLogs).values({
+    id: testId,
+    userId: authz.userId,
+    action: 'system.smtp_test_requested',
+    resourceType: 'system_setting',
+    resourceId: 'smtp_config',
+    metadata: { testId, recipient, source: cfg.source, insecureTls },
+  });
+
+  let messageId: string | undefined;
   try {
     const nodemailer = await import('nodemailer');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,46 +89,84 @@ export async function POST(request: NextRequest) {
       host: cfg.host,
       port: cfg.port,
       secure: cfg.secure,
-      tls: { rejectUnauthorized: false },
     };
+    if (insecureTls) transportOptions.tls = { rejectUnauthorized: false };
     if (cfg.user && cfg.password) {
       transportOptions.auth = { user: cfg.user, pass: cfg.password };
     }
     const transport = nodemailer.default.createTransport(transportOptions);
+    const t = await getTranslations('adminPanels.systemCredentials.smtp');
     const info = await transport.sendMail({
       from: cfg.emailFrom,
       to: recipient,
-      subject: 'TaskNebula SMTP test email',
-      html: `<p>This is a test email from your TaskNebula admin console.</p>
-<p>If you are seeing this, your SMTP configuration is working correctly (<strong>${cfg.source}</strong> source).</p>`,
-      text: `TaskNebula SMTP test email — config source: ${cfg.source}. If you received this, your SMTP configuration is working.`,
+      subject: t('testEmailSubject'),
+      text: t('testEmailText', { source: cfg.source }),
     });
+    messageId = info.messageId;
+  } catch (err) {
+    const message = (err instanceof Error ? err.message : String(err)).slice(0, 500);
+    try {
+      await db.insert(systemAuditLogs).values({
+        id: createId(),
+        userId: authz.userId,
+        action: 'system.smtp_test_failed',
+        resourceType: 'system_setting',
+        resourceId: 'smtp_config',
+        metadata: { testId, recipient, source: cfg.source, error: message },
+      });
+    } catch (auditError) {
+      console.error('[smtp-test] failed delivery outcome could not be recorded', {
+        testId,
+        error: auditError instanceof Error ? auditError.message : String(auditError),
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'smtp_test_outcome_unrecorded',
+          code: 'smtp_test_outcome_unrecorded',
+          deliveryUncertain: true,
+          testId,
+        },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: 'smtp_test_failed', code: 'smtp_test_failed' },
+      { status: 502 }
+    );
+  }
 
+  try {
     await db.insert(systemAuditLogs).values({
       id: createId(),
       userId: authz.userId,
       action: 'system.smtp_test_sent',
       resourceType: 'system_setting',
       resourceId: 'smtp_config',
-      metadata: { recipient, source: cfg.source },
+      metadata: { testId, recipient, source: cfg.source, messageId },
     });
-
-    return NextResponse.json({
-      success: true,
-      source: cfg.source,
-      messageId: info.messageId,
-      recipient,
+  } catch (error) {
+    console.error('[smtp-test] email sent but outcome audit could not be recorded', {
+      testId,
+      error: error instanceof Error ? error.message : String(error),
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await db.insert(systemAuditLogs).values({
-      id: createId(),
-      userId: authz.userId,
-      action: 'system.smtp_test_failed',
-      resourceType: 'system_setting',
-      resourceId: 'smtp_config',
-      metadata: { recipient, source: cfg.source, error: message },
-    });
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'smtp_test_outcome_unrecorded',
+        code: 'smtp_test_outcome_unrecorded',
+        deliveryUncertain: true,
+        testId,
+      },
+      { status: 503 }
+    );
   }
+
+  return NextResponse.json({
+    success: true,
+    source: cfg.source,
+    messageId,
+    recipient,
+    testId,
+  });
 }

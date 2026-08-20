@@ -1,11 +1,12 @@
 'use client';
 
 import { WorkflowBuilder } from '@/components/workflows/workflow-builder';
+import { PageFrame } from '@/components/ui/page-frame';
 
 export function ProjectWorkflowsClient({ projectId }: { projectId: string }) {
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:px-8">
+    <PageFrame contentClassName="max-w-7xl">
       <WorkflowBuilder projectId={projectId} />
-    </div>
+    </PageFrame>
   );
 }

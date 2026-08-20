@@ -1,6 +1,5 @@
-// QUAL-21 TS-strict-migration: file untouched intentionally; surfaces 3 errors
-// under `exactOptionalPropertyTypes`. See docs/TS_STRICT_MIGRATION.md.
 import { createId } from '@paralleldrive/cuid2';
+import path from 'node:path';
 import { db, eq, systemSettings } from '@tasknebula/db';
 import {
   decryptSecretEnvelope,
@@ -13,6 +12,9 @@ import {
 export const SMTP_CONFIG_KEY = 'smtp_config';
 export const LIVEKIT_CONFIG_KEY = 'livekit_config';
 export const STORAGE_CONFIG_KEY = 'storage_config';
+export const STORAGE_CONFIG_ADVISORY_LOCK = 'tasknebula:storage-config:v1';
+
+type SystemSettingsDbClient = Pick<typeof db, 'select' | 'insert' | 'update'>;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -77,6 +79,8 @@ export type StorageConfigStored = {
   uploadsDir: string;
   s3Bucket: string;
   s3Region: string;
+  s3Endpoint: string;
+  s3ForcePathStyle: boolean;
   s3AccessKey: string;
   s3SecretKey: SecretEnvelope | null;
   updatedAt?: string;
@@ -87,6 +91,8 @@ export type StorageConfigSanitized = {
   uploadsDir: string;
   s3Bucket: string;
   s3Region: string;
+  s3Endpoint: string;
+  s3ForcePathStyle: boolean;
   s3AccessKey: string;
   s3SecretKeyPreview: string | null;
   updatedAt: string | null;
@@ -98,6 +104,8 @@ export type StorageConfigInput = {
   uploadsDir: string;
   s3Bucket: string;
   s3Region: string;
+  s3Endpoint: string;
+  s3ForcePathStyle: boolean;
   s3AccessKey: string;
   s3SecretKey?: string | null;
 };
@@ -106,8 +114,11 @@ export type StorageConfigInput = {
 // Generic upsert
 // ---------------------------------------------------------------------------
 
-async function readRawSetting(key: string): Promise<Record<string, unknown> | null> {
-  const [setting] = await db
+async function readRawSetting(
+  key: string,
+  client: SystemSettingsDbClient = db
+): Promise<Record<string, unknown> | null> {
+  const [setting] = await client
     .select({ value: systemSettings.value })
     .from(systemSettings)
     .where(eq(systemSettings.key, key))
@@ -121,30 +132,24 @@ async function writeRawSetting(
   category: string,
   description: string,
   value: Record<string, unknown>,
-  userId: string
+  userId: string,
+  client: SystemSettingsDbClient = db
 ) {
-  const [existing] = await db
-    .select({ id: systemSettings.id })
-    .from(systemSettings)
-    .where(eq(systemSettings.key, key))
-    .limit(1);
-
-  if (!existing) {
-    await db.insert(systemSettings).values({
+  const now = new Date();
+  await client
+    .insert(systemSettings)
+    .values({
       id: createId(),
       key,
       category,
       description,
       value,
       updatedBy: userId,
+    })
+    .onConflictDoUpdate({
+      target: systemSettings.key,
+      set: { category, description, value, updatedAt: now, updatedBy: userId },
     });
-    return;
-  }
-
-  await db
-    .update(systemSettings)
-    .set({ value, updatedAt: new Date(), updatedBy: userId })
-    .where(eq(systemSettings.id, existing.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -171,8 +176,10 @@ export function normalizeSmtpConfig(value: unknown): SmtpConfigStored {
   };
 }
 
-export async function getSmtpConfig(): Promise<SmtpConfigStored> {
-  const raw = await readRawSetting(SMTP_CONFIG_KEY);
+export async function getSmtpConfig(
+  client: SystemSettingsDbClient = db
+): Promise<SmtpConfigStored> {
+  const raw = await readRawSetting(SMTP_CONFIG_KEY, client);
   return normalizeSmtpConfig(raw);
 }
 
@@ -192,9 +199,10 @@ export function sanitizeSmtpConfig(config: SmtpConfigStored): SmtpConfigSanitize
 
 export async function upsertSmtpConfig(
   input: SmtpConfigInput,
-  userId: string
+  userId: string,
+  client: SystemSettingsDbClient = db
 ): Promise<SmtpConfigStored> {
-  const existing = await getSmtpConfig();
+  const existing = await getSmtpConfig(client);
 
   let passwordEnvelope: SecretEnvelope | null = existing.password;
   const trimmedPassword = typeof input.password === 'string' ? input.password.trim() : '';
@@ -218,7 +226,8 @@ export async function upsertSmtpConfig(
     'integrations',
     'Platform SMTP credentials (used for invite, notification, and verification emails).',
     next as unknown as Record<string, unknown>,
-    userId
+    userId,
+    client
   );
 
   return next;
@@ -285,8 +294,10 @@ export function normalizeLivekitConfig(value: unknown): LivekitConfigStored {
   };
 }
 
-export async function getLivekitConfigStored(): Promise<LivekitConfigStored> {
-  const raw = await readRawSetting(LIVEKIT_CONFIG_KEY);
+export async function getLivekitConfigStored(
+  client: SystemSettingsDbClient = db
+): Promise<LivekitConfigStored> {
+  const raw = await readRawSetting(LIVEKIT_CONFIG_KEY, client);
   return normalizeLivekitConfig(raw);
 }
 
@@ -303,9 +314,10 @@ export function sanitizeLivekitConfig(config: LivekitConfigStored): LivekitConfi
 
 export async function upsertLivekitConfig(
   input: LivekitConfigInput,
-  userId: string
+  userId: string,
+  client: SystemSettingsDbClient = db
 ): Promise<LivekitConfigStored> {
-  const existing = await getLivekitConfigStored();
+  const existing = await getLivekitConfigStored(client);
 
   let secretEnvelope: SecretEnvelope | null = existing.apiSecret;
   const trimmedSecret = typeof input.apiSecret === 'string' ? input.apiSecret.trim() : '';
@@ -326,7 +338,8 @@ export async function upsertLivekitConfig(
     'integrations',
     'Platform LiveKit server credentials (used for realtime audio/video rooms).',
     next as unknown as Record<string, unknown>,
-    userId
+    userId,
+    client
   );
 
   return next;
@@ -382,6 +395,8 @@ export function normalizeStorageConfig(value: unknown): StorageConfigStored {
     uploadsDir: typeof raw.uploadsDir === 'string' ? raw.uploadsDir : '',
     s3Bucket: typeof raw.s3Bucket === 'string' ? raw.s3Bucket : '',
     s3Region: typeof raw.s3Region === 'string' ? raw.s3Region : '',
+    s3Endpoint: typeof raw.s3Endpoint === 'string' ? raw.s3Endpoint : '',
+    s3ForcePathStyle: raw.s3ForcePathStyle === true,
     s3AccessKey: typeof raw.s3AccessKey === 'string' ? raw.s3AccessKey : '',
     s3SecretKey: isSecretEnvelope(secretCandidate) ? secretCandidate : null,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : undefined,
@@ -389,8 +404,10 @@ export function normalizeStorageConfig(value: unknown): StorageConfigStored {
   };
 }
 
-export async function getStorageConfig(): Promise<StorageConfigStored> {
-  const raw = await readRawSetting(STORAGE_CONFIG_KEY);
+export async function getStorageConfig(
+  client: SystemSettingsDbClient = db
+): Promise<StorageConfigStored> {
+  const raw = await readRawSetting(STORAGE_CONFIG_KEY, client);
   return normalizeStorageConfig(raw);
 }
 
@@ -399,42 +416,167 @@ export function sanitizeStorageConfig(config: StorageConfigStored): StorageConfi
     uploadsDir: config.uploadsDir,
     s3Bucket: config.s3Bucket,
     s3Region: config.s3Region,
+    s3Endpoint: config.s3Endpoint,
+    s3ForcePathStyle: config.s3ForcePathStyle,
     s3AccessKey: config.s3AccessKey,
     s3SecretKeyPreview: config.s3SecretKey ? config.s3SecretKey.preview : null,
     updatedAt: config.updatedAt ?? null,
     updatedBy: config.updatedBy ?? null,
-    configured: Boolean(config.uploadsDir || config.s3Bucket),
+    configured: Boolean(
+      config.uploadsDir ||
+        (config.s3Bucket && config.s3Region && config.s3AccessKey && config.s3SecretKey)
+    ),
   };
 }
 
-export async function upsertStorageConfig(
-  input: StorageConfigInput,
-  userId: string
-): Promise<StorageConfigStored> {
-  const existing = await getStorageConfig();
+export type ResolvedStorageConfig =
+  | {
+      source: 'db' | 'env' | 'default';
+      mode: 'local';
+      uploadsDir: string;
+    }
+  | {
+      source: 'db' | 'env';
+      mode: 's3';
+      bucket: string;
+      region: string;
+      endpoint?: string;
+      forcePathStyle?: boolean;
+      credentials?: {
+        accessKeyId: string;
+        secretAccessKey: string;
+      };
+    };
 
+export function resolveStoredStorageConfig(
+  stored: StorageConfigStored
+): ResolvedStorageConfig | null {
+  const secretAccessKey = decryptSecretEnvelope(stored.s3SecretKey);
+  if (stored.s3Bucket && stored.s3Region && stored.s3AccessKey && secretAccessKey) {
+    return {
+      source: 'db',
+      mode: 's3',
+      bucket: stored.s3Bucket,
+      region: stored.s3Region,
+      ...(stored.s3Endpoint ? { endpoint: stored.s3Endpoint } : {}),
+      ...(stored.s3ForcePathStyle ? { forcePathStyle: true } : {}),
+      credentials: {
+        accessKeyId: stored.s3AccessKey,
+        secretAccessKey,
+      },
+    };
+  }
+
+  if (stored.uploadsDir) {
+    return { source: 'db', mode: 'local', uploadsDir: stored.uploadsDir };
+  }
+
+  return null;
+}
+
+export function resolveEnvironmentStorageConfig(): ResolvedStorageConfig {
+  const envBucket = process.env.S3_BUCKET?.trim();
+  const envRegion = process.env.S3_REGION?.trim() || process.env.AWS_REGION?.trim();
+  const envEndpoint = process.env.S3_ENDPOINT?.trim();
+  if (envBucket && envRegion) {
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
+    return {
+      source: 'env',
+      mode: 's3',
+      bucket: envBucket,
+      region: envRegion,
+      ...(envEndpoint ? { endpoint: envEndpoint } : {}),
+      ...(process.env.S3_FORCE_PATH_STYLE === 'true' ? { forcePathStyle: true } : {}),
+      ...(accessKeyId && secretAccessKey ? { credentials: { accessKeyId, secretAccessKey } } : {}),
+    };
+  }
+
+  const envUploadsDir = process.env.UPLOAD_DIR?.trim();
+  return envUploadsDir
+    ? { source: 'env', mode: 'local', uploadsDir: envUploadsDir }
+    : { source: 'default', mode: 'local', uploadsDir: './uploads' };
+}
+
+export function storageBackendIdentity(config: ResolvedStorageConfig): string {
+  if (config.mode === 'local') {
+    return `local:${path.resolve(process.cwd(), config.uploadsDir)}`;
+  }
+
+  const endpoint = (config.endpoint || 'aws').replace(/\/+$/, '').toLowerCase();
+  return [
+    's3',
+    endpoint,
+    config.region.toLowerCase(),
+    config.bucket,
+    config.forcePathStyle ? 'path' : 'virtual-host',
+  ].join(':');
+}
+
+export function isFilesystemRootStorage(config: ResolvedStorageConfig): boolean {
+  if (config.mode !== 'local') return false;
+  const directory = path.resolve(process.cwd(), config.uploadsDir);
+  return directory === path.parse(directory).root;
+}
+
+/**
+ * Resolve the storage backend used by every attachment route. A complete
+ * database S3 configuration wins, followed by the database local directory,
+ * environment S3/local settings, and finally the repository-local uploads
+ * directory. Partial database S3 credentials never create a half-configured
+ * runtime client.
+ */
+export async function resolveStorageConfig(): Promise<ResolvedStorageConfig> {
+  try {
+    const stored = await getStorageConfig();
+    const resolved = resolveStoredStorageConfig(stored);
+    if (resolved) return resolved;
+  } catch (err) {
+    console.error('[system-settings] failed to read storage from DB, falling back to env:', err);
+  }
+
+  return resolveEnvironmentStorageConfig();
+}
+
+export function buildStorageConfig(
+  input: StorageConfigInput,
+  existing: StorageConfigStored,
+  userId: string
+): StorageConfigStored {
   let secretEnvelope: SecretEnvelope | null = existing.s3SecretKey;
   const trimmedSecret = typeof input.s3SecretKey === 'string' ? input.s3SecretKey.trim() : '';
   if (trimmedSecret) {
     secretEnvelope = encryptSecretEnvelope(trimmedSecret, userId);
   }
 
-  const next: StorageConfigStored = {
+  return {
     uploadsDir: input.uploadsDir.trim(),
     s3Bucket: input.s3Bucket.trim(),
     s3Region: input.s3Region.trim(),
+    s3Endpoint: input.s3Endpoint.trim(),
+    s3ForcePathStyle: input.s3ForcePathStyle,
     s3AccessKey: input.s3AccessKey.trim(),
     s3SecretKey: secretEnvelope,
     updatedAt: new Date().toISOString(),
     updatedBy: userId,
   };
+}
+
+export async function upsertStorageConfig(
+  input: StorageConfigInput,
+  userId: string,
+  client: SystemSettingsDbClient = db
+): Promise<StorageConfigStored> {
+  const existing = await getStorageConfig(client);
+  const next = buildStorageConfig(input, existing, userId);
 
   await writeRawSetting(
     STORAGE_CONFIG_KEY,
     'integrations',
     'Platform storage configuration (local uploads dir or S3-compatible bucket).',
     next as unknown as Record<string, unknown>,
-    userId
+    userId,
+    client
   );
 
   return next;

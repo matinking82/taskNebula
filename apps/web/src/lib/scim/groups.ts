@@ -11,10 +11,16 @@ import {
   teams,
   teamMembers,
   organizationMembers,
+  organizations,
+  systemAuditLogs,
+  users,
   eq,
   and,
   inArray,
+  ne,
+  sql,
 } from '@tasknebula/db';
+import { createId } from '@paralleldrive/cuid2';
 import { SCIM_SCHEMAS, type ScimGroupRecord } from './types';
 import { getBaseUrl } from '../sso/saml';
 
@@ -23,6 +29,21 @@ export type WorkspaceGroup = {
   name: string;
   memberIds: string[];
 };
+
+type ScimDbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export type ScimGroupMutationErrorCode =
+  | 'workspace_unavailable'
+  | 'group_not_found'
+  | 'invalid_display_name'
+  | 'invalid_members';
+
+export class ScimGroupMutationError extends Error {
+  constructor(public readonly code: ScimGroupMutationErrorCode) {
+    super(code);
+    this.name = 'ScimGroupMutationError';
+  }
+}
 
 async function teamsForWorkspace(workspaceId: string) {
   return db
@@ -67,15 +88,18 @@ export async function listWorkspaceGroups(
 
 export async function getWorkspaceGroup(
   workspaceId: string,
-  groupId: string
+  groupId: string,
+  executor: ScimDbExecutor = db,
+  lockForUpdate = false
 ): Promise<WorkspaceGroup | null> {
-  const [team] = await db
+  const query = executor
     .select({ id: teams.id, name: teams.name })
     .from(teams)
     .where(and(eq(teams.id, groupId), eq(teams.organizationId, workspaceId)))
     .limit(1);
+  const [team] = lockForUpdate ? await query.for('update') : await query;
   if (!team) return null;
-  const members = await db
+  const members = await executor
     .select({ userId: teamMembers.userId })
     .from(teamMembers)
     .where(eq(teamMembers.teamId, team.id));
@@ -100,56 +124,188 @@ export function toScimGroup(row: WorkspaceGroup): ScimGroupRecord {
 }
 
 function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80) || 'team';
+  return (
+    input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80) || 'team'
+  );
 }
 
 export async function createWorkspaceGroup(
   workspaceId: string,
   displayName: string,
-  memberIds: string[]
+  memberIds: string[],
+  tokenId?: string
 ): Promise<WorkspaceGroup> {
-  const inserted = await db
-    .insert(teams)
-    .values({
-      organizationId: workspaceId,
-      name: displayName,
-      slug: `${slugify(displayName)}-${Date.now().toString(36)}`,
-    })
-    .returning({ id: teams.id, name: teams.name });
-  const team = inserted[0];
-  if (!team) {
-    throw new Error('Failed to create group');
-  }
+  return db.transaction(async (tx) => {
+    const name = normalizeDisplayName(displayName);
+    const [workspace] = await tx
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(and(eq(organizations.id, workspaceId), ne(organizations.status, 'suspended')))
+      .limit(1)
+      .for('share');
+    if (!workspace) throw new ScimGroupMutationError('workspace_unavailable');
 
-  if (memberIds.length) {
-    await applyGroupMembershipChanges(workspaceId, team.id, {
-      add: memberIds,
-    });
-  }
-  return { id: team.id, name: team.name, memberIds };
+    const id = createId();
+    const [team] = await tx
+      .insert(teams)
+      .values({
+        id,
+        organizationId: workspaceId,
+        name,
+        slug: `${slugify(name)}-${id.slice(-10)}`.slice(0, 100),
+      })
+      .returning({ id: teams.id, name: teams.name });
+    if (!team) throw new ScimGroupMutationError('group_not_found');
+
+    await applyGroupMembershipChangesWithExecutor(workspaceId, team.id, { replace: memberIds }, tx);
+    if (tokenId) {
+      await writeGroupAudit(tx, {
+        tokenId,
+        workspaceId,
+        groupId: team.id,
+        action: 'scim.group.created',
+        changes: {
+          displayName: { from: null, to: name },
+          memberCount: { from: 0, to: new Set(memberIds).size },
+        },
+      });
+    }
+
+    const created = await getWorkspaceGroup(workspaceId, team.id, tx);
+    if (!created) throw new ScimGroupMutationError('group_not_found');
+    return created;
+  });
 }
 
-export async function renameWorkspaceGroup(
+function normalizeDisplayName(displayName: string): string {
+  const name = displayName.trim();
+  if (name.length === 0 || name.length > 255) {
+    throw new ScimGroupMutationError('invalid_display_name');
+  }
+  return name;
+}
+
+function normalizeMemberIds(memberIds: string[]): string[] {
+  if (memberIds.some((id) => typeof id !== 'string' || id.trim().length === 0)) {
+    throw new ScimGroupMutationError('invalid_members');
+  }
+  return Array.from(new Set(memberIds.map((id) => id.trim())));
+}
+
+async function writeGroupAudit(
+  executor: ScimDbExecutor,
+  params: {
+    tokenId: string;
+    workspaceId: string;
+    groupId: string;
+    action: string;
+    changes: Record<string, { from: unknown; to: unknown }>;
+  }
+) {
+  await executor.insert(systemAuditLogs).values({
+    userId: `scim:${params.tokenId}`,
+    action: params.action,
+    resourceType: 'team',
+    resourceId: params.groupId,
+    organizationId: params.workspaceId,
+    changes: params.changes,
+    metadata: { actorType: 'scim_token', tokenId: params.tokenId },
+  });
+}
+
+export async function updateWorkspaceGroupAtomic(params: {
+  workspaceId: string;
+  groupId: string;
+  tokenId: string;
+  displayName?: string;
+  members: { add?: string[]; remove?: string[]; replace?: string[] };
+}): Promise<WorkspaceGroup> {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`scim-group:${params.groupId}`}))`
+    );
+    const current = await getWorkspaceGroup(params.workspaceId, params.groupId, tx, true);
+    if (!current) throw new ScimGroupMutationError('group_not_found');
+
+    const nextName =
+      params.displayName !== undefined ? normalizeDisplayName(params.displayName) : current.name;
+    await applyGroupMembershipChangesWithExecutor(
+      params.workspaceId,
+      params.groupId,
+      params.members,
+      tx
+    );
+    if (nextName !== current.name) {
+      await renameWorkspaceGroup(params.workspaceId, params.groupId, nextName, tx);
+    }
+
+    const updated = await getWorkspaceGroup(params.workspaceId, params.groupId, tx);
+    if (!updated) throw new ScimGroupMutationError('group_not_found');
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    if (nextName !== current.name) {
+      changes.displayName = { from: current.name, to: nextName };
+    }
+    if (
+      params.members.replace !== undefined ||
+      (params.members.add?.length ?? 0) > 0 ||
+      (params.members.remove?.length ?? 0) > 0
+    ) {
+      changes.memberCount = { from: current.memberIds.length, to: updated.memberIds.length };
+    }
+    if (Object.keys(changes).length > 0) {
+      await writeGroupAudit(tx, {
+        tokenId: params.tokenId,
+        workspaceId: params.workspaceId,
+        groupId: params.groupId,
+        action: 'scim.group.updated',
+        changes,
+      });
+    }
+    return updated;
+  });
+}
+
+export async function deleteWorkspaceGroupAtomic(params: {
+  workspaceId: string;
+  groupId: string;
+  tokenId: string;
+}): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`scim-group:${params.groupId}`}))`
+    );
+    const current = await getWorkspaceGroup(params.workspaceId, params.groupId, tx, true);
+    if (!current) throw new ScimGroupMutationError('group_not_found');
+    await tx
+      .delete(teams)
+      .where(and(eq(teams.id, params.groupId), eq(teams.organizationId, params.workspaceId)));
+    await writeGroupAudit(tx, {
+      tokenId: params.tokenId,
+      workspaceId: params.workspaceId,
+      groupId: params.groupId,
+      action: 'scim.group.deleted',
+      changes: {
+        deleted: { from: false, to: true },
+        displayName: { from: current.name, to: null },
+        memberCount: { from: current.memberIds.length, to: 0 },
+      },
+    });
+  });
+}
+
+async function renameWorkspaceGroup(
   workspaceId: string,
   groupId: string,
-  displayName: string
+  displayName: string,
+  executor: ScimDbExecutor = db
 ): Promise<void> {
-  await db
+  await executor
     .update(teams)
     .set({ name: displayName, updatedAt: new Date() })
-    .where(and(eq(teams.id, groupId), eq(teams.organizationId, workspaceId)));
-}
-
-export async function deleteWorkspaceGroup(
-  workspaceId: string,
-  groupId: string
-): Promise<void> {
-  await db
-    .delete(teams)
     .where(and(eq(teams.id, groupId), eq(teams.organizationId, workspaceId)));
 }
 
@@ -161,67 +317,57 @@ export async function deleteWorkspaceGroup(
  * keeps the response well-formed when IdPs over-eagerly include users that
  * haven't been synced yet.
  */
-export async function applyGroupMembershipChanges(
+async function applyGroupMembershipChangesWithExecutor(
   workspaceId: string,
   groupId: string,
-  changes: { add?: string[]; remove?: string[]; replace?: string[] }
+  changes: { add?: string[]; remove?: string[]; replace?: string[] },
+  executor: ScimDbExecutor
 ): Promise<void> {
-  const candidate = Array.from(
-    new Set([
-      ...(changes.add ?? []),
-      ...(changes.remove ?? []),
-      ...(changes.replace ?? []),
-    ])
-  );
-  if (!candidate.length && !changes.replace) return;
+  const replace = changes.replace !== undefined ? normalizeMemberIds(changes.replace) : undefined;
+  const add = normalizeMemberIds(changes.add ?? []);
+  const remove = normalizeMemberIds(changes.remove ?? []);
+  const candidate = replace ?? add;
+  if (candidate.length === 0 && replace === undefined && remove.length === 0) return;
 
   // Validate which candidates actually belong to the workspace.
   const validMembers = candidate.length
-    ? await db
+    ? await executor
         .select({ userId: organizationMembers.userId })
         .from(organizationMembers)
+        .innerJoin(users, eq(users.id, organizationMembers.userId))
         .where(
           and(
             eq(organizationMembers.organizationId, workspaceId),
+            eq(organizationMembers.status, 'active'),
+            eq(users.status, 'active'),
             inArray(organizationMembers.userId, candidate)
           )
         )
     : [];
   const validSet = new Set(validMembers.map((r) => r.userId));
+  if (validSet.size !== candidate.length) {
+    throw new ScimGroupMutationError('invalid_members');
+  }
 
-  if (changes.replace) {
-    await db.delete(teamMembers).where(eq(teamMembers.teamId, groupId));
-    const adds = changes.replace.filter((id) => validSet.has(id));
-    if (adds.length) {
-      await db.insert(teamMembers).values(
-        adds.map((userId) => ({ teamId: groupId, userId, role: 'member' as const }))
-      );
+  if (replace !== undefined) {
+    await executor.delete(teamMembers).where(eq(teamMembers.teamId, groupId));
+    if (replace.length) {
+      await executor
+        .insert(teamMembers)
+        .values(replace.map((userId) => ({ teamId: groupId, userId, role: 'member' as const })))
+        .onConflictDoNothing();
     }
     return;
   }
-  if (changes.remove?.length) {
-    await db
+  if (remove.length) {
+    await executor
       .delete(teamMembers)
-      .where(
-        and(
-          eq(teamMembers.teamId, groupId),
-          inArray(teamMembers.userId, changes.remove)
-        )
-      );
+      .where(and(eq(teamMembers.teamId, groupId), inArray(teamMembers.userId, remove)));
   }
-  if (changes.add?.length) {
-    const adds = changes.add.filter((id) => validSet.has(id));
-    for (const userId of adds) {
-      // Drizzle doesn't have a built-in upsert without onConflict here, so
-      // catch unique-violation per row. Memberships are rare PATCH events.
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        await db
-          .insert(teamMembers)
-          .values({ teamId: groupId, userId, role: 'member' });
-      } catch {
-        // ignore duplicates
-      }
-    }
+  if (add.length) {
+    await executor
+      .insert(teamMembers)
+      .values(add.map((userId) => ({ teamId: groupId, userId, role: 'member' as const })))
+      .onConflictDoNothing();
   }
 }

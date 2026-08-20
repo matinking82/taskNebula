@@ -8,10 +8,28 @@ import { processApprovalEffectOutbox } from '@/lib/agent-policy/approval-effects
 import { evaluateAgentPolicy } from '@/lib/agent-policy/evaluator';
 import { executeApprovedAgentAction } from '@/lib/agent-policy/executors';
 import { childLogger } from '@/lib/logger';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
+import { canCommentOnIssue, canEditIssue } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
 const log = childLogger('api/agent-approvals/approve');
+
+async function requesterCanStillExecute(approval: typeof agentApprovalRequests.$inferSelect) {
+  if (!approval.projectId) return false;
+  const access = await resolveProjectCapabilityAccess(approval.requestedBy, approval.projectId);
+  if (!access.canRead || access.project?.organizationId !== approval.workspaceId) return false;
+
+  const executor = (approval.proposedPayload as { executor?: string } | null)?.executor;
+  if (executor === 'issues:create') return access.permissions.canCreateIssues;
+  if (executor === 'issues:update' && approval.targetId) {
+    return (await canEditIssue(approval.requestedBy, approval.targetId)).allowed;
+  }
+  if (executor === 'comments:create' && approval.targetId) {
+    return (await canCommentOnIssue(approval.requestedBy, approval.targetId)).allowed;
+  }
+  return false;
+}
 
 export async function POST(
   _request: Request,
@@ -56,6 +74,16 @@ export async function POST(
         and(eq(agentApprovalRequests.id, approval.id), eq(agentApprovalRequests.status, 'pending'))
       );
     return NextResponse.json({ error: 'approval_expired' }, { status: 410 });
+  }
+
+  if (!(await requesterCanStillExecute(approval))) {
+    await db
+      .update(agentApprovalRequests)
+      .set({ status: 'expired', updatedAt: now })
+      .where(
+        and(eq(agentApprovalRequests.id, approval.id), eq(agentApprovalRequests.status, 'pending'))
+      );
+    return NextResponse.json({ error: 'approval_requester_access_changed' }, { status: 409 });
   }
 
   const currentPolicy = await evaluateAgentPolicy({

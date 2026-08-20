@@ -26,7 +26,12 @@ export default defineConfig({
   // Fail the build on .only() in CI.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // The exhaustive route matrix and interaction specs share one stateful seed
+  // and one Next dev compiler. Parallel workers can race cold RSC compilation
+  // and mutate the same fixture, producing hydration noise and false greens via
+  // API fallbacks. Reliability is the default; an explicitly isolated caller
+  // can opt into parallelism with PLAYWRIGHT_WORKERS.
+  workers: Math.max(1, Number.parseInt(process.env.PLAYWRIGHT_WORKERS ?? '1', 10) || 1),
   reporter: process.env.CI
     ? [['list'], ['html', { open: 'never' }], ['github']]
     : [['list'], ['html', { open: 'never' }]],
@@ -36,7 +41,11 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     actionTimeout: 15_000,
-    navigationTimeout: 30_000,
+    // The exhaustive surface matrix intentionally cold-compiles dozens of
+    // independent App Router entries in development. Keep navigation bounded,
+    // but allow the compile itself to finish so assertions measure the rendered
+    // product rather than Next.js compiler startup time.
+    navigationTimeout: 60_000,
   },
   projects: [
     // 1) Setup: programmatic signin → storage state shared by authed specs.

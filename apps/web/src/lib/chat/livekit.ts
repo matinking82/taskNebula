@@ -16,7 +16,11 @@ function stripPort(host: string) {
 export function resolveLivekitPublicUrl(request?: Request) {
   const configuredPublicHost = process.env.LIVEKIT_PUBLIC_HOST?.trim();
   const configuredPort = process.env.LIVEKIT_PORT || '7880';
-  const configuredPublicUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL || '').trim();
+  const configuredPublicUrl = (
+    process.env.NEXT_PUBLIC_LIVEKIT_URL ||
+    process.env.LIVEKIT_URL ||
+    ''
+  ).trim();
 
   const buildSocketUrl = (host: string, protocolHint?: string) => {
     const socketProtocol = protocolHint === 'https' || protocolHint === 'wss' ? 'wss' : 'ws';
@@ -29,10 +33,7 @@ export function resolveLivekitPublicUrl(request?: Request) {
   // and the port is 443, not 7880. Falling through to LIVEKIT_PUBLIC_HOST
   // here would silently replace that with a port-7880 URL that the
   // browser can't reach.
-  if (
-    configuredPublicUrl.startsWith('wss://') ||
-    configuredPublicUrl.startsWith('ws://')
-  ) {
+  if (configuredPublicUrl.startsWith('wss://') || configuredPublicUrl.startsWith('ws://')) {
     return configuredPublicUrl.replace(/\/+$/, '');
   }
 
@@ -109,6 +110,28 @@ export function getLivekitStatus() {
       !config.apiKey ? 'LIVEKIT_API_KEY' : null,
       !config.apiSecret ? 'LIVEKIT_API_SECRET' : null,
     ].filter(Boolean),
+  };
+}
+
+/**
+ * Async DB-first status for request handlers and server operations. Admin →
+ * System credentials must drive the same readiness gates as token and room
+ * creation; the synchronous status above remains available for env-only code.
+ */
+export async function resolveLivekitStatus() {
+  const config = await resolveLivekitConfigForServer();
+  const ready = Boolean(config.serverUrl && config.publicUrl && config.apiKey && config.apiSecret);
+
+  return {
+    ready,
+    url: config.publicUrl || null,
+    source: config.source,
+    missing: [
+      !config.serverUrl ? 'LIVEKIT_URL' : null,
+      !config.publicUrl ? 'NEXT_PUBLIC_LIVEKIT_URL' : null,
+      !config.apiKey ? 'LIVEKIT_API_KEY' : null,
+      !config.apiSecret ? 'LIVEKIT_API_SECRET' : null,
+    ].filter((value): value is string => Boolean(value)),
   };
 }
 

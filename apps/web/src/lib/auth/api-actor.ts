@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { auth } from '@/auth';
-import { apiKeys, db, organizationMembers, users } from '@tasknebula/db';
-import { and, eq, gt, isNull, or } from 'drizzle-orm';
+import { apiKeys, db, organizationMembers, organizations, users } from '@tasknebula/db';
+import { and, eq, gt, isNull, ne, or } from 'drizzle-orm';
 
 export type ApiActor = {
   userId: string;
@@ -80,6 +80,10 @@ export async function resolveApiActor(request: Request): Promise<ApiActor | null
         eq(organizationMembers.organizationId, apiKeys.organizationId),
         eq(organizationMembers.status, 'active')
       )
+    )
+    .innerJoin(
+      organizations,
+      and(eq(organizations.id, apiKeys.organizationId), ne(organizations.status, 'suspended'))
     )
     .where(
       and(

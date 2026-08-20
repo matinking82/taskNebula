@@ -26,6 +26,7 @@ const dbDeleteMock = jest.fn();
 const buildInitiativeIndexMock = jest.fn();
 const validateInitiativeDepthMock = jest.fn();
 const wouldCreateInitiativeCycleMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
 
 class MockNextRequest {
   private readonly bodyValue: string;
@@ -74,6 +75,10 @@ jest.mock('next/server', () => ({
 
 jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
+}));
+
+jest.mock('@/lib/auth/access-control', () => ({
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
 }));
 
 jest.mock('@paralleldrive/cuid2', () => ({
@@ -300,6 +305,12 @@ describe('/api/initiatives workspace validation guards', () => {
     buildInitiativeIndexMock.mockReturnValue(new Map());
     validateInitiativeDepthMock.mockReturnValue({ allowed: true });
     wouldCreateInitiativeCycleMock.mockReturnValue(false);
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: true,
+      isSuperAdmin: false,
+      role: 'member',
+      membershipId: 'membership-1',
+    });
   });
 
   // ------------------------------------------------------------------
@@ -308,11 +319,9 @@ describe('/api/initiatives workspace validation guards', () => {
   describe('POST /api/initiatives', () => {
     it('rejects parentInitiativeId belonging to another workspace with 400', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      dbSelectMock
-        // 1) membership lookup → present
-        .mockReturnValueOnce(limitBuilder([{ userId: 'user-1', organizationId: 'ws-1' }]))
-        // 2) parent initiative lookup → exists but in ws-2
-        .mockReturnValueOnce(limitBuilder([{ id: 'parent-foreign', workspaceId: 'ws-2' }]));
+      dbSelectMock.mockReturnValueOnce(
+        limitBuilder([{ id: 'parent-foreign', workspaceId: 'ws-2' }])
+      );
 
       const response = await POST(
         new NextRequestCtor('http://localhost:3002/api/initiatives', {
@@ -330,7 +339,7 @@ describe('/api/initiatives workspace validation guards', () => {
         error: 'parentInitiativeId does not belong to this workspace',
       });
       // We bail before touching siblings, projects, or insert.
-      expect(dbSelectMock).toHaveBeenCalledTimes(2);
+      expect(dbSelectMock).toHaveBeenCalledTimes(1);
       expect(dbInsertMock).not.toHaveBeenCalled();
     });
 
@@ -339,11 +348,9 @@ describe('/api/initiatives workspace validation guards', () => {
       const insertValuesSpy = jest.fn();
 
       dbSelectMock
-        // 1) membership
-        .mockReturnValueOnce(limitBuilder([{ userId: 'user-1', organizationId: 'ws-1' }]))
-        // 2) parent in same workspace
+        // 1) parent in same workspace
         .mockReturnValueOnce(limitBuilder([{ id: 'parent-ok', workspaceId: 'ws-1' }]))
-        // 3) siblings (for depth) — empty is fine; helpers are mocked
+        // 2) siblings (for depth) — empty is fine; helpers are mocked
         .mockReturnValueOnce(whereBuilder([]));
 
       dbInsertMock.mockReturnValueOnce(
@@ -383,11 +390,7 @@ describe('/api/initiatives workspace validation guards', () => {
 
     it('rejects projectIds containing a foreign project id with 400 (mentions the id)', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      dbSelectMock
-        // 1) membership
-        .mockReturnValueOnce(limitBuilder([{ userId: 'user-1', organizationId: 'ws-1' }]))
-        // 2) projects scan: only `proj-ours` matched, `proj-foreign` missing
-        .mockReturnValueOnce(whereBuilder([{ id: 'proj-ours' }]));
+      dbSelectMock.mockReturnValueOnce(whereBuilder([{ id: 'proj-ours' }]));
 
       const response = await POST(
         new NextRequestCtor('http://localhost:3002/api/initiatives', {
@@ -412,11 +415,7 @@ describe('/api/initiatives workspace validation guards', () => {
       const initiativeValuesSpy = jest.fn();
       const linkValuesSpy = jest.fn();
 
-      dbSelectMock
-        // 1) membership
-        .mockReturnValueOnce(limitBuilder([{ userId: 'user-1', organizationId: 'ws-1' }]))
-        // 2) projects scan: both owned
-        .mockReturnValueOnce(whereBuilder([{ id: 'proj-a' }, { id: 'proj-b' }]));
+      dbSelectMock.mockReturnValueOnce(whereBuilder([{ id: 'proj-a' }, { id: 'proj-b' }]));
 
       dbInsertMock
         // 1) initiatives insert
@@ -457,11 +456,7 @@ describe('/api/initiatives workspace validation guards', () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
       const initiativeValuesSpy = jest.fn();
 
-      // Membership only — `requested.length === 0` short-circuits before the
-      // project ownership scan, so we don't queue a `whereBuilder` here.
-      dbSelectMock.mockReturnValueOnce(
-        limitBuilder([{ userId: 'user-1', organizationId: 'ws-1' }])
-      );
+      // `requested.length === 0` short-circuits before the project ownership scan.
 
       dbInsertMock.mockReturnValueOnce(
         insertReturningBuilder(
@@ -500,9 +495,7 @@ describe('/api/initiatives workspace validation guards', () => {
       dbSelectMock
         // 1) loadAndAuthorize: initiative row
         .mockReturnValueOnce(limitBuilder([{ id: 'init-1', workspaceId: 'ws-1', slug: 'old' }]))
-        // 2) loadAndAuthorize: membership
-        .mockReturnValueOnce(limitBuilder([{ userId: 'user-1', organizationId: 'ws-1' }]))
-        // 3) projects scan: foreign id not returned
+        // 2) projects scan: foreign id not returned
         .mockReturnValueOnce(whereBuilder([]));
 
       // The PATCH path runs the update *before* the projectIds scan, so we
@@ -535,9 +528,7 @@ describe('/api/initiatives workspace validation guards', () => {
       dbSelectMock
         // 1) loadAndAuthorize: initiative row
         .mockReturnValueOnce(limitBuilder([{ id: 'init-1', workspaceId: 'ws-1', slug: 'old' }]))
-        // 2) loadAndAuthorize: membership
-        .mockReturnValueOnce(limitBuilder([{ userId: 'user-1', organizationId: 'ws-1' }]))
-        // 3) projects scan: owned
+        // 2) projects scan: owned
         .mockReturnValueOnce(whereBuilder([{ id: 'ours' }]));
 
       dbUpdateMock.mockReturnValueOnce(

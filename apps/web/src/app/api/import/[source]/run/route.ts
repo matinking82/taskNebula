@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  ROLE_DEFAULT_PERMISSIONS,
-  db,
-  hasPermission as roleHasPermission,
-  importJobs,
-  organizationMembers,
-  projectMembers,
-  projects,
-  users,
-  eq,
-  and,
-  type ProjectRole,
-} from '@tasknebula/db';
+import { db, importJobs } from '@tasknebula/db';
 import { isImportSource, type ImportSource } from '@/lib/importers';
 import { executeImportJob } from '@/lib/importers/runner';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,68 +24,20 @@ async function canCreateImportedIssues(args: {
 }): Promise<{ allowed: boolean; status: 403 | 404; error: string }> {
   const { userId, workspaceId, projectId } = args;
 
-  const [project] = await db
-    .select({ id: projects.id, organizationId: projects.organizationId })
-    .from(projects)
-    .where(and(eq(projects.id, projectId), eq(projects.organizationId, workspaceId)))
-    .limit(1);
-
-  if (!project) {
+  const access = await resolveProjectCapabilityAccess(userId, projectId);
+  if (!access.project || access.project.organizationId !== workspaceId) {
     return { allowed: false, status: 404, error: 'Project not found' };
   }
-
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (user?.isSuperAdmin) {
-    return { allowed: true, status: 403, error: '' };
-  }
-
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  if (!orgMember) {
+  if (!access.canRead) {
     return { allowed: false, status: 403, error: 'Forbidden' };
   }
-
-  if (roleHasPermission(orgMember.role || '', 'project:manage')) {
+  if (access.canManage || access.permissions.canCreateIssues) {
     return { allowed: true, status: 403, error: '' };
   }
-
-  const [projectMember] = await db
-    .select({
-      role: projectMembers.role,
-      canCreateIssues: projectMembers.canCreateIssues,
-    })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-
-  if (!projectMember) {
-    return { allowed: false, status: 403, error: 'Forbidden' };
-  }
-
-  const roleDefaults =
-    ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const allowed = resolveProjectMemberPermission(
-    projectMember.canCreateIssues,
-    roleDefaults.canCreateIssues
-  );
   return {
-    allowed,
+    allowed: false,
     status: 403,
-    error: allowed ? '' : 'Insufficient permissions to create imported issues',
+    error: 'Insufficient permissions to create imported issues',
   };
 }
 

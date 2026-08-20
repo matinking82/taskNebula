@@ -11,56 +11,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  db,
-  desc,
-  eq,
-  getIssueById,
-  issueTriageSuggestions,
-  organizationMembers,
-  projectMembers,
-  projects,
-  users,
-} from '@tasknebula/db';
-import { and } from 'drizzle-orm';
+import { db, desc, eq, getIssueById, issueTriageSuggestions } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { triageIssue } from '@/lib/agents/triage';
 import { AiDraftError } from '@/lib/ai/draft-issue';
+import { resolveProjectAccess } from '@/lib/auth/project-access';
 
 async function callerCanView(userId: string, projectId: string): Promise<boolean> {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (user?.isSuperAdmin) return true;
-
-  const [project] = await db
-    .select({ id: projects.id, organizationId: projects.organizationId })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-  if (!project) return false;
-
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (orgMember) return true;
-
-  const [projectMember] = await db
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-  return Boolean(projectMember);
+  return (await resolveProjectAccess(userId, projectId)).canRead;
 }
 
 export async function POST(

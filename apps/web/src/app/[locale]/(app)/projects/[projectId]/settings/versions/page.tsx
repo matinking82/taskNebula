@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { ProjectAccessDenied } from '@/components/projects/project-access-denied';
 import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 import { VersionsManager } from '@/components/settings/versions-manager';
+import { PageFrame } from '@/components/ui/page-frame';
 
 export default async function ProjectVersionsSettingsPage({
   params,
@@ -29,9 +30,9 @@ export default async function ProjectVersionsSettingsPage({
   const t = await getTranslations('settings.versions');
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-8">
+    <PageFrame contentClassName="max-w-5xl">
       <h1 className="sr-only">{t('title')}</h1>
       <VersionsManager projectId={projectId} />
-    </div>
+    </PageFrame>
   );
 }

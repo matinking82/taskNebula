@@ -7,9 +7,14 @@ import {
 } from './config';
 
 export const SYSTEM_AGENT_CONTROL_KEY = 'agent_control_center';
+export const SYSTEM_AGENT_CONTROL_ADVISORY_LOCK = 'tasknebula:agent-control-settings:v1';
 
-export async function getSystemAgentControlSettingsFromDb(): Promise<SystemAgentControlSettings> {
-  const [setting] = await db
+type AgentControlDbClient = Pick<typeof db, 'select' | 'insert'>;
+
+export async function getSystemAgentControlSettingsFromDb(
+  client: AgentControlDbClient = db
+): Promise<SystemAgentControlSettings> {
+  const [setting] = await client
     .select({ value: systemSettings.value })
     .from(systemSettings)
     .where(eq(systemSettings.key, SYSTEM_AGENT_CONTROL_KEY))
@@ -20,45 +25,29 @@ export async function getSystemAgentControlSettingsFromDb(): Promise<SystemAgent
 
 export async function upsertSystemAgentControlSettings(
   value: SystemAgentControlSettings,
-  userId: string
+  userId: string,
+  client: AgentControlDbClient = db
 ) {
-  const [existing] = await db
-    .select({ id: systemSettings.id })
-    .from(systemSettings)
-    .where(eq(systemSettings.key, SYSTEM_AGENT_CONTROL_KEY))
-    .limit(1);
-
-  if (!existing) {
-    const [created] = await db
-      .insert(systemSettings)
-      .values({
-        id: createId(),
-        key: SYSTEM_AGENT_CONTROL_KEY,
-        category: 'features',
-        description: 'Global controls for TaskNebula AI and agentic execution.',
-        value,
-        updatedBy: userId,
-      })
-      .returning();
-
-    return created;
-  }
-
-  const [updated] = await db
-    .update(systemSettings)
-    .set({
+  const now = new Date();
+  const [saved] = await client
+    .insert(systemSettings)
+    .values({
+      id: createId(),
+      key: SYSTEM_AGENT_CONTROL_KEY,
+      category: 'features',
+      description: 'Global controls for TaskNebula AI and agentic execution.',
       value,
-      updatedAt: new Date(),
       updatedBy: userId,
     })
-    .where(eq(systemSettings.id, existing.id))
+    .onConflictDoUpdate({
+      target: systemSettings.key,
+      set: { value, updatedAt: now, updatedBy: userId },
+    })
     .returning();
 
-  return updated;
+  return saved;
 }
 
-export function ensureSystemAgentControlSettings(
-  value: unknown
-): SystemAgentControlSettings {
+export function ensureSystemAgentControlSettings(value: unknown): SystemAgentControlSettings {
   return normalizeSystemAgentControlSettings(value ?? DEFAULT_SYSTEM_AGENT_CONTROL_SETTINGS);
 }

@@ -89,12 +89,15 @@ jest.mock('@tasknebula/db', () => ({
 }));
 
 function limitBuilder(result: unknown) {
-  return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue(result),
-      }),
+  const query = {
+    innerJoin: jest.fn(),
+    where: jest.fn().mockReturnValue({
+      limit: jest.fn().mockResolvedValue(result),
     }),
+  };
+  query.innerJoin.mockReturnValue(query);
+  return {
+    from: jest.fn().mockReturnValue(query),
   };
 }
 

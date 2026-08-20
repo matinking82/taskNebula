@@ -1,5 +1,5 @@
 import NextAuth from 'next-auth';
-import type { NextAuthConfig } from 'next-auth';
+import type { NextAuthConfig, Session } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
@@ -11,6 +11,7 @@ import { consumeSamlExchangeToken } from '@/lib/sso/session';
 import { getLoginOAuthCredentials, isLoginOAuthProvider } from '@/lib/auth/login-oauth-providers';
 import { applyOAuthDatabaseUser, resolveOAuthDatabaseUser } from '@/lib/auth/oauth-users';
 import { consumeMobileOAuthExchangeToken } from '@/lib/auth/mobile-oauth';
+import { isDurableSessionValid } from '@/lib/auth/session-revocation';
 
 /**
  * Full auth configuration with database operations
@@ -49,6 +50,7 @@ function buildCredentialProviders(): NextAuthConfig['providers'] {
           email: user.email,
           name: user.name,
           image: user.image,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -74,6 +76,7 @@ function buildCredentialProviders(): NextAuthConfig['providers'] {
           email: user.email,
           name: user.name,
           image: user.image,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -97,6 +100,7 @@ function buildCredentialProviders(): NextAuthConfig['providers'] {
           email: user.email,
           name: user.name,
           image: user.image,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -169,4 +173,24 @@ const sessionAuth = NextAuth(authConfig);
 export const handlers = handlerAuth.handlers;
 export const signIn: typeof handlerAuth.signIn = handlerAuth.signIn;
 export const signOut = handlerAuth.signOut;
-export const auth = sessionAuth.auth;
+
+/**
+ * Resolve a session and re-check the durable user status on every server
+ * boundary. Credentials are rejected at sign-in time as well, but JWT sessions
+ * can outlive an administrator deactivating an account. Keeping this check in
+ * the canonical `auth()` export makes that admin control take effect for pages
+ * and route handlers without waiting for the token to expire.
+ */
+export async function auth(): Promise<Session | null> {
+  const session = await sessionAuth.auth();
+  const userId = session?.user?.id;
+  if (!userId) return session;
+
+  const [actor] = await db
+    .select({ status: users.status, sessionVersion: users.sessionVersion })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return isDurableSessionValid(actor, session.user.sessionVersion) ? session : null;
+}

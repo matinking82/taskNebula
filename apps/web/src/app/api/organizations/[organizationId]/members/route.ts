@@ -189,6 +189,12 @@ export async function POST(
     if (!user) {
       throw new Error('Failed to find or create user');
     }
+    if (user.status === 'inactive') {
+      return NextResponse.json(
+        { error: 'The user is inactive and must be reactivated by a platform administrator' },
+        { status: 409 }
+      );
+    }
 
     const userCanAcceptInvite = user.status === 'invited' && !user.password;
 

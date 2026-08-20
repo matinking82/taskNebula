@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  db,
-  sprints,
-  projects,
-  projectMembers,
-  organizationMembers,
-  users,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  type ProjectRole,
-} from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { db, sprints } from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
 import { rolloverCycle } from '@/lib/issues/cycle-rollover';
 import { publishEvent } from '@/lib/realtime/events';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 /**
  * POST /api/cycles/[cycleId]/rollover
@@ -47,61 +37,12 @@ export async function POST(
 
   // Permission: manage_sprints on this project, with org-wide project manager
   // and super-admin fast-paths matching the existing sprint endpoints.
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  // Resolved unconditionally so realtime events below can carry the
-  // organizationId (the SSE stream drops org-less events).
-  const [project] = await db
-    .select({ organizationId: projects.organizationId })
-    .from(projects)
-    .where(eq(projects.id, cycle.projectId))
-    .limit(1);
-
-  if (!project) {
+  const access = await resolveProjectCapabilityAccess(userId, cycle.projectId);
+  if (!access.project) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
-
-  if (!user?.isSuperAdmin) {
-    const [orgMember] = await db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, userId),
-          eq(organizationMembers.organizationId, project.organizationId),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-
-    if (!roleHasPermission(orgMember?.role || '', 'project:manage')) {
-      const [projectMember] = await db
-        .select()
-        .from(projectMembers)
-        .where(
-          and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, cycle.projectId))
-        )
-        .limit(1);
-
-      if (!projectMember) {
-        return NextResponse.json({ error: 'Not a project member' }, { status: 403 });
-      }
-
-      const roleDefaults =
-        ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] ||
-        ROLE_DEFAULT_PERMISSIONS.viewer;
-      const allowed = resolveProjectMemberPermission(
-        projectMember.canManageSprints,
-        roleDefaults.canManageSprints
-      );
-      if (!allowed) {
-        return NextResponse.json({ error: 'No permission to manage sprints' }, { status: 403 });
-      }
-    }
+  if (!access.canRead || (!access.canManage && !access.permissions.canManageSprints)) {
+    return NextResponse.json({ error: 'No permission to manage sprints' }, { status: 403 });
   }
 
   const result = await rolloverCycle(cycleId, userId, /* manualOverride */ true);
@@ -109,13 +50,13 @@ export async function POST(
   publishEvent('sprint.updated', userId, {
     projectId: cycle.projectId,
     sprintId: cycleId,
-    organizationId: project.organizationId,
+    organizationId: access.project.organizationId,
   });
   if (result.nextCycleId) {
     publishEvent('sprint.updated', userId, {
       projectId: cycle.projectId,
       sprintId: result.nextCycleId,
-      organizationId: project.organizationId,
+      organizationId: access.project.organizationId,
     });
   }
 

@@ -7,7 +7,6 @@ import {
   and,
   ROLE_DEFAULT_PERMISSIONS,
   PERMISSION_KEYS,
-  hasPermission as roleHasPermission,
   type ProjectRole,
   type PermissionKey,
 } from '@tasknebula/db';
@@ -15,87 +14,19 @@ import { createId } from '@paralleldrive/cuid2';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
 import { canReadProject } from '@/lib/auth/access-control';
 import { publishEvent } from '@/lib/realtime/events';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 // Check if user can change roles/permissions
 async function canChangeRolesAndPermissions(userId: string, projectId: string): Promise<boolean> {
-  // Check if super admin
-  const user = await db.query.users.findFirst({
-    where: eq(schema.users.id, userId),
-    columns: { isSuperAdmin: true },
-  });
-  if (user?.isSuperAdmin) return true;
-
-  // Get project to check org
-  const project = await db.query.projects.findFirst({
-    where: eq(schema.projects.id, projectId),
-    columns: { organizationId: true },
-  });
-  if (!project) return false;
-
-  // Check org role
-  const orgMember = await db.query.organizationMembers.findFirst({
-    where: and(
-      eq(schema.organizationMembers.userId, userId),
-      eq(schema.organizationMembers.organizationId, project.organizationId),
-      eq(schema.organizationMembers.status, 'active')
-    ),
-    columns: { role: true },
-  });
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) return true;
-
-  // Check project role - only product_owner can change roles
-  const projectMember = await db.query.projectMembers.findFirst({
-    where: and(
-      eq(schema.projectMembers.userId, userId),
-      eq(schema.projectMembers.projectId, projectId)
-    ),
-  });
-  if (!projectMember) return false;
-
-  const roleDefaults = ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole];
-  return resolveProjectMemberPermission(projectMember.canChangeRoles, roleDefaults?.canChangeRoles);
+  const access = await resolveProjectCapabilityAccess(userId, projectId);
+  return access.canRead && access.permissions.canChangeRoles;
 }
 
 // Check if user can remove members
 async function canRemoveProjectMembers(userId: string, projectId: string): Promise<boolean> {
-  const user = await db.query.users.findFirst({
-    where: eq(schema.users.id, userId),
-    columns: { isSuperAdmin: true },
-  });
-  if (user?.isSuperAdmin) return true;
-
-  const project = await db.query.projects.findFirst({
-    where: eq(schema.projects.id, projectId),
-    columns: { organizationId: true },
-  });
-  if (!project) return false;
-
-  const orgMember = await db.query.organizationMembers.findFirst({
-    where: and(
-      eq(schema.organizationMembers.userId, userId),
-      eq(schema.organizationMembers.organizationId, project.organizationId),
-      eq(schema.organizationMembers.status, 'active')
-    ),
-    columns: { role: true },
-  });
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) return true;
-
-  const projectMember = await db.query.projectMembers.findFirst({
-    where: and(
-      eq(schema.projectMembers.userId, userId),
-      eq(schema.projectMembers.projectId, projectId)
-    ),
-  });
-  if (!projectMember) return false;
-
-  const roleDefaults = ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole];
+  const access = await resolveProjectCapabilityAccess(userId, projectId);
   return (
-    resolveProjectMemberPermission(
-      projectMember.canManageMembers,
-      roleDefaults?.canManageMembers
-    ) ||
-    resolveProjectMemberPermission(projectMember.canRemoveMembers, roleDefaults?.canRemoveMembers)
+    access.canRead && (access.permissions.canManageMembers || access.permissions.canRemoveMembers)
   );
 }
 

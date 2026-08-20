@@ -4,11 +4,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import { db, systemAuditLogs } from '@tasknebula/db';
-import {
-  getSmtpConfig,
-  sanitizeSmtpConfig,
-  upsertSmtpConfig,
-} from '@/lib/admin/system-settings';
+import { getSmtpConfig, sanitizeSmtpConfig, upsertSmtpConfig } from '@/lib/admin/system-settings';
 import { resetEmailTransportCache } from '@/lib/email/sender';
 
 const bodySchema = z.object({
@@ -58,23 +54,25 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const saved = await upsertSmtpConfig(parsed.data, authz.userId);
-  resetEmailTransportCache();
-
-  await db.insert(systemAuditLogs).values({
-    id: createId(),
-    userId: authz.userId,
-    action: 'system.smtp_config_updated',
-    resourceType: 'system_setting',
-    resourceId: 'smtp_config',
-    metadata: {
-      host: saved.host,
-      port: saved.port,
-      secure: saved.secure,
-      emailFrom: saved.emailFrom,
-      passwordRotated: Boolean(parsed.data.password && parsed.data.password.trim()),
-    },
+  const saved = await db.transaction(async (tx) => {
+    const next = await upsertSmtpConfig(parsed.data, authz.userId, tx);
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: authz.userId,
+      action: 'system.smtp_config_updated',
+      resourceType: 'system_setting',
+      resourceId: 'smtp_config',
+      metadata: {
+        host: next.host,
+        port: next.port,
+        secure: next.secure,
+        emailFrom: next.emailFrom,
+        passwordRotated: Boolean(parsed.data.password?.trim()),
+      },
+    });
+    return next;
   });
+  resetEmailTransportCache();
 
   return NextResponse.json({ smtp: sanitizeSmtpConfig(saved) });
 }

@@ -23,9 +23,13 @@ jest.mock('@/lib/version', () => ({
 }));
 
 const getSelfUpdateStatusMock = jest.fn();
-jest.mock('@/lib/version/self-update', () => ({
-  getSelfUpdateStatus: (...args: any[]) => getSelfUpdateStatusMock(...args),
-}));
+jest.mock('@/lib/version/self-update', () => {
+  class SelfUpdateStateError extends Error {}
+  return {
+    getSelfUpdateStatus: (...args: any[]) => getSelfUpdateStatusMock(...args),
+    SelfUpdateStateError,
+  };
+});
 
 const getVersionUpdatePreferencesMock = jest.fn();
 jest.mock('@/lib/version/preferences', () => ({
@@ -35,6 +39,7 @@ jest.mock('@/lib/version/preferences', () => ({
 import { NextRequest } from 'next/server';
 import { GET } from '../route';
 import type { UpdateStatus } from '@/lib/version';
+import { SelfUpdateStateError } from '@/lib/version/self-update';
 
 function request(url = 'http://localhost/api/admin/version') {
   return new NextRequest(url);
@@ -149,5 +154,18 @@ describe('GET /api/admin/version', () => {
     await GET(request('http://localhost/api/admin/version?refresh=1'));
 
     expect(getUpdateStatusMock).toHaveBeenCalledWith({ refresh: false });
+  });
+
+  it('returns 503 when persisted self-update state cannot be read', async () => {
+    authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    isSuperAdminMock.mockResolvedValue(true);
+    getUpdateStatusMock.mockResolvedValue(upToDateStatus);
+    getSelfUpdateStatusMock.mockRejectedValue(new SelfUpdateStateError('database unavailable'));
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ reason: 'state_unavailable' });
+    expect(getVersionUpdatePreferencesMock).not.toHaveBeenCalled();
   });
 });

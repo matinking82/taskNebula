@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, intakeForms, organizationMembers, projects } from '@tasknebula/db';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { db, intakeForms, projects } from '@tasknebula/db';
+import { desc, inArray } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { IntakeFormsList } from '@/components/intake/intake-forms-list';
-import { hasPermission } from '@/lib/auth/permissions';
+import { getPermittedOrganizationIds } from '@/lib/auth/permissions';
 import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
 
@@ -23,22 +23,7 @@ export default async function IntakeFormsSettingsPage() {
     redirect('/auth/signin?callbackUrl=/settings/intake-forms');
   }
 
-  const orgMemberships = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    );
-
-  const orgIds = (
-    await Promise.all(
-      orgMemberships.map(async (membership) =>
-        (await hasPermission(membership.organizationId, 'org:settings'))
-          ? membership.organizationId
-          : null
-      )
-    )
-  ).filter((organizationId): organizationId is string => Boolean(organizationId));
+  const orgIds = await getPermittedOrganizationIds(session.user.id, 'org:settings');
 
   if (orgIds.length === 0) {
     redirect('/dashboard?error=insufficient-permission');

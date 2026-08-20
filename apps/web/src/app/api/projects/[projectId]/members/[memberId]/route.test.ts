@@ -4,6 +4,7 @@ const canReadProjectMock = jest.fn();
 const publishEventMock = jest.fn();
 const dbDeleteMock = jest.fn();
 const dbInsertMock = jest.fn();
+const resolveProjectCapabilityAccessMock = jest.fn();
 
 const dbQueryMock = {
   users: { findFirst: jest.fn() },
@@ -50,6 +51,11 @@ jest.mock('@/lib/projects/server', () => ({
 
 jest.mock('@/lib/auth/access-control', () => ({
   canReadProject: (...args: unknown[]) => canReadProjectMock(...args),
+}));
+
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    resolveProjectCapabilityAccessMock(...args),
 }));
 
 jest.mock('@/lib/realtime/events', () => ({
@@ -121,6 +127,7 @@ describe('DELETE /api/projects/[projectId]/members/[memberId]', () => {
     publishEventMock.mockReset();
     dbDeleteMock.mockReset();
     dbInsertMock.mockReset();
+    resolveProjectCapabilityAccessMock.mockReset();
     dbQueryMock.users.findFirst.mockReset();
     dbQueryMock.projects.findFirst.mockReset();
     dbQueryMock.organizationMembers.findFirst.mockReset();
@@ -130,6 +137,11 @@ describe('DELETE /api/projects/[projectId]/members/[memberId]', () => {
     authMock.mockResolvedValue({ user: { id: 'actor-1' } });
     resolveProjectByIdOrKeyMock.mockResolvedValue({ id: 'project-1', organizationId: 'org-1' });
     canReadProjectMock.mockResolvedValue(true);
+    resolveProjectCapabilityAccessMock.mockResolvedValue({
+      project: { id: 'project-1', organizationId: 'org-1' },
+      canRead: true,
+      permissions: { canManageMembers: true, canRemoveMembers: false },
+    });
     dbQueryMock.users.findFirst.mockResolvedValue(null);
     dbQueryMock.projects.findFirst.mockResolvedValue({ organizationId: 'org-1' });
     dbQueryMock.organizationMembers.findFirst.mockResolvedValue({ role: 'member' });

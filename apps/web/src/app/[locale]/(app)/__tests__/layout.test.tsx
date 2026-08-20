@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import AppLayout from '../layout';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
-import { currentUserHasWorkspaceAccess } from '@/lib/auth/workspace-access';
+import { currentUserWorkspaceAccessContext } from '@/lib/auth/workspace-access';
 import { redirect } from 'next/navigation';
 
 jest.mock('@/auth', () => ({
@@ -15,7 +15,7 @@ jest.mock('@/lib/auth/permissions', () => ({
 }));
 
 jest.mock('@/lib/auth/workspace-access', () => ({
-  currentUserHasWorkspaceAccess: jest.fn(),
+  currentUserWorkspaceAccessContext: jest.fn(),
 }));
 
 jest.mock('next/navigation', () => ({
@@ -53,7 +53,13 @@ jest.mock('@/components/chat/global-voice-provider', () => ({
 }));
 
 jest.mock('@/components/command/command-palette-provider', () => ({
-  CommandPaletteProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  CommandPaletteProvider: ({
+    children,
+    defaultOrganizationId,
+  }: {
+    children: ReactNode;
+    defaultOrganizationId?: string | null;
+  }) => <div data-default-organization-id={defaultOrganizationId ?? ''}>{children}</div>,
 }));
 
 jest.mock('@/components/help/keyboard-shortcuts-provider', () => ({
@@ -78,9 +84,10 @@ jest.mock('@/components/admin/global-version-update-banner', () => ({
 
 const authMock = auth as jest.MockedFunction<typeof auth>;
 const isSuperAdminMock = isSuperAdmin as jest.MockedFunction<typeof isSuperAdmin>;
-const currentUserHasWorkspaceAccessMock = currentUserHasWorkspaceAccess as jest.MockedFunction<
-  typeof currentUserHasWorkspaceAccess
->;
+const currentUserWorkspaceAccessContextMock =
+  currentUserWorkspaceAccessContext as jest.MockedFunction<
+    typeof currentUserWorkspaceAccessContext
+  >;
 const redirectMock = redirect as unknown as jest.MockedFunction<(url: string) => never>;
 
 async function renderLayout() {
@@ -103,13 +110,16 @@ describe('AppLayout', () => {
 
     expect(redirectMock).toHaveBeenCalledWith('/auth/signin');
     expect(isSuperAdminMock).not.toHaveBeenCalled();
-    expect(currentUserHasWorkspaceAccessMock).not.toHaveBeenCalled();
+    expect(currentUserWorkspaceAccessContextMock).not.toHaveBeenCalled();
   });
 
   it('renders app chrome for authenticated users', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' }, expires: '2099-01-01T00:00:00.000Z' });
     isSuperAdminMock.mockResolvedValue(true);
-    currentUserHasWorkspaceAccessMock.mockResolvedValue(true);
+    currentUserWorkspaceAccessContextMock.mockResolvedValue({
+      hasAccess: true,
+      defaultOrganizationId: 'org-1',
+    });
 
     await renderLayout();
 
@@ -118,12 +128,16 @@ describe('AppLayout', () => {
     expect(screen.getByTestId('mobile-nav')).toBeInTheDocument();
     expect(screen.getByTestId('version-banner')).toBeInTheDocument();
     expect(screen.getByTestId('page-content')).toBeInTheDocument();
+    expect(document.querySelector('[data-default-organization-id="org-1"]')).toBeInTheDocument();
   });
 
   it('does not render the global update banner for non-super-admin users', async () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' }, expires: '2099-01-01T00:00:00.000Z' });
     isSuperAdminMock.mockResolvedValue(false);
-    currentUserHasWorkspaceAccessMock.mockResolvedValue(true);
+    currentUserWorkspaceAccessContextMock.mockResolvedValue({
+      hasAccess: true,
+      defaultOrganizationId: 'org-1',
+    });
 
     await renderLayout();
 

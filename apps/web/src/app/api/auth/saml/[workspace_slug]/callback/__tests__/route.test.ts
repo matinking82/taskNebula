@@ -27,6 +27,14 @@ jest.mock('@/lib/sso/attribute-map', () => ({
 }));
 
 jest.mock('@/lib/sso/jit', () => ({
+  JitProvisionError: class JitProvisionError extends Error {
+    constructor(
+      public code: string,
+      message: string
+    ) {
+      super(message);
+    }
+  },
   jitProvisionUser: (...args: unknown[]) => jitProvisionUserMock(...args),
 }));
 
@@ -93,5 +101,24 @@ describe('/api/auth/saml/[workspace_slug]/callback mobile relay', () => {
       email: 'user@example.com',
       workspaceId: 'org_1',
     });
+  });
+
+  it('returns a generic forbidden response when provisioning is rejected', async () => {
+    const { JitProvisionError } = jest.requireMock('@/lib/sso/jit') as {
+      JitProvisionError: new (code: string, message: string) => Error;
+    };
+    jitProvisionUserMock.mockRejectedValue(
+      new JitProvisionError('user_inactive', 'User is inactive')
+    );
+
+    const response = await POST(samlRequest(), {
+      params: Promise.resolve({ workspace_slug: 'acme' }),
+    });
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Unable to sign in to this workspace',
+    });
+    expect(mintSamlExchangeTokenMock).not.toHaveBeenCalled();
   });
 });

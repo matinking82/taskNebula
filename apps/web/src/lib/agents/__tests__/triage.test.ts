@@ -27,6 +27,7 @@ jest.mock('@tasknebula/db', () => ({
   inArray: () => undefined,
   issues: {},
   organizationMembers: {},
+  organizations: {},
   projectMembers: {},
   projects: {},
   teams: {},

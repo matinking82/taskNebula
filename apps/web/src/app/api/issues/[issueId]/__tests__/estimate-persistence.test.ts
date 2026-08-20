@@ -18,6 +18,8 @@ const notifyIssueEventMock = jest.fn();
 const runAutomationsMock = jest.fn();
 const prepareTransitionMock = jest.fn();
 const applyTransitionMock = jest.fn();
+const resolveProjectCapabilityAccessMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
 
 // --- next/server shim ---------------------------------------------------
 // Provide enough of `NextRequest` / `NextResponse` for the route + the
@@ -108,6 +110,15 @@ jest.mock('@/lib/workflows/issue-transition-policy', () => {
     resolveProjectWorkflowStatusByCategory: jest.fn(),
   };
 });
+
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    resolveProjectCapabilityAccessMock(...args),
+}));
+
+jest.mock('@/lib/auth/access-control', () => ({
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
+}));
 
 jest.mock('@tasknebula/db', () => ({
   db: {
@@ -213,13 +224,23 @@ describe('PATCH /api/issues/[issueId] — estimate & rich description persistenc
     dbSelectMock.mockReset();
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
     getIssueByIdMock.mockResolvedValue(SAMPLE_ISSUE);
+    resolveProjectCapabilityAccessMock.mockResolvedValue({
+      project: { id: 'project-1', organizationId: 'org-1' },
+      canRead: true,
+      canManage: true,
+      permissions: {},
+    });
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: true,
+      isSuperAdmin: false,
+      role: 'member',
+      membershipId: 'member-1',
+    });
     dbSelectMock
       .mockReturnValueOnce(
         chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
       )
-      // The following select inside checkIssuePermission looks up the super
-      // admin flag. It short-circuits the rest of authz for this persistence suite.
-      .mockReturnValue(chainable([{ isSuperAdmin: true }]));
+      .mockReturnValue(chainable([]));
     updateIssueMock.mockImplementation((_id: string, data: Record<string, unknown>) =>
       Promise.resolve({ ...SAMPLE_ISSUE, ...data })
     );
@@ -389,8 +410,13 @@ describe('PATCH /api/issues/[issueId] — estimate & rich description persistenc
       .mockReset()
       .mockReturnValueOnce(
         chainable([{ id: 'project-1', organizationId: 'org-1', defaultWorkflowId: 'workflow-1' }])
-      )
-      .mockReturnValueOnce(chainable([]));
+      );
+    resolveOrganizationAccessMock.mockResolvedValueOnce({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
 
     const response = await PATCH(makePatch({ assigneeId: 'foreign-user' }) as never, {
       params: Promise.resolve({ issueId: 'issue-1' }),

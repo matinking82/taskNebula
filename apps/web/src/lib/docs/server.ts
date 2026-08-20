@@ -14,10 +14,12 @@ import {
   documentPageLinks,
   eq,
   organizationMembers,
+  organizations,
   projectMembers,
   projects,
   sql,
   users,
+  ne,
   hasPermission as roleHasPermission,
   type ProjectRole,
 } from '@tasknebula/db';
@@ -27,6 +29,8 @@ import {
   slugifyDocumentTitle,
 } from './content';
 import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectByIdOrKey } from '@/lib/projects/server';
+import { resolveDocumentProjectListingMode } from './access';
 
 export type OrgDocumentRole = 'owner' | 'admin' | 'member' | 'viewer' | 'guest' | null;
 type DocumentSpaceRecord = typeof documentSpaces.$inferSelect;
@@ -51,29 +55,20 @@ export interface DocumentShareSettings {
   };
 }
 
-export async function resolveProjectId(projectIdOrKey: string) {
-  if (projectIdOrKey.length > 10 || projectIdOrKey.includes('_')) {
-    return projectIdOrKey;
-  }
-
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.key, projectIdOrKey.toUpperCase()))
-    .limit(1);
-
-  return project?.id || null;
+export async function resolveProjectId(projectIdOrKey: string, userId: string) {
+  const project = await resolveProjectByIdOrKey(projectIdOrKey, userId);
+  return project?.id ?? null;
 }
 
 export async function getUserFlags(userId: string) {
   const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
+    .select({ isSuperAdmin: users.isSuperAdmin, status: users.status })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
 
   return {
-    isSuperAdmin: user?.isSuperAdmin || false,
+    isSuperAdmin: user?.status === 'active' && user.isSuperAdmin,
   };
 }
 
@@ -84,11 +79,14 @@ export async function getOrganizationRole(
   const [member] = await db
     .select({ role: organizationMembers.role })
     .from(organizationMembers)
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .innerJoin(users, and(eq(users.id, userId), eq(users.status, 'active')))
     .where(
       and(
         eq(organizationMembers.userId, userId),
         eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
+        eq(organizationMembers.status, 'active'),
+        ne(organizations.status, 'suspended')
       )
     )
     .limit(1);
@@ -104,7 +102,15 @@ export async function resolveOrganizationIdForUser(userId: string, organizationI
   const [membership] = await db
     .select({ organizationId: organizationMembers.organizationId })
     .from(organizationMembers)
-    .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active')))
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .innerJoin(users, and(eq(users.id, userId), eq(users.status, 'active')))
+    .where(
+      and(
+        eq(organizationMembers.userId, userId),
+        eq(organizationMembers.status, 'active'),
+        ne(organizations.status, 'suspended')
+      )
+    )
     .limit(1);
 
   return membership?.organizationId || null;
@@ -151,17 +157,24 @@ export async function getProjectDocumentPermissions(
   const [orgMember] = await db
     .select({ role: organizationMembers.role })
     .from(organizationMembers)
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .innerJoin(users, and(eq(users.id, userId), eq(users.status, 'active')))
     .where(
       and(
         eq(organizationMembers.userId, userId),
         eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
+        eq(organizationMembers.status, 'active'),
+        ne(organizations.status, 'suspended')
       )
     )
     .limit(1);
 
   if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
     return { canBrowse: true, canCreate: true, canEdit: true, canDelete: true };
+  }
+
+  if (!orgMember) {
+    return { canBrowse: false, canCreate: false, canEdit: false, canDelete: false };
   }
 
   const [member] = await db
@@ -190,6 +203,14 @@ export async function ensureOrganizationDocumentSpace(
   organizationId: string,
   userId: string
 ): Promise<DocumentSpaceRecord | null> {
+  const [{ isSuperAdmin }, role] = await Promise.all([
+    getUserFlags(userId),
+    getOrganizationRole(userId, organizationId),
+  ]);
+  if (!getOrgDocumentPermissions(role, isSuperAdmin).canBrowse) {
+    return null;
+  }
+
   const defaultSlug = 'team-wiki';
   const [existing] = await db
     .select()
@@ -249,6 +270,12 @@ export async function ensureProjectDocumentSpace(
   projectId: string,
   userId: string
 ): Promise<DocumentSpaceRecord | null> {
+  const { isSuperAdmin } = await getUserFlags(userId);
+  const permissions = await getProjectDocumentPermissions(userId, projectId, isSuperAdmin);
+  if (!permissions.canBrowse) {
+    return null;
+  }
+
   const [existing] = await db
     .select()
     .from(documentSpaces)
@@ -347,13 +374,14 @@ export async function listAccessibleDocumentSpaces(
   }
 
   const accessibleProjects = new Map<string, DocumentPermissionSet>();
+  const listingMode = resolveDocumentProjectListingMode({ orgRole, isSuperAdmin });
 
   if (projectId) {
     const permissions = await getProjectDocumentPermissions(userId, projectId, isSuperAdmin);
     if (permissions.canBrowse) {
       accessibleProjects.set(projectId, permissions);
     }
-  } else if (isSuperAdmin || orgRole === 'owner') {
+  } else if (listingMode === 'all') {
     const allProjects = await db
       .select({ id: projects.id })
       .from(projects)
@@ -367,7 +395,7 @@ export async function listAccessibleDocumentSpaces(
         canDelete: true,
       });
     }
-  } else {
+  } else if (listingMode === 'memberships') {
     const memberships = await db
       .select({
         projectId: projectMembers.projectId,

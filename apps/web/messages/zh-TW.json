@@ -503,7 +503,8 @@
         "invalid_target": "The selected target version is not valid for this install.",
         "active_job": "Another update request is already active. Wait for it to finish before starting a new one.",
         "missing_digest": "Docker Hub did not return an immutable image digest. Wait for tag metadata to settle, then check again.",
-        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request."
+        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request.",
+        "weak_secret": "TASKNEBULA_SELF_UPDATE_WEBHOOK_SECRET must contain at least 32 bytes of unpredictable secret material."
       },
       "jobStatus": {
         "queued": "Queued",
@@ -575,7 +576,8 @@
     "createFailed": "無法建立子項目。請再試一次。",
     "noSubtasks": "尚無子任務",
     "markComplete": "標記為完成",
-    "markIncomplete": "標記為未完成"
+    "markIncomplete": "標記為未完成",
+    "transitionFailed": "無法更新子任務狀態。請再試一次。"
   },
   "issueRelations": {
     "dialogTitle": "連結工作項目",
@@ -1937,7 +1939,55 @@
       "token_created": "建立於 {date}",
       "token_last_used": "最後使用於 {date}",
       "token_revoked": "已撤銷",
-      "revoke": "撤銷"
+      "revoke": "撤銷",
+      "token_scopes_label": "Access scopes",
+      "token_scopes_desc": "Grant only the operations this identity provider needs. At least one scope is required.",
+      "scope_users_read": "Read users",
+      "scope_users_read_desc": "List and inspect workspace users.",
+      "scope_users_write": "Manage users",
+      "scope_users_write_desc": "Provision, update, activate, and deactivate users.",
+      "scope_groups_read": "Read groups",
+      "scope_groups_read_desc": "List groups and their members.",
+      "scope_groups_write": "Manage groups",
+      "scope_groups_write_desc": "Create, update, and remove provisioned groups.",
+      "token_scope_required": "Select at least one access scope.",
+      "copy_token": "Copy token",
+      "token_copied_desc": "The SCIM token is now on your clipboard and has been hidden from this page.",
+      "token_copy_failed": "Token could not be copied",
+      "token_copy_failed_desc": "Copy the visible token manually before leaving this page.",
+      "token_created_toast": "SCIM token created",
+      "token_created_toast_desc": "Copy the secret now; only its hash will remain after you leave.",
+      "token_revoked_toast": "SCIM token revoked",
+      "token_revoked_toast_desc": "Requests using this token are no longer accepted.",
+      "tokens_loading": "Loading provisioning tokens…",
+      "token_active": "Active",
+      "token_legacy": "Rotate recommended",
+      "token_legacy_full_access": "Legacy token · full access until rotated",
+      "token_revoke_confirm": "Revoke the SCIM token “{name}”? This cannot be undone.",
+      "token_revoke_aria": "Revoke SCIM token {name}",
+      "idp_metadata_placeholder": "Paste an IdP EntityDescriptor XML document…",
+      "idp_metadata_file_label": "Or choose a metadata XML file",
+      "metadata_invalid": "Metadata could not be parsed",
+      "metadata_invalid_desc": "Provide a valid SAML IdP EntityDescriptor containing an issuer, SSO service, or signing certificate.",
+      "metadata_too_large": "Metadata XML must be smaller than 2 MB.",
+      "config_loading": "Loading SSO configuration…",
+      "cert_placeholder": "-----BEGIN CERTIFICATE-----",
+      "cert_invalid": "The IdP signing certificate is not a valid X.509 certificate.",
+      "entry_point_invalid": "Use an HTTPS IdP SSO URL without credentials or a fragment.",
+      "private_key_label": "SP request-signing private key (optional)",
+      "private_key_desc": "Used only to sign AuthnRequests. New keys are encrypted at rest and are never returned by the API.",
+      "private_key_configured": "Configured",
+      "private_key_placeholder": "-----BEGIN PRIVATE KEY-----",
+      "private_key_keep_placeholder": "Leave blank to keep the encrypted key already configured",
+      "private_key_remove": "Remove the configured request-signing key when saving",
+      "private_key_invalid": "The request-signing private key is not a valid PEM private key.",
+      "test_sso": "Test SSO in a new tab",
+      "delete_config": "Delete configuration",
+      "config_delete_confirm": "Delete this SSO configuration? Workspace SSO sign-in will stop immediately.",
+      "config_deleted": "SSO configuration deleted",
+      "config_deleted_desc": "Workspace SSO sign-in is no longer available.",
+      "config_delete_failed": "SSO configuration could not be deleted",
+      "config_delete_failed_desc": "No changes were applied. Try again or inspect the server logs."
     },
     "notifications": {
       "fetch_failed": "擷取偏好設定失敗",
@@ -3709,7 +3759,7 @@
       },
       "localRunners": {
         "title": "Claude Code / Codex",
-        "description": "來自目前所有正在進行的代理程式執行的即時狀態與記錄。",
+        "description": "Manage the Claude Code or Codex CLI runner on this server for the selected workspace.",
         "loading": "正在載入代理程式控制...",
         "loadError": "載入代理程式控制失敗。",
         "updated": "代理程式控制已更新",
@@ -3725,9 +3775,9 @@
           "codex": "Codex CLI"
         },
         "reason": {
-          "disabled": "更新代理程式控制失敗: TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true",
-          "cwd_missing": "載入代理程式控制失敗: {value}",
-          "command_missing": "載入代理程式控制失敗: {value}"
+          "disabled": "Local CLI dispatch is off. Turn on this provider here, or set TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true as a server-wide default.",
+          "cwd_missing": "Working directory does not exist: {value}",
+          "command_missing": "Command is not available on PATH: {value}"
         }
       }
     },
@@ -3761,6 +3811,22 @@
       "optional": "（選填）",
       "cancel": "取消",
       "saveCredentials": "儲存憑證",
+      "redirectHint": "https://your-domain{path}",
+      "providerLabel": {
+        "slack": "Slack",
+        "gitlab": "GitLab",
+        "jira": "Jira (Atlassian)",
+        "github": "GitHub",
+        "google": "Google",
+        "sentry": "Sentry"
+      },
+      "scopeHint": {
+        "slack": "channels:read,chat:write",
+        "gitlab": "read_api read_repository",
+        "jira": "read:jira-user read:jira-work write:jira-work offline_access",
+        "github": "repo read:user",
+        "sentry": "org:read project:read event:read"
+      },
       "providerDescription": {
         "slack": "用於將 Slack 工作區連接至 TaskNebula 的 OAuth 應用程式憑證。",
         "gitlab": "用於鏡像合併請求與管線的 OAuth 應用程式。",
@@ -3832,6 +3898,8 @@
         "testError": "傳送測試電子郵件失敗",
         "testSent": "測試電子郵件已傳送",
         "testSentDescription": "已透過 {source} 設定送達 {recipient}。",
+        "testEmailSubject": "TaskNebula SMTP test email",
+        "testEmailText": "This is a TaskNebula SMTP test sent through the {source} configuration. If you received it, outbound email is working.",
         "host": "主機",
         "port": "連接埠",
         "username": "使用者名稱",
@@ -3857,6 +3925,11 @@
         "testError": "簽發 LiveKit 權杖失敗",
         "tokenMinted": "LiveKit 權杖已簽發",
         "tokenMintedDescription": "房間 {roomName} · {source} 設定。",
+        "connectionTestError": "LiveKit connection or credentials could not be verified",
+        "connectionVerified": "LiveKit connection verified",
+        "connectionVerifiedDescription": "Authenticated with the {source} configuration; {roomCount} active rooms are visible.",
+        "verifyTitle": "Verify server reachability and API credentials",
+        "verify": "Verify LiveKit",
         "secretPreview": "secret {preview}",
         "serverUrl": "伺服器 URL",
         "apiKey": "API 金鑰",
@@ -3886,7 +3959,20 @@
         "uploadsDirPlaceholder": "/var/tasknebula/uploads",
         "s3BucketPlaceholder": "tasknebula-prod",
         "s3RegionPlaceholder": "us-east-1",
-        "s3AccessKeyPlaceholder": "AKIA…"
+        "s3AccessKeyPlaceholder": "AKIA…",
+        "s3Endpoint": "自訂 S3 端點",
+        "s3EndpointPlaceholder": "https://s3.example.com",
+        "s3ForcePathStyle": "路徑樣式的儲存貯體 URL",
+        "s3ForcePathStyleDescription": "針對要求路徑樣式的供應商使用相應的儲存貯體 URL。",
+        "backendChangeBlocked": "仍有附件時無法變更儲存位置。請先移轉或刪除現有附件。",
+        "s3Incomplete": "啟用 S3 前，請完整填寫儲存貯體、區域、存取金鑰和秘密金鑰。",
+        "localRootForbidden": "不能將檔案系統根目錄用作上傳目錄。",
+        "testPassed": "儲存空間測試通過",
+        "testPassedDescription": "可透過 {source} 設定讀寫 {mode} 儲存空間。",
+        "testError": "寫入、讀取和刪除測試失敗。請檢查設定和伺服器記錄。",
+        "saveFirst": "請先儲存完整的儲存空間設定",
+        "testTitle": "寫入、讀取並刪除暫存測試檔案",
+        "test": "測試儲存空間"
       },
       "registration": {
         "title": "註冊",
@@ -3967,6 +4053,12 @@
       "missingFields": "缺少欄位",
       "somethingWentWrong": "發生錯誤。"
     },
+    "userGovernance": {
+      "admin_self_super_admin_revocation_forbidden": "You cannot remove your own super admin access.",
+      "admin_self_deactivation_forbidden": "You cannot deactivate your own administrator account.",
+      "admin_last_active_super_admin_required": "At least one active super admin must remain.",
+      "admin_self_deletion_forbidden": "You cannot delete your own administrator account."
+    },
     "createFlag": {
       "trigger": "新增旗標",
       "title": "建立功能旗標",
@@ -4011,7 +4103,11 @@
       "missingFieldsDescription": "名稱、代稱與擁有者為必填。",
       "toastCreatedTitle": "組織已建立",
       "toastCreatedDescription": "組織已成功建立。",
-      "toastFailedTitle": "建立組織失敗"
+      "toastFailedTitle": "建立組織失敗",
+      "ownerLoading": "Loading active users…",
+      "ownerSearchPlaceholder": "Search active users…",
+      "ownerEmpty": "No active users found.",
+      "ownerRetry": "Try again"
     },
     "editOrg": {
       "title": "編輯組織",
@@ -4024,6 +4120,8 @@
       "toastUpdatedTitle": "組織已更新",
       "toastUpdatedDescription": "變更已成功儲存。",
       "toastFailedTitle": "更新組織失敗",
+      "loadFailed": "Failed to load organization details.",
+      "retry": "Try again",
       "domainPlaceholder": "example.com"
     },
     "orgForm": {
@@ -4063,7 +4161,9 @@
       "superAdminWarning": "此使用者將擁有對所有組織與系統設定的完整存取權。",
       "toastUpdatedTitle": "使用者已更新",
       "toastUpdatedDescription": "使用者已成功更新。",
-      "toastFailedTitle": "更新使用者失敗"
+      "toastFailedTitle": "更新使用者失敗",
+      "loadFailed": "Failed to load user details.",
+      "retry": "Try again"
     },
     "userForm": {
       "superAdmin": "超級管理員",
@@ -7029,6 +7129,33 @@
     "assignmentSuccess": "已將 *{issueKey}* 重新指派給 <@{slackUserId}>（請求者：<@{requestedBy}>）。",
     "statusSuccess": "已將 *{issueKey}* 移至 *{statusName}*（請求者：<@{requestedBy}>）。",
     "newUsage": "用法：`/tn new 標題` — 開啟新任務視窗。",
-    "newOpening": "正在為以下標題開啟新任務視窗：_{title}_"
+    "newOpening": "正在為以下標題開啟新任務視窗：_{title}_",
+    "bridgeFromSlack": "From Slack",
+    "bridgePermalink": "Permalink: {url}",
+    "bridgeAuthorInChannel": "Author: <@{author}> in #{channel}",
+    "bridgeAuthor": "Author: <@{author}>",
+    "bridgeEmptyMessage": "(no message text)",
+    "bridgeFallbackTitle": "Slack: {message}",
+    "untitledSlackMessage": "Untitled Slack message",
+    "bridgeConfirmationText": "Created TaskNebula issue *{issueKey}* — {issueUrl}",
+    "bridgeConfirmationBlock": ":white_check_mark: Created TaskNebula issue *<{issueUrl}|{issueKey}>*",
+    "reactionIssueTitle": ":{reaction}: {message}",
+    "modalTitle": "New issue from Slack",
+    "modalSubmit": "Create",
+    "modalCancel": "Cancel",
+    "modalContext": "Create an issue from <@{author}> in <#{channel}>",
+    "modalTitleLabel": "Title",
+    "modalDescriptionLabel": "Description (extra context)",
+    "modalProjectLabel": "Project key (overrides channel mapping)",
+    "titleRequired": "Title is required.",
+    "workspaceDisconnected": "This Slack workspace is no longer connected.",
+    "reporterUnmapped": "No TaskNebula user is mapped to this Slack profile.",
+    "projectResolutionFailed": "No project could be resolved. Enter a project key or configure a channel mapping.",
+    "standaloneProjectRequired": "A project key is required when creating from /tn new.",
+    "issueCreateFailed": "The issue could not be created.",
+    "projectKeyNotFound": "No active project matches `{projectKey}` in this workspace.",
+    "modalOpenFailed": "The new-issue modal could not be opened. Try again.",
+    "modalDescriptionStandaloneLabel": "Description",
+    "modalStandaloneProjectLabel": "Project key (required, e.g. TN)"
   }
 }

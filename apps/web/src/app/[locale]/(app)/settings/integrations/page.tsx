@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, organizationMembers } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
-import { requirePermission } from '@/lib/auth/permissions';
+import { getPermittedOrganizationIds } from '@/lib/auth/permissions';
 import { IntegrationsGrid } from '@/components/settings/integrations-grid';
 import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
@@ -19,19 +17,11 @@ export default async function IntegrationsPage() {
     redirect('/auth/signin?callbackUrl=/settings/integrations');
   }
 
-  const [primaryOrg] = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    )
-    .limit(1);
+  const [organizationId] = await getPermittedOrganizationIds(session.user.id, 'org:settings');
 
-  if (!primaryOrg) {
+  if (!organizationId) {
     redirect('/dashboard?error=insufficient-permission');
   }
-
-  await requirePermission(primaryOrg.organizationId, 'org:settings');
 
   const t = await getTranslations('pagesSettings');
 

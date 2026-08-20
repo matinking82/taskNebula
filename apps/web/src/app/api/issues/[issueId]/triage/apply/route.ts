@@ -32,21 +32,15 @@ import {
   getIssueById,
   issueTriageSuggestions,
   issues,
-  organizationMembers,
   organizations,
-  projectMembers,
-  projects,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  users,
-  type ProjectRole,
 } from '@tasknebula/db';
 import { and, isNull } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { publishEvent } from '@/lib/realtime/events';
 import type { TriageSuggestionPayload } from '@/lib/agents/triage';
 import { guardAgentAction } from '@/lib/agent-policy/guard';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 const applyBodySchema = z.object({
   suggestionId: z.string().optional(),
@@ -56,42 +50,7 @@ const applyBodySchema = z.object({
 const DEFAULT_AUTO_APPLY_CONFIDENCE = 90;
 
 async function callerCanEdit(userId: string, projectId: string): Promise<boolean> {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (user?.isSuperAdmin) return true;
-
-  const [project] = await db
-    .select({ id: projects.id, organizationId: projects.organizationId })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-  if (!project) return false;
-
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) return true;
-
-  const [pm] = await db
-    .select({ role: projectMembers.role, canEditIssues: projectMembers.canEditIssues })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-  if (!pm) return false;
-  const roleDefaults =
-    ROLE_DEFAULT_PERMISSIONS[pm.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  return resolveProjectMemberPermission(pm.canEditIssues, roleDefaults.canEditIssues);
+  return (await resolveProjectCapabilityAccess(userId, projectId)).permissions.canEditIssues;
 }
 
 async function autoApplyConfidenceFor(organizationId: string): Promise<number> {
@@ -200,7 +159,14 @@ export async function POST(
       !currentIssue.assigneeId &&
       typeof payload.suggested_assignee_id === 'string'
     ) {
-      update.assigneeId = payload.suggested_assignee_id;
+      const assigneeAccess = await resolveOrganizationAccess(
+        payload.suggested_assignee_id,
+        currentIssue.organizationId,
+        { allowSuperAdmin: false }
+      );
+      if (assigneeAccess.allowed) {
+        update.assigneeId = payload.suggested_assignee_id;
+      }
     }
 
     if (Object.keys(update).length > 0) {

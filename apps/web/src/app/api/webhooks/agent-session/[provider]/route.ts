@@ -36,6 +36,7 @@ import {
   issueComments,
   and,
   organizationMembers,
+  organizations,
   users,
 } from '@tasknebula/db';
 import {
@@ -165,7 +166,9 @@ async function findAgentUser(
         eq(organizationMembers.status, 'active')
       )
     )
-    .where(and(eq(users.isAgent, true), eq(users.agentProvider, provider)))
+    .where(
+      and(eq(users.isAgent, true), eq(users.agentProvider, provider), eq(users.status, 'active'))
+    )
     .limit(1);
   return agent?.id ?? null;
 }
@@ -186,7 +189,7 @@ async function findActiveOrganizationUser(
         eq(organizationMembers.status, 'active')
       )
     )
-    .where(eq(users.id, userId))
+    .where(and(eq(users.id, userId), eq(users.status, 'active')))
     .limit(1);
   return user?.id ?? null;
 }
@@ -279,6 +282,15 @@ export async function POST(
       { error: verdict.reason ?? 'Unable to locate session' },
       { status: 401 }
     );
+  }
+
+  const [workspace] = await db
+    .select({ status: organizations.status })
+    .from(organizations)
+    .where(eq(organizations.id, workspaceId!))
+    .limit(1);
+  if (!workspace || workspace.status === 'suspended') {
+    return NextResponse.json({ error: 'Workspace is suspended' }, { status: 403 });
   }
 
   const requestedState = event.state;

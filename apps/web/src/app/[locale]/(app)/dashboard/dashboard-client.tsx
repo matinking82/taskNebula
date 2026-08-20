@@ -11,15 +11,15 @@ import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
 import { IssueDetailModal } from '@/components/issues/issue-detail-modal';
 import { CreateIssueModal } from '@/components/issues/create-issue-modal';
-import { ActivityFeed } from '@/components/activity/activity-feed';
 import { UpcomingDeadlinesWidget } from '@/components/dashboard/upcoming-deadlines-widget';
 import { PinnedItemsWidget } from '@/components/dashboard/pinned-items-widget';
 import { CatchMeUpBanner } from '@/components/dashboard/catch-me-up-banner';
 import { StandupWidget } from '@/components/dashboard/standup-widget';
 import { DeliveryAnalysis } from '@/components/dashboard/delivery-analysis';
+import { AgentAttentionWidget } from '@/components/dashboard/agent-attention-widget';
 import { useOrganization } from '@/lib/hooks/use-organization';
 import { useProjects } from '@/lib/hooks/use-projects';
-import { ArrowUpRight, Target, Inbox } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Target, Inbox, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,7 @@ interface Issue {
   statusId: string;
   projectId: string;
   estimate?: number;
+  dueDate?: string | null;
   createdAt: string;
   updatedAt: string;
   status: {
@@ -60,10 +61,17 @@ const PRIORITY_ACTION_ORDER: Record<string, number> = {
   low: 3,
 };
 
-function compareActionableIssues(left: Issue, right: Issue): number {
-  const statusDelta =
-    (STATUS_ACTION_ORDER[left.status.category] ?? 4) -
-    (STATUS_ACTION_ORDER[right.status.category] ?? 4);
+function issueAttentionOrder(issue: Issue, now: number): number {
+  if (issue.status.category === 'blocked') return 0;
+  if (issue.dueDate) {
+    const dueAt = new Date(issue.dueDate).getTime();
+    if (!Number.isNaN(dueAt) && dueAt < now) return 1;
+  }
+  return (STATUS_ACTION_ORDER[issue.status.category] ?? 4) + 2;
+}
+
+function compareActionableIssues(left: Issue, right: Issue, now: number): number {
+  const statusDelta = issueAttentionOrder(left, now) - issueAttentionOrder(right, now);
   if (statusDelta !== 0) return statusDelta;
 
   const priorityDelta =
@@ -77,6 +85,8 @@ export function DashboardClient() {
   const { data: session } = useSession();
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
+  const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
+  const [pendingAgentApprovalCount, setPendingAgentApprovalCount] = useState(0);
   const { currentOrganizationId, currentTeamId } = useOrganization();
   const router = useRouter();
   const pathname = usePathname();
@@ -86,6 +96,8 @@ export function DashboardClient() {
   const tActions = useTranslations('actions');
   const tNav = useTranslations('nav');
   const t = useTranslations('pagesHome');
+  const tExtra = useTranslations('dashboardExtra');
+  const tSettings = useTranslations('settingsConfig');
   const errorT = useTranslations('componentErrors.dashboard');
 
   // Surface server-side permission redirects (e.g. /settings/organization without perms)
@@ -175,13 +187,12 @@ export function DashboardClient() {
     return { active, completed, blocked, points };
   }, [myIssues]);
 
-  const actionableIssues = useMemo(
-    () =>
-      (myIssues ?? [])
-        .filter((issue) => issue.status.category !== 'done')
-        .sort(compareActionableIssues),
-    [myIssues]
-  );
+  const actionableIssues = useMemo(() => {
+    const now = Date.now();
+    return (myIssues ?? [])
+      .filter((issue) => issue.status.category !== 'done')
+      .sort((left, right) => compareActionableIssues(left, right, now));
+  }, [myIssues]);
 
   if (isLoading) {
     return <DashboardLoadingShell title={tDash('kicker')} />;
@@ -215,67 +226,118 @@ export function DashboardClient() {
 
         <MetricStrip items={metrics} />
 
-        <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-w-0 space-y-4">
-            <section
-              aria-labelledby="dashboard-action-queue"
-              className="surface-card min-w-0 overflow-hidden shadow-none"
-            >
-              <div className="border-border flex min-h-11 items-center justify-between gap-3 border-b px-4 py-2.5">
+        <CatchMeUpBanner />
+
+        <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <section
+            aria-labelledby="dashboard-action-queue"
+            className="surface-card min-w-0 overflow-hidden shadow-none"
+          >
+            <div className="border-border flex min-h-12 items-center justify-between gap-3 border-b px-4 py-2.5">
+              <div className="min-w-0">
+                <span className="kicker">{tDash('kicker')}</span>
                 <h2
                   id="dashboard-action-queue"
-                  className="text-foreground min-w-0 truncate text-sm font-semibold"
+                  className="text-foreground mt-0.5 min-w-0 truncate text-sm font-semibold"
                 >
                   {tDash('my_issues_heading')}
                 </h2>
-                <Link
-                  href="/my-issues"
-                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                >
-                  {tActions('view_all')}
-                  <ArrowUpRight className="h-3 w-3" />
-                </Link>
               </div>
+              <Link
+                href="/my-issues"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              >
+                {tActions('view_all')}
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
 
-              {actionableIssues.length === 0 ? (
-                <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-                  <Inbox className="text-muted-foreground mb-3 h-7 w-7" />
-                  <p className="text-muted-foreground mb-4 text-sm">{tDash('all_caught_up')}</p>
-                  {firstProjectId ? (
-                    <Button variant="outline" size="sm" onClick={() => setIsCreateIssueOpen(true)}>
-                      {tActions('create_issue')}
-                    </Button>
-                  ) : (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href="/projects">{tActions('create_project')}</Link>
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="divide-border divide-y px-2 py-2">
-                  {actionableIssues.slice(0, 7).map((issue) => (
-                    <IssueRow
-                      key={issue.id}
-                      issue={issue}
-                      onClick={() => setSelectedIssueId(issue.id)}
+            {actionableIssues.length === 0 && pendingAgentApprovalCount === 0 ? (
+              <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+                <Inbox className="text-muted-foreground mb-3 h-7 w-7" />
+                <p className="text-muted-foreground mb-4 text-sm">{tDash('all_caught_up')}</p>
+                {firstProjectId ? (
+                  <Button variant="outline" size="sm" onClick={() => setIsCreateIssueOpen(true)}>
+                    {tActions('create_issue')}
+                  </Button>
+                ) : (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/projects">{tActions('create_project')}</Link>
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="divide-border divide-y px-2 py-2">
+                {pendingAgentApprovalCount > 0 ? (
+                  <Link
+                    href="/settings?tab=ai-agents#agent-governance"
+                    className="row-interactive focus-visible:ring-ring flex min-h-12 min-w-0 items-center gap-3 rounded-md border border-transparent px-2 py-2.5 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                  >
+                    <ShieldCheck
+                      className="text-accent-amber h-4 w-4 shrink-0"
+                      aria-hidden="true"
                     />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <UpcomingDeadlinesWidget />
-          </div>
+                    <span className="min-w-0 flex-1">
+                      <span className="text-foreground block truncate text-sm font-medium">
+                        {tSettings('agentGovernance.queueTitle')}
+                      </span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {tSettings('orgAi.needs_review')}
+                      </span>
+                    </span>
+                    <span className="text-accent-amber shrink-0 font-mono text-xs tabular-nums">
+                      {pendingAgentApprovalCount}
+                    </span>
+                    <ArrowUpRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                  </Link>
+                ) : null}
+                {actionableIssues.slice(0, 9).map((issue) => (
+                  <IssueRow
+                    key={issue.id}
+                    issue={issue}
+                    onClick={() => setSelectedIssueId(issue.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
 
           <aside className="min-w-0 space-y-4">
-            <CatchMeUpBanner />
-            <StandupWidget />
-            <PinnedItemsWidget />
-            {currentOrganizationId ? (
-              <ActivityFeed organizationId={currentOrganizationId} limit={6} />
-            ) : null}
+            <AgentAttentionWidget
+              organizationId={currentOrganizationId}
+              onPendingApprovalCountChange={setPendingAgentApprovalCount}
+            />
+            <UpcomingDeadlinesWidget />
           </aside>
         </div>
+
+        <details
+          className="surface-card group min-w-0 overflow-hidden"
+          onToggle={(event) => setIsWorkspaceToolsOpen(event.currentTarget.open)}
+        >
+          <summary className="row-interactive focus-visible:ring-ring flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0">
+              <span className="kicker">{tExtra('your_work.heading')}</span>
+              <h2 className="text-foreground mt-0.5 truncate text-sm font-semibold">
+                {tExtra('standup.heading')}
+                <span className="text-muted-foreground mx-1.5" aria-hidden="true">
+                  {'/'}
+                </span>
+                {tExtra('pinned.heading')}
+              </h2>
+            </div>
+            <ChevronDown
+              className="text-muted-foreground h-4 w-4 shrink-0 transition-transform duration-150 group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          {isWorkspaceToolsOpen ? (
+            <div className="border-border bg-muted/15 grid min-w-0 gap-4 border-t p-4 lg:grid-cols-2">
+              <StandupWidget />
+              <PinnedItemsWidget />
+            </div>
+          ) : null}
+        </details>
 
         <DeliveryAnalysis organizationId={currentOrganizationId} projectId={firstProjectId} />
       </PageFrame>
@@ -325,11 +387,16 @@ function IssueRow({ issue, onClick }: { issue: Issue; onClick: () => void }) {
     >
       <span className={cn('priority-indicator h-6 shrink-0', priorityCls)} />
 
-      <span className="text-muted-foreground w-16 shrink-0 truncate font-mono text-xs sm:w-20">
+      <span
+        dir="ltr"
+        className="text-muted-foreground w-16 shrink-0 truncate font-mono text-xs sm:w-20"
+      >
         {issue.key}
       </span>
 
-      <p className="text-foreground min-w-0 flex-1 truncate text-sm">{issue.title}</p>
+      <p dir="auto" className="text-foreground min-w-0 flex-1 truncate text-start text-sm">
+        {issue.title}
+      </p>
 
       <span className="text-muted-foreground hidden shrink-0 items-center gap-1.5 text-xs sm:inline-flex">
         <span className={cn('status-dot', statusCls)} />

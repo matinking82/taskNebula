@@ -545,7 +545,7 @@ export function ProjectViewsShell({ projectId }: { projectId: string }) {
         className="bg-background flex h-full flex-col"
       >
         <h1 className="sr-only">{t('shell.views')}</h1>
-        <div className="border-border bg-background shrink-0 border-b px-3 py-1.5 sm:px-4">
+        <div className="command-header shrink-0 border-b px-3 py-1.5 sm:px-4">
           {/* Compact toolbar: view-mode icons + filters + actions (icon-only) */}
           <div className="flex flex-wrap items-center gap-2">
             <TabsList className="bg-muted/30 flex h-10 shrink-0 items-center gap-0.5 rounded-md p-0.5 sm:h-8">

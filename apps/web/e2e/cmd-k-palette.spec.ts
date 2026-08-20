@@ -6,6 +6,21 @@ import { test, expect } from '@playwright/test';
 import { ensureSeed } from './fixtures/seed';
 
 test.describe('cmd+k command palette', () => {
+  test('returns focus to the invoking control when dismissed', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    const trigger = page.getByRole('button', { name: /open command palette/i });
+    await expect(trigger).toBeVisible({ timeout: 20_000 });
+    await trigger.click();
+
+    const palette = page.getByRole('dialog', { name: /command palette/i });
+    await expect(palette).toBeVisible({ timeout: 10_000 });
+    await page.keyboard.press('Escape');
+
+    await expect(palette).toBeHidden({ timeout: 5_000 });
+    await expect(trigger).toBeFocused();
+  });
+
   test('opens from the global trigger and surfaces an Ask AI action', async ({ page }) => {
     const seed = await ensureSeed();
     let askRequestCount = 0;

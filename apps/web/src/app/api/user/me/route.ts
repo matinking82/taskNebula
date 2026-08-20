@@ -11,8 +11,10 @@ import {
   eq,
   hasPermission as roleHasPermission,
   organizationMembers,
+  organizations,
   users,
 } from '@tasknebula/db';
+import { ne } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -44,8 +46,13 @@ export async function GET() {
       const memberships = await db
         .select({ role: organizationMembers.role })
         .from(organizationMembers)
+        .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
         .where(
-          and(eq(organizationMembers.userId, user.id), eq(organizationMembers.status, 'active'))
+          and(
+            eq(organizationMembers.userId, user.id),
+            eq(organizationMembers.status, 'active'),
+            ne(organizations.status, 'suspended')
+          )
         );
       trustedForVerification = memberships.some((membership) =>
         roleHasPermission(membership.role || '', 'org:settings')

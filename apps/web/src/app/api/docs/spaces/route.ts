@@ -7,6 +7,7 @@ import {
   ensureProjectDocumentSpace,
   getOrgDocumentPermissions,
   getOrganizationRole,
+  getProjectDocumentPermissions,
   getUserFlags,
   listAccessibleDocumentSpaces,
   resolveOrganizationIdForUser,
@@ -33,7 +34,9 @@ export async function GET(request: NextRequest) {
   const projectIdParam = searchParams.get('projectId');
 
   try {
-    const resolvedProjectId = projectIdParam ? await resolveProjectId(projectIdParam) : null;
+    const resolvedProjectId = projectIdParam
+      ? await resolveProjectId(projectIdParam, session.user.id)
+      : null;
     let organizationId = await resolveOrganizationIdForUser(session.user.id, organizationIdParam);
 
     if (resolvedProjectId) {
@@ -54,7 +57,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ spaces: [] });
     }
 
-    const spaces = await listAccessibleDocumentSpaces(session.user.id, organizationId, resolvedProjectId);
+    const spaces = await listAccessibleDocumentSpaces(
+      session.user.id,
+      organizationId,
+      resolvedProjectId
+    );
     return NextResponse.json({ spaces });
   } catch (error) {
     console.error('Error fetching document spaces:', error);
@@ -75,12 +82,24 @@ export async function POST(request: NextRequest) {
 
     if (data.scope === 'project') {
       if (!data.projectId) {
-        return NextResponse.json({ error: 'projectId is required for project spaces' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'projectId is required for project spaces' },
+          { status: 400 }
+        );
       }
 
-      const projectId = await resolveProjectId(data.projectId);
+      const projectId = await resolveProjectId(data.projectId, session.user.id);
       if (!projectId) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      }
+
+      const permissions = await getProjectDocumentPermissions(
+        session.user.id,
+        projectId,
+        isSuperAdmin
+      );
+      if (!permissions.canCreate) {
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 });
       }
 
       const space = await ensureProjectDocumentSpace(projectId, session.user.id);
@@ -99,7 +118,10 @@ export async function POST(request: NextRequest) {
     const orgRole = await getOrganizationRole(session.user.id, organizationId);
     const permissions = getOrgDocumentPermissions(orgRole, isSuperAdmin);
     if (!permissions.canCreate) {
-      return NextResponse.json({ error: 'You do not have permission to create document spaces' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'You do not have permission to create document spaces' },
+        { status: 403 }
+      );
     }
 
     const slug = slugifyDocumentTitle(data.name);
@@ -122,7 +144,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(space, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
     }
 
     console.error('Error creating document space:', error);

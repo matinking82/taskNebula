@@ -8,14 +8,16 @@ import {
   issueComments,
   issues,
   organizationMembers,
+  organizations,
   projectMembers,
   projects,
   sprints,
   workflowStatuses,
   workflows,
+  users,
   type AgentApprovalRequest,
 } from '@tasknebula/db';
-import { and, desc, sql } from 'drizzle-orm';
+import { and, desc, ne, sql } from 'drizzle-orm';
 import { syncIssueLabelsWithExecutor } from '@/lib/labels/sync';
 import type { RealtimeEventType } from '@/lib/realtime/events';
 import type { AutomationTrigger } from '@/lib/automation/evaluator';
@@ -151,11 +153,15 @@ async function validateIssueRelationships(
     const [member] = await tx
       .select({ id: organizationMembers.id })
       .from(organizationMembers)
+      .innerJoin(users, eq(users.id, organizationMembers.userId))
+      .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
       .where(
         and(
           eq(organizationMembers.organizationId, input.organizationId),
           eq(organizationMembers.userId, input.assigneeId),
-          eq(organizationMembers.status, 'active')
+          eq(organizationMembers.status, 'active'),
+          eq(users.status, 'active'),
+          ne(organizations.status, 'suspended')
         )
       )
       .limit(1);

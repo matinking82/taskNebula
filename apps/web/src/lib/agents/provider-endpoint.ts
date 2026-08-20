@@ -1,4 +1,5 @@
 import { lookup } from 'node:dns/promises';
+import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 
@@ -114,8 +115,14 @@ interface ResolvedAgentProviderEndpoint {
   addresses: Array<{ address: string; family: 4 | 6 }>;
 }
 
-async function resolveAgentProviderEndpoint(
-  rawEndpoint: string
+export type PublicEndpointPolicy = {
+  allowInsecureHttp?: boolean;
+  hostAllowlist?: readonly string[];
+};
+
+async function resolvePublicEndpoint(
+  rawEndpoint: string,
+  policy: PublicEndpointPolicy = {}
 ): Promise<ResolvedAgentProviderEndpoint> {
   let endpoint: URL;
   try {
@@ -124,7 +131,10 @@ async function resolveAgentProviderEndpoint(
     throw new UnsafeAgentProviderEndpointError('Agent provider endpoint is not a valid URL.');
   }
 
-  if (endpoint.protocol !== 'https:') {
+  if (
+    endpoint.protocol !== 'https:' &&
+    !(policy.allowInsecureHttp === true && endpoint.protocol === 'http:')
+  ) {
     throw new UnsafeAgentProviderEndpointError('Agent provider endpoint must use HTTPS.');
   }
   if (endpoint.username || endpoint.password) {
@@ -143,7 +153,7 @@ async function resolveAgentProviderEndpoint(
     throw new UnsafeAgentProviderEndpointError('Agent provider endpoint host is not public.');
   }
 
-  const allowlist = configuredHostAllowlist();
+  const allowlist = policy.hostAllowlist ?? [];
   if (allowlist.length > 0 && !hostMatchesAllowlist(hostname, allowlist)) {
     throw new UnsafeAgentProviderEndpointError('Agent provider endpoint host is not allowlisted.');
   }
@@ -182,18 +192,39 @@ async function resolveAgentProviderEndpoint(
 }
 
 export async function validateAgentProviderEndpoint(rawEndpoint: string): Promise<URL> {
-  return (await resolveAgentProviderEndpoint(rawEndpoint)).endpoint;
+  return (
+    await resolvePublicEndpoint(rawEndpoint, {
+      hostAllowlist: configuredHostAllowlist(),
+    })
+  ).endpoint;
 }
 
-interface AgentProviderPostOptions {
+/**
+ * Validate any administrator-configured outbound HTTP endpoint using the same
+ * public-network and DNS policy that is enforced again at connection time.
+ * Callers can use this before persisting configuration so operators receive
+ * immediate feedback, while `postPublicEndpoint` remains the authoritative
+ * runtime check against DNS rebinding and stale configuration.
+ */
+export async function validatePublicEndpoint(
+  rawEndpoint: string,
+  policy: PublicEndpointPolicy = {}
+): Promise<URL> {
+  return (await resolvePublicEndpoint(rawEndpoint, policy)).endpoint;
+}
+
+export interface PublicEndpointPostOptions {
   body: string;
   headers: Record<string, string>;
   signal: AbortSignal;
+  /** Capture at most this many response bytes. Omit to discard the body. */
+  maxResponseBytes?: number;
 }
 
-interface AgentProviderPostResponse {
+export interface PublicEndpointPostResponse {
   ok: boolean;
   status: number;
+  body: string;
 }
 
 /**
@@ -204,16 +235,33 @@ interface AgentProviderPostResponse {
  */
 export async function postAgentProviderEndpoint(
   rawEndpoint: string,
-  options: AgentProviderPostOptions
-): Promise<AgentProviderPostResponse> {
-  const { endpoint, addresses } = await resolveAgentProviderEndpoint(rawEndpoint);
+  options: PublicEndpointPostOptions
+): Promise<PublicEndpointPostResponse> {
+  return postPublicEndpoint(rawEndpoint, options, {
+    hostAllowlist: configuredHostAllowlist(),
+  });
+}
+
+/**
+ * POST to a public endpoint while pinning the DNS answer used by the socket.
+ * This is also used by administrator-configured outbound integrations such
+ * as audit sinks, where validating and connecting in separate calls would
+ * leave a DNS-rebinding window.
+ */
+export async function postPublicEndpoint(
+  rawEndpoint: string,
+  options: PublicEndpointPostOptions,
+  policy: PublicEndpointPolicy = {}
+): Promise<PublicEndpointPostResponse> {
+  const { endpoint, addresses } = await resolvePublicEndpoint(rawEndpoint, policy);
   const pinned = addresses[0];
   if (!pinned) {
     throw new UnsafeAgentProviderEndpointError('Agent provider endpoint has no public address.');
   }
 
-  return new Promise<AgentProviderPostResponse>((resolve, reject) => {
-    const request = httpsRequest(
+  return new Promise<PublicEndpointPostResponse>((resolve, reject) => {
+    const requestFn = endpoint.protocol === 'https:' ? httpsRequest : httpRequest;
+    const request = requestFn(
       endpoint,
       {
         method: 'POST',
@@ -225,9 +273,32 @@ export async function postAgentProviderEndpoint(
         },
       },
       (response) => {
-        response.resume();
         const status = response.statusCode ?? 0;
-        resolve({ ok: status >= 200 && status < 300, status });
+        const maxResponseBytes = Math.max(0, options.maxResponseBytes ?? 0);
+        if (maxResponseBytes === 0) {
+          response.resume();
+          resolve({ ok: status >= 200 && status < 300, status, body: '' });
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        let capturedBytes = 0;
+        response.on('data', (chunk: Buffer | string) => {
+          if (capturedBytes >= maxResponseBytes) return;
+          const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          const remaining = maxResponseBytes - capturedBytes;
+          const captured = buffer.subarray(0, remaining);
+          chunks.push(captured);
+          capturedBytes += captured.length;
+        });
+        response.once('error', reject);
+        response.once('end', () => {
+          resolve({
+            ok: status >= 200 && status < 300,
+            status,
+            body: Buffer.concat(chunks).toString('utf8'),
+          });
+        });
       }
     );
     request.once('error', reject);

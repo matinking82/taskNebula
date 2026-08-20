@@ -22,17 +22,19 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        'border-border/70 flex min-w-0 flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between',
+        'border-border/70 flex min-w-0 flex-col gap-3 border-b pb-3.5 sm:flex-row sm:items-end sm:justify-between',
         className
       )}
     >
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0 space-y-0.5">
         {kicker ? <div className="kicker">{kicker}</div> : null}
-        <Heading className="text-foreground text-balance text-2xl font-semibold leading-tight tracking-[-0.015em] sm:text-[26px]">
+        <Heading className="text-foreground text-balance text-[21px] font-semibold leading-tight tracking-[-0.012em] sm:text-[23px]">
           {title}
         </Heading>
         {description ? (
-          <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">{description}</p>
+          <p className="text-muted-foreground max-w-3xl text-[13px] leading-relaxed">
+            {description}
+          </p>
         ) : null}
       </div>
       {actions ? (

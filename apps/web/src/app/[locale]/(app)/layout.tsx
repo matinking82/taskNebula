@@ -12,7 +12,7 @@ import { MobileNav } from '@/components/mobile/mobile-nav';
 import { GlobalVersionUpdateBanner } from '@/components/admin/global-version-update-banner';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
-import { currentUserHasWorkspaceAccess } from '@/lib/auth/workspace-access';
+import { currentUserWorkspaceAccessContext } from '@/lib/auth/workspace-access';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import type { CSSProperties } from 'react';
@@ -31,11 +31,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect('/auth/signin');
   }
 
-  const [t, isSuperAdminUser, hasWorkspaceAccess] = await Promise.all([
+  const [t, isSuperAdminUser, workspaceAccess] = await Promise.all([
     getTranslations('common'),
     isSuperAdmin(),
-    currentUserHasWorkspaceAccess(),
+    currentUserWorkspaceAccessContext(),
   ]);
+  const { hasAccess: hasWorkspaceAccess, defaultOrganizationId } = workspaceAccess;
   const appCarbonStyle = {
     '--font-sans': "var(--app-font-sans, 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif)",
     '--font-mono':
@@ -46,7 +47,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <GlobalVoiceProvider>
       <AppUiScope />
-      <CommandPaletteProvider hasWorkspaceAccess={hasWorkspaceAccess}>
+      <CommandPaletteProvider
+        hasWorkspaceAccess={hasWorkspaceAccess}
+        defaultOrganizationId={defaultOrganizationId}
+      >
         <KeyboardShortcutsProvider>
           <AiSidecarProvider enabled={hasWorkspaceAccess}>
             <PageSidebarSlotProvider>

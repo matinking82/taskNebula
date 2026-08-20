@@ -6,7 +6,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db, organizations, organizationMembers, users, projects, issues, systemAuditLogs } from '@tasknebula/db';
+import {
+  db,
+  organizations,
+  organizationMembers,
+  users,
+  projects,
+  issues,
+  systemAuditLogs,
+} from '@tasknebula/db';
 import { eq, desc, count, and, ilike, or, inArray } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
@@ -119,7 +127,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Batch fetch owners for all orgs in one query
-    const ownersMap = new Map<string, { id: string; name: string | null; email: string; image: string | null }>();
+    const ownersMap = new Map<
+      string,
+      { id: string; name: string | null; email: string; image: string | null }
+    >();
 
     if (orgIds.length > 0) {
       const ownerRows = await db
@@ -132,10 +143,12 @@ export async function GET(request: NextRequest) {
         })
         .from(organizationMembers)
         .innerJoin(users, eq(organizationMembers.userId, users.id))
-        .where(and(
-          inArray(organizationMembers.organizationId, orgIds),
-          eq(organizationMembers.role, 'owner')
-        ));
+        .where(
+          and(
+            inArray(organizationMembers.organizationId, orgIds),
+            eq(organizationMembers.role, 'owner')
+          )
+        );
 
       for (const row of ownerRows) {
         if (!ownersMap.has(row.organizationId)) {
@@ -159,13 +172,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Get total count
-    const totalQuery = db
-      .select({ count: count() })
-      .from(organizations);
+    const totalQuery = db.select({ count: count() }).from(organizations);
 
-    const [totalCount] = whereClause
-      ? await totalQuery.where(whereClause)
-      : await totalQuery;
+    const [totalCount] = whereClause ? await totalQuery.where(whereClause) : await totalQuery;
 
     return NextResponse.json({
       organizations: orgsWithStats,
@@ -178,17 +187,18 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch organizations' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch organizations' }, { status: 500 });
   }
 }
 
 // POST /api/admin/organizations - Create new organization
 const createOrgSchema = z.object({
   name: z.string().min(1).max(255),
-  slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z0-9-]+$/),
   plan: z.enum(['free', 'starter', 'growth', 'enterprise']).default('free'),
   status: z.enum(['active', 'trial', 'suspended']).default('trial'),
   ownerId: z.string().min(1),
@@ -222,57 +232,63 @@ export async function POST(request: NextRequest) {
     }
 
     // Find owner user
-    const [owner] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, data.ownerId))
-      .limit(1);
+    const [owner] = await db.select().from(users).where(eq(users.id, data.ownerId)).limit(1);
 
     if (!owner) {
       return NextResponse.json({ error: 'Owner user not found' }, { status: 400 });
     }
 
-    // Create organization
-    const [newOrg] = await db
-      .insert(organizations)
-      .values({
-        id: createId(),
-        name: data.name,
-        slug: data.slug,
-        plan: data.plan,
-        status: data.status,
-        settings: {},
-      })
-      .returning();
-
-    if (!newOrg) {
-      throw new Error('Failed to create organization');
+    if (owner.status !== 'active') {
+      return NextResponse.json({ error: 'Owner user must be active' }, { status: 400 });
     }
 
-    // Add owner as member
-    await db.insert(organizationMembers).values({
-      id: createId(),
-      organizationId: newOrg.id,
-      userId: owner.id,
-      role: 'owner',
-      status: 'active',
-    });
+    const newOrg = await db.transaction(async (tx) => {
+      const [activeOwner] = await tx
+        .select({ id: users.id, email: users.email })
+        .from(users)
+        .where(and(eq(users.id, owner.id), eq(users.status, 'active')))
+        .limit(1)
+        .for('update');
+      if (!activeOwner) throw new Error('organization_owner_inactive');
 
-    await db.insert(systemAuditLogs).values({
-      id: createId(),
-      userId: session.user.id,
-      action: 'org.created',
-      resourceType: 'organization',
-      resourceId: newOrg.id,
-      organizationId: newOrg.id,
-      metadata: {
-        plan: newOrg.plan,
-        status: newOrg.status,
-        ownerId: owner.id,
-        ownerEmail: owner.email,
-      },
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
+      const [created] = await tx
+        .insert(organizations)
+        .values({
+          id: createId(),
+          name: data.name,
+          slug: data.slug,
+          plan: data.plan,
+          status: data.status,
+          settings: {},
+        })
+        .returning();
+      if (!created) throw new Error('organization_create_failed');
+
+      await tx.insert(organizationMembers).values({
+        id: createId(),
+        organizationId: created.id,
+        userId: activeOwner.id,
+        role: 'owner',
+        status: 'active',
+      });
+      await tx.insert(systemAuditLogs).values({
+        id: createId(),
+        userId: session.user.id,
+        action: 'org.created',
+        resourceType: 'organization',
+        resourceId: created.id,
+        organizationId: created.id,
+        metadata: {
+          plan: created.plan,
+          status: created.status,
+          ownerId: activeOwner.id,
+          ownerEmail: activeOwner.email,
+        },
+        ipAddress:
+          request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        userAgent: request.headers.get('user-agent') || undefined,
+      });
+      return created;
     });
 
     return NextResponse.json(newOrg, { status: 201 });
@@ -283,11 +299,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if ((error as { code?: unknown })?.code === '23505') {
+      return NextResponse.json({ error: 'Organization slug already exists' }, { status: 409 });
+    }
+    if (error instanceof Error && error.message === 'organization_owner_inactive') {
+      return NextResponse.json({ error: 'Owner user must be active' }, { status: 409 });
+    }
 
     console.error('Failed to create organization:', error);
-    return NextResponse.json(
-      { error: 'Failed to create organization' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
   }
 }

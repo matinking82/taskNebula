@@ -6,47 +6,76 @@
  *   DELETE /Groups/{id}   → Delete
  */
 import { NextRequest } from 'next/server';
-import { authenticateScimRequest } from '@/lib/sso/tokens';
+import { z } from 'zod';
+import { authenticateScimRequest, scimTokenCan } from '@/lib/sso/tokens';
+import type { ScimScope } from '@/lib/scim/scopes';
 import { scimError, scimResponse } from '@/lib/scim/types';
 import type { PatchRequest } from '@/lib/scim/types';
 import {
-  applyGroupMembershipChanges,
-  deleteWorkspaceGroup,
+  deleteWorkspaceGroupAtomic,
   getWorkspaceGroup,
-  renameWorkspaceGroup,
+  ScimGroupMutationError,
   toScimGroup,
+  updateWorkspaceGroupAtomic,
 } from '@/lib/scim/groups';
 import { applyGroupPatch } from '@/lib/scim/patch';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-async function ctx(request: NextRequest, id: string) {
-  const auth = await authenticateScimRequest(
-    request.headers.get('authorization')
-  );
+const groupMemberSchema = z.object({ value: z.string().trim().min(1) }).passthrough();
+const replaceGroupSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(255),
+    members: z.array(groupMemberSchema).optional().default([]),
+  })
+  .passthrough();
+
+function isUniqueViolation(error: unknown): boolean {
+  const candidate = error as { code?: string; cause?: { code?: string } };
+  return candidate?.code === '23505' || candidate?.cause?.code === '23505';
+}
+
+function groupMutationError(error: unknown) {
+  if (error instanceof ScimGroupMutationError) {
+    switch (error.code) {
+      case 'group_not_found':
+        return scimError(404, 'Group not found');
+      case 'workspace_unavailable':
+        return scimError(403, 'Workspace is unavailable');
+      case 'invalid_display_name':
+      case 'invalid_members':
+        return scimError(400, 'Group contains an invalid value', 'invalidValue');
+    }
+  }
+  if (isUniqueViolation(error)) {
+    return scimError(409, 'A group with this identity already exists', 'uniqueness');
+  }
+  console.error('SCIM group mutation failed:', error);
+  return scimError(500, 'Group could not be updated');
+}
+
+async function ctx(request: NextRequest, id: string, scope: ScimScope) {
+  const auth = await authenticateScimRequest(request.headers.get('authorization'));
   if (!auth) return { error: scimError(401, 'Invalid or missing SCIM token') };
+  if (!scimTokenCan(auth, scope)) {
+    return { error: scimError(403, `SCIM token lacks ${scope} scope`) };
+  }
   const row = await getWorkspaceGroup(auth.workspaceId, id);
   if (!row) return { error: scimError(404, `Group ${id} not found`) };
   return { auth, row };
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const c = await ctx(request, id);
+  const c = await ctx(request, id, 'groups:read');
   if ('error' in c) return c.error;
   return scimResponse(toScimGroup(c.row));
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const c = await ctx(request, id);
+  const c = await ctx(request, id, 'groups:write');
   if ('error' in c) return c.error;
 
   let body: Record<string, unknown>;
@@ -55,27 +84,27 @@ export async function PUT(
   } catch {
     return scimError(400, 'Body must be JSON', 'invalidSyntax');
   }
-  if (typeof body.displayName === 'string') {
-    await renameWorkspaceGroup(c.auth.workspaceId, id, body.displayName);
+  const parsed = replaceGroupSchema.safeParse(body);
+  if (!parsed.success) {
+    return scimError(400, 'displayName and members must be valid', 'invalidValue');
   }
-  const memberIds = Array.isArray(body.members)
-    ? (body.members as { value: string }[]).map((m) => m.value)
-    : [];
-  await applyGroupMembershipChanges(c.auth.workspaceId, id, {
-    replace: memberIds,
-  });
-
-  const updated = await getWorkspaceGroup(c.auth.workspaceId, id);
-  if (!updated) return scimError(500, 'Group updated but could not be re-read');
-  return scimResponse(toScimGroup(updated));
+  try {
+    const updated = await updateWorkspaceGroupAtomic({
+      workspaceId: c.auth.workspaceId,
+      groupId: id,
+      tokenId: c.auth.tokenId,
+      displayName: parsed.data.displayName,
+      members: { replace: parsed.data.members.map((member) => member.value) },
+    });
+    return scimResponse(toScimGroup(updated));
+  } catch (error) {
+    return groupMutationError(error);
+  }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const c = await ctx(request, id);
+  const c = await ctx(request, id, 'groups:write');
   if ('error' in c) return c.error;
 
   let body: PatchRequest;
@@ -94,18 +123,22 @@ export async function PATCH(
   } catch (err) {
     return scimError(400, (err as Error).message, 'invalidSyntax');
   }
-  if (patch.displayName !== undefined) {
-    await renameWorkspaceGroup(c.auth.workspaceId, id, patch.displayName);
+  try {
+    const updated = await updateWorkspaceGroupAtomic({
+      workspaceId: c.auth.workspaceId,
+      groupId: id,
+      tokenId: c.auth.tokenId,
+      ...(patch.displayName !== undefined ? { displayName: patch.displayName } : {}),
+      members: {
+        ...(patch.addMembers !== undefined ? { add: patch.addMembers } : {}),
+        ...(patch.removeMembers !== undefined ? { remove: patch.removeMembers } : {}),
+        ...(patch.replaceMembers !== undefined ? { replace: patch.replaceMembers } : {}),
+      },
+    });
+    return scimResponse(toScimGroup(updated));
+  } catch (error) {
+    return groupMutationError(error);
   }
-  await applyGroupMembershipChanges(c.auth.workspaceId, id, {
-    add: patch.addMembers,
-    remove: patch.removeMembers,
-    replace: patch.replaceMembers,
-  });
-
-  const updated = await getWorkspaceGroup(c.auth.workspaceId, id);
-  if (!updated) return scimError(500, 'Group updated but could not be re-read');
-  return scimResponse(toScimGroup(updated));
 }
 
 export async function DELETE(
@@ -113,8 +146,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const c = await ctx(request, id);
+  const c = await ctx(request, id, 'groups:write');
   if ('error' in c) return c.error;
-  await deleteWorkspaceGroup(c.auth.workspaceId, id);
-  return new Response(null, { status: 204 });
+  try {
+    await deleteWorkspaceGroupAtomic({
+      workspaceId: c.auth.workspaceId,
+      groupId: id,
+      tokenId: c.auth.tokenId,
+    });
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    return groupMutationError(error);
+  }
 }

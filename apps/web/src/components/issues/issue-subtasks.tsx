@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Plus, CheckCircle2, Circle, Loader2, X } from 'lucide-react';
@@ -19,9 +19,73 @@ interface Subtask {
   id: string;
   key: string;
   title: string;
+  statusId: string;
   statusName: string;
-  statusCategory: string;
+  /** GET /api/issues exposes the workflow category as `status`. */
+  status: string;
   priority: string;
+}
+
+interface WorkflowStatusSummary {
+  id: string;
+  category: string;
+  position: number;
+}
+
+interface WorkflowTransitionSummary {
+  id: string;
+  name: string;
+  fromStatusId: string;
+  toStatusId: string;
+}
+
+interface WorkflowGraph {
+  statuses: WorkflowStatusSummary[];
+  transitions: WorkflowTransitionSummary[];
+}
+
+/**
+ * Pick the most useful legal next step for the compact status control.
+ *
+ * A sub-issue checkbox must respect the configured workflow graph: a Backlog
+ * item cannot jump straight to Done when the project requires Backlog → In
+ * Progress → Done. Prefer a direct completion/reopen edge when one exists;
+ * otherwise advance to the nearest forward state.
+ */
+function selectPrimaryTransition(
+  subtask: Subtask,
+  graph: WorkflowGraph | undefined
+): WorkflowTransitionSummary | null {
+  if (!graph) return null;
+
+  const statusById = new Map(graph.statuses.map((status) => [status.id, status]));
+  const current = statusById.get(subtask.statusId);
+  const currentCategory = current?.category ?? subtask.status;
+  const outgoing = graph.transitions.filter(
+    (transition) => transition.fromStatusId === subtask.statusId
+  );
+  if (outgoing.length === 0) return null;
+
+  return [...outgoing].sort((left, right) => {
+    const leftTarget = statusById.get(left.toStatusId);
+    const rightTarget = statusById.get(right.toStatusId);
+
+    const score = (target: WorkflowStatusSummary | undefined) => {
+      if (!target) return 10_000;
+      if (currentCategory === 'done') {
+        if (target.category === 'backlog') return 0;
+        if (target.category !== 'done') return 100 + target.position;
+        return 1_000 + target.position;
+      }
+      if (target.category === 'done') return 0;
+      if (current && target.position > current.position) {
+        return 100 + (target.position - current.position);
+      }
+      return 1_000 + target.position;
+    };
+
+    return score(leftTarget) - score(rightTarget) || left.id.localeCompare(right.id);
+  })[0]!;
 }
 
 export function IssueSubtasks({ issueId, projectId }: IssueSubtasksProps) {
@@ -29,6 +93,7 @@ export function IssueSubtasks({ issueId, projectId }: IssueSubtasksProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
   const createSubIssue = useCreateSubIssue();
   const updateIssue = useUpdateIssue();
   const { data: parentContext } = useSubIssueParentContext(issueId, projectId);
@@ -47,6 +112,26 @@ export function IssueSubtasks({ issueId, projectId }: IssueSubtasksProps) {
       return (data.issues || []) as Subtask[];
     },
   });
+
+  const { data: workflowGraph, isLoading: isWorkflowGraphLoading } = useQuery<WorkflowGraph>({
+    queryKey: ['workflow-transitions', projectId],
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${projectId}/workflow-transitions`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json() as Promise<WorkflowGraph>;
+    },
+  });
+
+  const transitionBySubtaskId = useMemo(
+    () =>
+      new Map(
+        (subtasks ?? []).map((subtask) => [
+          subtask.id,
+          selectPrimaryTransition(subtask, workflowGraph),
+        ])
+      ),
+    [subtasks, workflowGraph]
+  );
 
   const handleCreateSubtask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,20 +156,22 @@ export function IssueSubtasks({ issueId, projectId }: IssueSubtasksProps) {
   };
 
   const handleToggleComplete = async (subtask: Subtask) => {
-    // Toggle between done and todo
-    const newStatus = subtask.statusCategory === 'done' ? 'backlog' : 'done';
+    const transition = transitionBySubtaskId.get(subtask.id);
+    if (!transition) return;
+    setTransitionError(null);
     try {
       await updateIssue.mutateAsync({
         issueId: subtask.id,
-        data: { status: newStatus },
+        data: { statusId: transition.toStatusId },
       });
-      refetch();
+      await refetch();
     } catch (error) {
       console.error('Error updating subtask:', error);
+      setTransitionError(t('transitionFailed'));
     }
   };
 
-  const completedCount = subtasks?.filter((s) => s.statusCategory === 'done').length || 0;
+  const completedCount = subtasks?.filter((s) => s.status === 'done').length || 0;
   const totalCount = subtasks?.length || 0;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
@@ -118,41 +205,52 @@ export function IssueSubtasks({ issueId, projectId }: IssueSubtasksProps) {
       {/* Subtasks list */}
       {subtasks && subtasks.length > 0 ? (
         <ul className="stagger space-y-0.5">
-          {subtasks.map((subtask) => (
-            <li
-              key={subtask.id}
-              className="row-interactive group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5"
-            >
-              <button
-                onClick={() => handleToggleComplete(subtask)}
-                className="shrink-0"
-                disabled={updateIssue.isPending}
-                aria-label={
-                  subtask.statusCategory === 'done' ? t('markIncomplete') : t('markComplete')
-                }
+          {subtasks.map((subtask) => {
+            const transition = transitionBySubtaskId.get(subtask.id);
+            const fallbackLabel =
+              subtask.status === 'done' ? t('markIncomplete') : t('markComplete');
+
+            return (
+              <li
+                key={subtask.id}
+                className="row-interactive group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5"
               >
-                {subtask.statusCategory === 'done' ? (
-                  <CheckCircle2 className="text-accent-emerald h-4 w-4" />
-                ) : (
-                  <Circle className="text-muted-foreground hover:text-primary h-4 w-4 transition-colors duration-150" />
-                )}
-              </button>
-              <Link
-                href={`/issues/${subtask.id}`}
-                className={`hover:text-primary ease-snap flex min-w-0 flex-1 items-center gap-1.5 text-sm transition-colors duration-150 ${
-                  subtask.statusCategory === 'done' ? 'text-muted-foreground line-through' : ''
-                }`}
-              >
-                <span className="chip shrink-0 rounded-sm font-mono text-[11px]">
-                  {subtask.key}
-                </span>
-                <span className="truncate">{subtask.title}</span>
-              </Link>
-            </li>
-          ))}
+                <button
+                  onClick={() => handleToggleComplete(subtask)}
+                  className="shrink-0"
+                  disabled={updateIssue.isPending || isWorkflowGraphLoading || transition == null}
+                  aria-label={transition?.name || fallbackLabel}
+                  title={transition?.name || undefined}
+                >
+                  {subtask.status === 'done' ? (
+                    <CheckCircle2 className="text-accent-emerald h-4 w-4" />
+                  ) : (
+                    <Circle className="text-muted-foreground hover:text-primary h-4 w-4 transition-colors duration-150" />
+                  )}
+                </button>
+                <Link
+                  href={`/issues/${subtask.id}`}
+                  className={`hover:text-primary ease-snap flex min-w-0 flex-1 items-center gap-1.5 text-sm transition-colors duration-150 ${
+                    subtask.status === 'done' ? 'text-muted-foreground line-through' : ''
+                  }`}
+                >
+                  <span className="chip shrink-0 rounded-sm font-mono text-[11px]">
+                    {subtask.key}
+                  </span>
+                  <span className="truncate">{subtask.title}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       ) : !isAdding ? (
         <p className="text-muted-foreground py-2 text-center text-sm">{t('noSubtasks')}</p>
+      ) : null}
+
+      {transitionError ? (
+        <p className="text-destructive px-1 text-xs" role="alert">
+          {transitionError}
+        </p>
       ) : null}
 
       {/* Add subtask form */}

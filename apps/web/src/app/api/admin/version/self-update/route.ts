@@ -3,7 +3,12 @@ import { z } from 'zod';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import { getUpdateStatus } from '@/lib/version';
-import { getSelfUpdateStatus, SelfUpdateError, startSelfUpdate } from '@/lib/version/self-update';
+import {
+  getSelfUpdateStatus,
+  SelfUpdateError,
+  SelfUpdateStateError,
+  startSelfUpdate,
+} from '@/lib/version/self-update';
 
 const startSchema = z.object({
   targetVersion: z.string().min(1).max(32),
@@ -34,9 +39,19 @@ export async function GET() {
   const authz = await requireAdmin();
   if ('error' in authz) return authz.error;
 
-  const status = await getUpdateStatus();
-  const selfUpdate = await getSelfUpdateStatus(status);
-  return NextResponse.json(selfUpdate);
+  try {
+    const status = await getUpdateStatus();
+    const selfUpdate = await getSelfUpdateStatus(status);
+    return NextResponse.json(selfUpdate);
+  } catch (error) {
+    if (error instanceof SelfUpdateStateError) {
+      return NextResponse.json(
+        { error: 'Self-update state is unavailable', reason: 'state_unavailable' },
+        { status: 503 }
+      );
+    }
+    throw error;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -68,6 +83,12 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     if (err instanceof SelfUpdateError) {
       return NextResponse.json({ error: err.message, reason: err.reason }, { status: err.status });
+    }
+    if (err instanceof SelfUpdateStateError) {
+      return NextResponse.json(
+        { error: 'Self-update state is unavailable', reason: 'state_unavailable' },
+        { status: 503 }
+      );
     }
     return NextResponse.json(
       { error: 'Failed to start self-update', reason: 'webhook_failed' },

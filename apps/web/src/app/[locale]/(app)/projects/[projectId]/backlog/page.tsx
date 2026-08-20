@@ -90,7 +90,7 @@ export default function BacklogPage({ params }: { params: Promise<{ projectId: s
   return (
     <div className="animate-fade-in flex h-full flex-col">
       {/* Header */}
-      <div className="border-border bg-background shrink-0 border-b px-3 py-2.5 sm:px-5 sm:py-3">
+      <div className="command-header shrink-0 border-b px-3 py-2.5 sm:px-5 sm:py-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-baseline gap-3">
             <h1 className="truncate text-xl font-semibold tracking-tight">{t('backlogTitle')}</h1>

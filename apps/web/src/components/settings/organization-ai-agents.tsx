@@ -528,26 +528,20 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
+    <div className="space-y-8">
+      <Card className="border-0 bg-transparent">
+        <CardHeader className="border-border border-b px-0 pb-4 pt-0">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CardTitle>{t('orgAi.title')}</CardTitle>
-                <Badge variant="outline">{data.organizationName}</Badge>
-              </div>
+              <CardTitle>{t('orgAi.title')}</CardTitle>
               <CardDescription>{t('orgAi.subtitle')}</CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={formState.enabled ? 'default' : 'secondary'}>
-                {formState.enabled ? t('orgAi.enabled') : t('orgAi.disabled')}
-              </Badge>
-              <Badge variant="outline">{data.access.orgRole || 'member'}</Badge>
-            </div>
+            <Badge variant={formState.enabled ? 'default' : 'secondary'}>
+              {formState.enabled ? t('orgAi.enabled') : t('orgAi.disabled')}
+            </Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-0">
           <AiQuickSetup
             organizationId={data.organizationId}
             workspaceSettings={formState}
@@ -567,12 +561,12 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
             }}
           />
 
-          <Card className="border-border/60">
+          <Card className="border-border/60 rounded-none border-x-0">
             <CardHeader>
               <CardTitle className="text-base">{t('orgAi.checklist_title')}</CardTitle>
               <CardDescription>{t('orgAi.checklist_desc')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-0">
               {data.configIssues.length === 0 ? (
                 <div className="border-border/60 bg-muted/10 text-muted-foreground rounded-lg border px-4 py-3 text-sm">
                   {t('orgAi.checklist_complete')}
@@ -584,7 +578,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                   return (
                     <div
                       key={`${issue.code}-${issue.scope}`}
-                      className="border-border/60 rounded-lg border p-4"
+                      className="border-border/60 border-t py-4"
                     >
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="space-y-2">
@@ -654,7 +648,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                 <CardDescription>{t('orgAi.exec_policy_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                <div className="border-border/60 flex items-center justify-between gap-4 rounded-lg border p-4">
+                <div className="border-border/60 flex items-center justify-between gap-4 border-b py-4">
                   <div className="space-y-1">
                     <div className="font-medium">{t('orgAi.workspace_agents')}</div>
                     <p className="text-muted-foreground text-sm">
@@ -727,7 +721,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                 </div>
 
                 <div className="grid gap-3">
-                  <div className="border-border/60 flex items-center justify-between rounded-lg border p-4">
+                  <div className="border-border/60 flex items-center justify-between border-b py-4">
                     <div>
                       <div className="font-medium">{t('orgAi.allow_writes')}</div>
                       <p className="text-muted-foreground text-sm">
@@ -742,7 +736,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                       disabled={!canManage}
                     />
                   </div>
-                  <div className="border-border/60 flex items-center justify-between rounded-lg border p-4">
+                  <div className="border-border/60 flex items-center justify-between border-b py-4">
                     <div>
                       <div className="font-medium">{t('orgAi.require_approval')}</div>
                       <p className="text-muted-foreground text-sm">
@@ -770,11 +764,9 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                 <CardDescription>{t('orgAi.provider_readiness_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-border/60 rounded-lg border p-4">
+                <div className="border-border/60 border-b py-4">
                   <div className="flex items-start gap-3">
-                    <div className="border-border/60 bg-muted/30 flex h-9 w-9 items-center justify-center rounded-lg border">
-                      <Cpu className="text-muted-foreground h-4 w-4" />
-                    </div>
+                    <Cpu className="text-muted-foreground mt-0.5 h-4 w-4" />
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{t('orgAi.provider_health')}</span>
@@ -794,7 +786,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                   </div>
                 </div>
 
-                <div className="border-border/60 rounded-lg border p-4">
+                <div className="py-4">
                   <div className="space-y-1">
                     <div className="font-medium">{t('orgAi.credential_source')}</div>
                     <p className="text-muted-foreground text-sm">
@@ -806,7 +798,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                     </p>
                   </div>
                   <div className="text-muted-foreground mt-3 grid gap-2 text-sm">
-                    <div className="border-border/60 flex items-center justify-between gap-4 rounded-lg border px-3 py-2">
+                    <div className="border-border/60 flex items-center justify-between gap-4 border-b py-2">
                       <span>{t('orgAi.source')}</span>
                       <span className="text-foreground font-medium">
                         {data.providerStatus.source === 'workspace'
@@ -816,7 +808,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                             : t('orgAi.not_configured')}
                       </span>
                     </div>
-                    <div className="border-border/60 flex items-center justify-between gap-4 rounded-lg border px-3 py-2">
+                    <div className="border-border/60 flex items-center justify-between gap-4 border-b py-2">
                       <span>{t('orgAi.credential')}</span>
                       <span className="text-foreground font-medium">
                         {formatAgentCredentialLabel(
@@ -827,7 +819,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                         )}
                       </span>
                     </div>
-                    <div className="border-border/60 flex items-center justify-between gap-4 rounded-lg border px-3 py-2">
+                    <div className="border-border/60 flex items-center justify-between gap-4 border-b py-2">
                       <span>{t('orgAi.updated')}</span>
                       <span className="text-foreground font-medium">
                         {data.providerStatus.updatedAt
@@ -968,7 +960,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                 return (
                   <div
                     key={key}
-                    className="border-border/60 flex flex-col gap-4 rounded-lg border p-4 lg:flex-row lg:items-center lg:justify-between"
+                    className="border-border/60 flex flex-col gap-4 border-b py-4 lg:flex-row lg:items-center lg:justify-between"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -1036,15 +1028,15 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="border-0 bg-transparent">
+        <CardHeader className="border-border border-b px-0 pb-4 pt-0">
           <CardTitle className="flex items-center gap-2 text-base">
             <Activity className="h-4 w-4" />
             {t('orgAi.workspace_runtime')}
           </CardTitle>
           <CardDescription>{t('orgAi.workspace_runtime_desc')}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 px-0">
           <MetricStrip
             items={[
               {
@@ -1084,7 +1076,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
               </CardHeader>
               <CardContent className="space-y-3">
                 {data.serviceStatus.map((service) => (
-                  <div key={service.key} className="border-border/60 rounded-lg border p-3">
+                  <div key={service.key} className="border-border/60 border-b py-3">
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-medium">{formatAgentServiceLabel(t, service.key)}</span>
                       <Badge variant={getServiceBadgeVariant(service.state)}>
@@ -1119,7 +1111,7 @@ export function OrganizationAiAgentsSettings({ organizationId }: { organizationI
                   </div>
                 ) : (
                   data.recentRuns.map((run) => (
-                    <div key={run.id} className="border-border/60 rounded-lg border p-3">
+                    <div key={run.id} className="border-border/60 border-b py-3">
                       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">

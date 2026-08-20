@@ -15,7 +15,7 @@ export function AppHeader({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
   const { open: openPalette } = useCommandPalette();
 
   return (
-    <header className="workbench-commandbar border-border sticky top-0 z-30 flex h-12 items-center justify-between border-b px-3 shadow-none">
+    <header className="workbench-commandbar border-border sticky top-0 z-30 flex h-11 items-center justify-between border-b px-3 shadow-none">
       {/* Workspace + search trigger */}
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {hasWorkspaceAccess ? (
@@ -25,7 +25,7 @@ export function AppHeader({ hasWorkspaceAccess = true }: { hasWorkspaceAccess?: 
               type="button"
               onClick={openPalette}
               aria-label={tActions('open_command_palette')}
-              className="border-border bg-background text-muted-foreground ease-snap focus-visible:border-ring focus-visible:ring-ring hover:border-border-strong hover:text-foreground group relative flex h-8 w-full max-w-xl items-center rounded-md border pe-2 ps-9 text-start text-[13px] transition-[color,background-color,border-color,box-shadow,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+              className="border-border bg-card/70 text-muted-foreground ease-snap focus-visible:border-ring focus-visible:ring-ring hover:border-border-strong hover:bg-card hover:text-foreground group relative flex h-8 w-full max-w-2xl items-center rounded-md border pe-2 ps-9 text-start text-[13px] transition-[color,background-color,border-color,box-shadow,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
             >
               <Search className="text-muted-foreground absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <span className="truncate">{tNav('search_placeholder')}</span>

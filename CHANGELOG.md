@@ -6,6 +6,63 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-08-20
+
+### Added
+
+- A calmer agentic-workbench operating model, including a dashboard attention
+  queue, permission-aware agent watch, compact evidence strips, quieter global
+  navigation, and responsive context navigation across planning and settings
+  surfaces.
+- Database-resolved attachment storage with safe local and S3-compatible
+  backends, lifecycle cleanup, traversal and overwrite protection, and
+  authenticated as well as public download coverage.
+- Governed SCIM token scopes and audit attribution, SSO configuration lifecycle
+  auditing, unique Slack workspace identity, and durable user session-version
+  revocation through four journaled migrations.
+
+### Changed
+
+- Reworked the dashboard, application shell, project navigation, issue details,
+  initiatives, team, settings, administration, API documentation, and shared UI
+  primitives around denser accountable work instead of equal-weight card grids.
+- Consolidated organization, project, document, chat, template, automation,
+  search, import, sprint, and issue authorization so inactive users, suspended
+  organizations, removed members, and wrong-tenant actors fail closed at shared
+  boundaries.
+- Expanded administrator controls for organizations, users, feature flags,
+  integrations, agent execution, registration, SMTP, LiveKit, storage, audit
+  sinks, and self-update preferences with validated persistence and audit-aware
+  behavior.
+- Hardened Slack commands and events, SAML/SCIM provisioning, webhooks, imports,
+  uploads, and agent-provider paths with explicit tenant and failure handling.
+
+### Fixed
+
+- Existing JWT sessions now become invalid when an administrator deactivates a
+  user or increments the durable session version; self-deactivation,
+  self-deletion, and removal of the last active super administrator are guarded.
+- Issue subtasks now read the API's actual workflow category and apply a legal
+  configured transition instead of requesting an invalid direct category jump.
+- LiveKit readiness now resolves database settings before environment fallback,
+  SMTP and storage tests use the saved runtime configuration, and related admin
+  query caches invalidate after successful changes.
+- Audit-log streaming refreshes after sink mutations, integration credentials
+  remain encrypted and redacted, and self-update state and preferences survive
+  refresh and failure paths consistently.
+
+### Security
+
+- Customer webhook destinations are normalized and revalidated against HTTPS,
+  public-address, DNS-rebinding, and optional host-allowlist rules before save
+  and delivery.
+- SSO private keys, integration secrets, storage credentials, audit-sink
+  credentials, and import metadata are encrypted or redacted at persistence and
+  response boundaries.
+- Slack, SCIM, SSO, public intake, shared documents, uploads, API keys, and agent
+  actions received additional cross-organization and inactive-principal guards
+  with focused negative-path coverage.
+
 ## [0.16.0] - 2026-08-13
 
 ### Added

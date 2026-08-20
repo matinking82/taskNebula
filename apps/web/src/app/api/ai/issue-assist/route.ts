@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { and, desc, eq } from 'drizzle-orm';
-import {
-  createAuditLog,
-  db,
-  issueComments,
-  issues,
-  organizationMembers,
-  organizations,
-  projects,
-  users,
-} from '@tasknebula/db';
+import { desc, eq } from 'drizzle-orm';
+import { createAuditLog, db, issueComments, organizations, users } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { aiDisabledResponse, isAiFeatureEnabled } from '@/lib/ai/feature-gate';
 import { AiDraftError, type DraftProvider } from '@/lib/ai/draft-issue';
@@ -24,6 +15,8 @@ import { getSystemAgentControlSettingsFromDb } from '@/lib/agents/system';
 import { resolveProviderApiKeyFromSettings } from '@/lib/agents/credentials';
 import { normalizeWorkspaceAgentSettings } from '@/lib/agents/config';
 import { evaluateInjectionRisk } from '@/lib/ai/safety/sandbox';
+import { canReadIssue } from '@/lib/auth/access-control';
+import { isProductFeatureEnabled, PRODUCT_FEATURE_FLAGS } from '@/lib/feature-flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,47 +84,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const [issue] = await db
-    .select({
-      id: issues.id,
-      key: issues.key,
-      type: issues.type,
-      title: issues.title,
-      description: issues.description,
-      priority: issues.priority,
-      labels: issues.labels,
-      projectId: issues.projectId,
-      organizationId: issues.organizationId,
-    })
-    .from(issues)
-    .where(eq(issues.id, body.issueId))
-    .limit(1);
-
+  const issueAccess = await canReadIssue(session.user.id, body.issueId);
+  const issue = issueAccess.issue;
   if (!issue) {
     return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
   }
+  if (!issueAccess.allowed) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  }
 
-  // Access: super-admin bypass, else must be a member of the issue's org.
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
-  if (!user?.isSuperAdmin) {
-    const [orgMember] = await db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.organizationId, issue.organizationId),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-    if (!orgMember) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+  if (
+    !(await isProductFeatureEnabled(PRODUCT_FEATURE_FLAGS.AI_ISSUE_ASSIST, issue.organizationId))
+  ) {
+    return aiDisabledResponse();
   }
 
   const [org] = await db
@@ -152,12 +117,6 @@ export async function POST(request: NextRequest) {
       { status: 412 }
     );
   }
-
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.id, issue.projectId))
-    .limit(1);
 
   // Recent comments for summarize context.
   const recent = await db
@@ -199,7 +158,7 @@ export async function POST(request: NextRequest) {
       action: 'agent.run_failed',
       resourceType: 'issue',
       resourceId: issue.id,
-      projectId: project?.id ?? issue.projectId,
+      projectId: issue.projectId,
       issueId: issue.id,
       metadata: {
         kind: 'issue_assist',
@@ -255,7 +214,7 @@ export async function POST(request: NextRequest) {
       action: 'agent.run_completed',
       resourceType: 'issue',
       resourceId: issue.id,
-      projectId: project?.id ?? issue.projectId,
+      projectId: issue.projectId,
       issueId: issue.id,
       metadata: {
         kind: 'issue_assist',
@@ -279,7 +238,7 @@ export async function POST(request: NextRequest) {
         action: 'agent.run_failed',
         resourceType: 'issue',
         resourceId: issue.id,
-        projectId: project?.id ?? issue.projectId,
+        projectId: issue.projectId,
         issueId: issue.id,
         metadata: {
           kind: 'issue_assist',

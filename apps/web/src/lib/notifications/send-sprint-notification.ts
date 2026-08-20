@@ -1,5 +1,7 @@
 import {
   db,
+  organizations,
+  organizationMembers,
   users,
   projectMembers,
   notifications,
@@ -8,6 +10,7 @@ import {
   eq,
   and,
   inArray,
+  ne,
 } from '@tasknebula/db';
 
 /**
@@ -74,29 +77,34 @@ async function _notifySprint(params: {
 }) {
   const { eventType, sprint, project, actorUserId, stats } = params;
 
-  // 1. Gather project members (exclude the actor).
-  const members = await db
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(eq(projectMembers.projectId, project.id));
-
-  const recipientUserIds = members
-    .map((m) => m.userId)
-    .filter((uid) => uid && uid !== actorUserId);
-
-  if (recipientUserIds.length === 0) return;
-
-  // 2. Load recipient users (need email for SMTP, name for greeting).
-  //    Dedupe defensively in case a user is listed twice.
-  const uniqueUserIds = Array.from(new Set(recipientUserIds));
+  // 1. Gather only active users whose project membership is still backed by
+  // an active membership in a non-suspended workspace.
   const userRows = await db
     .select({ id: users.id, email: users.email, name: users.name })
-    .from(users)
-    .where(inArray(users.id, uniqueUserIds));
+    .from(projectMembers)
+    .innerJoin(users, eq(users.id, projectMembers.userId))
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.userId, projectMembers.userId),
+        eq(organizationMembers.organizationId, project.organizationId)
+      )
+    )
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .where(
+      and(
+        eq(projectMembers.projectId, project.id),
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active'),
+        ne(organizations.status, 'suspended'),
+        ne(projectMembers.userId, actorUserId)
+      )
+    );
 
   if (userRows.length === 0) return;
+  const uniqueUserIds = Array.from(new Set(userRows.map((user) => user.id)));
 
-  // 3. Load notification preferences for all recipients (scoped to this org).
+  // 2. Load notification preferences for all recipients (scoped to this org).
   //    Missing row = defaults (in-app ON).
   const prefsRows = await db
     .select()
@@ -104,21 +112,21 @@ async function _notifySprint(params: {
     .where(
       and(
         eq(notificationPreferences.organizationId, project.organizationId),
-        inArray(notificationPreferences.userId, uniqueUserIds),
-      ),
+        inArray(notificationPreferences.userId, uniqueUserIds)
+      )
     );
 
-  const prefsByUserId = new Map<string, typeof prefsRows[number]>();
+  const prefsByUserId = new Map<string, (typeof prefsRows)[number]>();
   for (const row of prefsRows) prefsByUserId.set(row.userId, row);
 
-  // 4. Get actor name for template.
+  // 3. Get actor name for template.
   const [actor] = await db
     .select({ name: users.name })
     .from(users)
     .where(eq(users.id, actorUserId))
     .limit(1);
 
-  // 5. Build notification rows + email recipients, gated by prefs.
+  // 4. Build notification rows + email recipients, gated by prefs.
   const notificationType = eventType === 'sprint.started' ? 'sprint_started' : 'sprint_completed';
   const title =
     eventType === 'sprint.started'
@@ -160,7 +168,7 @@ async function _notifySprint(params: {
     emailRecipients.push({ userId: user.id, email: user.email, name: user.name });
   }
 
-  // 6. Insert all in-app notifications in one go. Failures are logged but
+  // 5. Insert all in-app notifications in one go. Failures are logged but
   //    must not prevent email from being sent.
   if (inAppRows.length > 0) {
     try {
@@ -170,7 +178,7 @@ async function _notifySprint(params: {
     }
   }
 
-  // 7. Send emails. Errors are swallowed inside sendSprintNotificationEmail.
+  // 6. Send emails. Errors are swallowed inside sendSprintNotificationEmail.
   if (emailRecipients.length > 0) {
     try {
       await sendSprintNotificationEmail({
@@ -186,4 +194,3 @@ async function _notifySprint(params: {
     }
   }
 }
-

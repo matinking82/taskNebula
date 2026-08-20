@@ -81,8 +81,13 @@ export async function GET(request: NextRequest) {
         role: organizationMembers.role,
       })
       .from(organizationMembers)
+      .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
       .where(
-        and(eq(organizationMembers.userId, actor.userId), eq(organizationMembers.status, 'active'))
+        and(
+          eq(organizationMembers.userId, actor.userId),
+          eq(organizationMembers.status, 'active'),
+          ne(organizations.status, 'suspended')
+        )
       );
 
     let orgIds = userOrgMemberships.map((m) => m.organizationId);
@@ -238,10 +243,12 @@ export const POST = withValidation({ body: createProjectSchema })(async (request
           status: organizationMembers.status,
         })
         .from(organizationMembers)
+        .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
         .where(
           and(
             eq(organizationMembers.userId, session.user.id),
-            eq(organizationMembers.status, 'active')
+            eq(organizationMembers.status, 'active'),
+            ne(organizations.status, 'suspended')
           )
         )
         .limit(1);

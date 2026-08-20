@@ -41,7 +41,7 @@ jest.mock('samlify', () => ({
   IdentityProvider: jest.fn(() => ({})),
 }));
 
-import { __test__, acsUrl, spEntityId } from '../saml';
+import { __test__, acsUrl } from '../saml';
 
 const { verifyAssertionConstraints, registerValidator } = __test__;
 
@@ -71,7 +71,7 @@ function makeCtx(): {
 }
 
 const ACS = acsUrl('https://app.example.com', 'acme'); // …/api/auth/saml/acme/callback
-const ENTITY_ID = spEntityId('https://app.example.com', 'acme'); // …/metadata.xml
+const ENTITY_ID = 'https://app.example.com';
 
 // ---------------------------------------------------------------------------
 // Validator (XML wrapping / XXE / oversize guard)
@@ -189,6 +189,12 @@ describe('verifyAssertionConstraints', () => {
     expect(() =>
       verifyAssertionConstraints(makeCtx(), extract as unknown as Record<string, unknown>)
     ).toThrow(/AudienceRestriction/i);
+  });
+
+  it('rejects the generated metadata URL when a custom SP Entity ID is configured', () => {
+    const extract = validExtract();
+    extract.conditions.audience = 'https://app.example.com/api/auth/saml/acme/metadata.xml';
+    expect(() => verifyAssertionConstraints(makeCtx(), extract)).toThrow(/Audience mismatch/i);
   });
 
   it('accepts an audience array that includes our entityID', () => {

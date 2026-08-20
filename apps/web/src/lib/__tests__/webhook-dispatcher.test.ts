@@ -51,12 +51,26 @@ const state: {
 // (org, projectId) filter the dispatcher sends. We keep this loose to avoid
 // reimplementing drizzle's expression semantics.
 const conditionRecord: { calls: unknown[][] } = { calls: [] };
+const mockPostPublicEndpoint = jest.fn();
+
+jest.mock('@/lib/agents/provider-endpoint', () => ({
+  postPublicEndpoint: (...args: unknown[]) => mockPostPublicEndpoint(...args),
+}));
 
 jest.mock('@tasknebula/db', () => {
   // Define table sentinels inside the factory so jest's hoisting doesn't
   // reference them before the file-level lets initialize.
-  const webhooksTable = { __name: 'webhooks' };
+  const webhooksTable = {
+    __name: 'webhooks',
+    id: { __key: 'webhooks.id' },
+    organizationId: { __key: 'webhooks.organizationId' },
+    projectId: { __key: 'webhooks.projectId' },
+    isActive: { __key: 'webhooks.isActive' },
+    successCount: { __key: 'webhooks.successCount' },
+    failureCount: { __key: 'webhooks.failureCount' },
+  };
   const webhookDeliveriesTable = { __name: 'webhook_deliveries' };
+  const auditLogsTable = { __name: 'audit_logs' };
 
   const eq = (col: { __key: string } | unknown, value: unknown) => ({
     op: 'eq',
@@ -90,8 +104,7 @@ jest.mock('@tasknebula/db', () => {
       const wherePromise = (cond: unknown) => {
         conditionRecord.calls.push([cond]);
         return {
-          then: (resolve: (rows: WebhookRow[]) => unknown) =>
-            Promise.resolve(exec()).then(resolve),
+          then: (resolve: (rows: WebhookRow[]) => unknown) => Promise.resolve(exec()).then(resolve),
         };
       };
       return { where: wherePromise };
@@ -116,9 +129,7 @@ jest.mock('@tasknebula/db', () => {
           return {
             where(cond: unknown) {
               const id =
-                cond &&
-                typeof cond === 'object' &&
-                'value' in (cond as Record<string, unknown>)
+                cond && typeof cond === 'object' && 'value' in (cond as Record<string, unknown>)
                   ? ((cond as { value: unknown }).value as string)
                   : '__unknown__';
               state.updated.push({ id, set: values });
@@ -128,16 +139,26 @@ jest.mock('@tasknebula/db', () => {
         },
       };
     },
+    transaction(callback: (tx: unknown) => Promise<unknown>) {
+      return callback(db);
+    },
   };
+
+  const sql = (strings: TemplateStringsArray, ...values: unknown[]) => ({
+    __sql: strings.join('?'),
+    values,
+  });
 
   return {
     db,
+    auditLogs: auditLogsTable,
     webhooks: webhooksTable,
     webhookDeliveries: webhookDeliveriesTable,
     eq,
     isNull,
     and,
     or,
+    sql,
   };
 });
 
@@ -162,24 +183,10 @@ function withOrgFilter(orgId: string, projectId: string | null = null) {
 
 // Import after jest.mock so the mocked db is picked up. jest hoists mock
 // definitions above all imports, so a normal ESM import here is safe.
-import {
-  triggerWebhooks,
-  signWebhookPayload,
-} from '../webhooks/dispatcher';
-
-// ---------------------------------------------------------------------------
-// fetch mock (Node 18+ uses global fetch)
-// ---------------------------------------------------------------------------
-
-const originalFetch = global.fetch;
+import { triggerWebhooks, signWebhookPayload } from '../webhooks/dispatcher';
 
 beforeEach(() => {
-  // Clear globals between tests.
-  (global as unknown as { fetch: jest.Mock }).fetch = jest.fn();
-});
-
-afterAll(() => {
-  global.fetch = originalFetch;
+  mockPostPublicEndpoint.mockReset();
 });
 
 // ---------------------------------------------------------------------------
@@ -190,10 +197,7 @@ describe('signWebhookPayload', () => {
   it('produces a hex HMAC-SHA256 over the payload string', () => {
     const secret = 'shh';
     const body = JSON.stringify({ hello: 'world' });
-    const expected = crypto
-      .createHmac('sha256', secret)
-      .update(body)
-      .digest('hex');
+    const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
     expect(signWebhookPayload(body, secret)).toBe(expected);
   });
 
@@ -222,7 +226,7 @@ describe('triggerWebhooks — delivery semantics', () => {
     });
 
     expect(outcomes).toEqual([]);
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockPostPublicEndpoint).not.toHaveBeenCalled();
     expect(state.inserted).toHaveLength(0);
   });
 
@@ -249,7 +253,7 @@ describe('triggerWebhooks — delivery semantics', () => {
     });
 
     expect(outcomes).toEqual([]);
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockPostPublicEndpoint).not.toHaveBeenCalled();
   });
 
   it('signs the body and posts it to the webhook URL', async () => {
@@ -269,11 +273,11 @@ describe('triggerWebhooks — delivery semantics', () => {
     ]);
     withOrgFilter('org-1');
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    mockPostPublicEndpoint.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      text: () => Promise.resolve('ok'),
-    } as Response);
+      body: 'ok',
+    });
 
     const outcomes = await triggerWebhooks({
       organizationId: 'org-1',
@@ -291,15 +295,14 @@ describe('triggerWebhooks — delivery semantics', () => {
       }),
     ]);
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    const call = (global.fetch as jest.Mock).mock.calls[0];
+    expect(mockPostPublicEndpoint).toHaveBeenCalledTimes(1);
+    const call = mockPostPublicEndpoint.mock.calls[0];
     expect(call[0]).toBe('https://hook.example/ok');
-    const init = call[1] as RequestInit & { headers: Record<string, string> };
-    expect(init.method).toBe('POST');
+    const init = call[1] as { body: string; headers: Record<string, string> };
     expect(init.headers['X-TaskNebula-Event']).toBe('issue.created');
     expect(init.headers['X-Webhook-ID']).toBe('wh-OK');
 
-    const body = init.body as string;
+    const body = init.body;
     const expectedSig = signWebhookPayload(body, secret);
     expect(init.headers['X-TaskNebula-Signature']).toBe(`sha256=${expectedSig}`);
     expect(init.headers['X-Webhook-Signature']).toBe(expectedSig);
@@ -316,6 +319,12 @@ describe('triggerWebhooks — delivery semantics', () => {
       })
     );
     expect(typeof parsed.timestamp).toBe('string');
+
+    const delivery = state.inserted.find((item) => item.table === 'webhook_deliveries');
+    expect(delivery?.id).toBe(init.headers['X-TaskNebula-Delivery']);
+    expect(call[2]).toEqual(
+      expect.objectContaining({ allowInsecureHttp: false, hostAllowlist: [] })
+    );
   });
 
   it('records a delivery row and increments successCount on 2xx', async () => {
@@ -334,11 +343,11 @@ describe('triggerWebhooks — delivery semantics', () => {
     ]);
     withOrgFilter('org-1');
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    mockPostPublicEndpoint.mockResolvedValueOnce({
       ok: true,
       status: 204,
-      text: () => Promise.resolve(''),
-    } as Response);
+      body: '',
+    });
 
     await triggerWebhooks({
       organizationId: 'org-1',
@@ -346,9 +355,7 @@ describe('triggerWebhooks — delivery semantics', () => {
       payload: {},
     });
 
-    const inserts = state.inserted.filter(
-      (i) => i.table === 'webhook_deliveries'
-    );
+    const inserts = state.inserted.filter((i) => i.table === 'webhook_deliveries');
     expect(inserts).toHaveLength(1);
     expect(inserts[0]).toMatchObject({
       webhookId: 'wh-OK',
@@ -362,10 +369,11 @@ describe('triggerWebhooks — delivery semantics', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: 'wh-OK',
-          set: expect.objectContaining({ successCount: 8, failureCount: 2 }),
+          set: expect.objectContaining({ successCount: expect.any(Object) }),
         }),
       ])
     );
+    expect(state.updated[0]?.set).not.toHaveProperty('failureCount');
   });
 
   it('records a failure on non-2xx and increments failureCount', async () => {
@@ -384,11 +392,11 @@ describe('triggerWebhooks — delivery semantics', () => {
     ]);
     withOrgFilter('org-1');
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    mockPostPublicEndpoint.mockResolvedValueOnce({
       ok: false,
       status: 500,
-      text: () => Promise.resolve('boom'),
-    } as Response);
+      body: 'boom',
+    });
 
     const outcomes = await triggerWebhooks({
       organizationId: 'org-1',
@@ -401,9 +409,7 @@ describe('triggerWebhooks — delivery semantics', () => {
       statusCode: 500,
     });
 
-    const inserts = state.inserted.filter(
-      (i) => i.table === 'webhook_deliveries'
-    );
+    const inserts = state.inserted.filter((i) => i.table === 'webhook_deliveries');
     expect(inserts[0]).toMatchObject({
       status: 'failed',
       statusCode: 500,
@@ -414,10 +420,11 @@ describe('triggerWebhooks — delivery semantics', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: 'wh-FAIL',
-          set: expect.objectContaining({ successCount: 1, failureCount: 2 }),
+          set: expect.objectContaining({ failureCount: expect.any(Object) }),
         }),
       ])
     );
+    expect(state.updated[0]?.set).not.toHaveProperty('successCount');
   });
 
   it('treats network errors as failed without throwing', async () => {
@@ -436,7 +443,7 @@ describe('triggerWebhooks — delivery semantics', () => {
     ]);
     withOrgFilter('org-1');
 
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('econnrefused'));
+    mockPostPublicEndpoint.mockRejectedValueOnce(new Error('econnrefused'));
 
     const outcomes = await triggerWebhooks({
       organizationId: 'org-1',
@@ -450,9 +457,7 @@ describe('triggerWebhooks — delivery semantics', () => {
       error: 'econnrefused',
     });
 
-    const inserts = state.inserted.filter(
-      (i) => i.table === 'webhook_deliveries'
-    );
+    const inserts = state.inserted.filter((i) => i.table === 'webhook_deliveries');
     expect(inserts[0]).toMatchObject({
       status: 'failed',
       errorMessage: 'econnrefused',

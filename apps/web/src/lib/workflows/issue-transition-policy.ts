@@ -4,6 +4,7 @@ import {
   issueStatusHistory,
   issues,
   organizationMembers,
+  organizations,
   projectMembers,
   projects,
   users,
@@ -212,12 +213,13 @@ export async function prepareIssueStatusTransition(
   input: PrepareIssueStatusTransitionInput
 ): Promise<PreparedIssueStatusTransition> {
   const [context] = await tx
-    .select({ issue: issues, project: projects })
+    .select({ issue: issues, project: projects, organizationStatus: organizations.status })
     .from(issues)
     .innerJoin(
       projects,
       and(eq(projects.id, issues.projectId), eq(projects.organizationId, issues.organizationId))
     )
+    .innerJoin(organizations, eq(organizations.id, projects.organizationId))
     .where(
       and(
         eq(issues.id, input.issueId),
@@ -229,7 +231,7 @@ export async function prepareIssueStatusTransition(
     .limit(1)
     .for('update');
 
-  if (!context) {
+  if (!context || context.organizationStatus === 'suspended') {
     throw new WorkflowTransitionError('workflow_transition_issue_not_found');
   }
   if (
@@ -285,11 +287,11 @@ export async function prepareIssueStatusTransition(
   assertRoleList(transition.allowedRoles, policyRoles);
 
   const [actor] = await tx
-    .select({ id: users.id, isSuperAdmin: users.isSuperAdmin })
+    .select({ id: users.id, isSuperAdmin: users.isSuperAdmin, status: users.status })
     .from(users)
     .where(eq(users.id, input.actorUserId))
     .limit(1);
-  if (!actor) {
+  if (!actor || actor.status !== 'active') {
     throw new WorkflowTransitionError('workflow_transition_actor_forbidden');
   }
 

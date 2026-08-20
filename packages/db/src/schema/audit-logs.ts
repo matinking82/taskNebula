@@ -102,6 +102,15 @@ export const auditLogActionEnum = pgEnum('audit_log_action', [
   // API key actions
   'api_key.created',
   'api_key.revoked',
+
+  // Identity provisioning actions
+  'scim_token.created',
+  'scim_token.revoked',
+
+  // Enterprise identity configuration actions
+  'sso_config.created',
+  'sso_config.updated',
+  'sso_config.deleted',
 ]);
 
 // Audit logs table

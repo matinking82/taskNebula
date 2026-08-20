@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
 import { and, db, documentPageAttachments, documentPages, eq } from '@tasknebula/db';
-
-const UPLOAD_DIR = join(process.cwd(), 'uploads');
+import {
+  attachmentContentDisposition,
+  readStoredFile,
+  StorageObjectNotFoundError,
+  storedFilenameFromPath,
+} from '@/lib/storage/blob-store';
 
 export async function GET(
   request: NextRequest,
@@ -46,21 +48,22 @@ export async function GET(
       return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
     }
 
-    const filename = attachment.filePath.split('/').pop();
-    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return NextResponse.json({ error: 'Invalid attachment path' }, { status: 400 });
-    }
+    const filename = storedFilenameFromPath(attachment.filePath);
+    const fileBuffer = await readStoredFile(filename);
 
-    const fileBuffer = await readFile(join(UPLOAD_DIR, filename));
-
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': attachment.mimeType || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${attachment.fileName}"`,
+        'Content-Disposition': attachmentContentDisposition(attachment.fileName),
         'Cache-Control': 'public, max-age=300',
+        'Content-Security-Policy': 'sandbox',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error) {
+    if (error instanceof StorageObjectNotFoundError) {
+      return NextResponse.json({ error: 'Attachment not found' }, { status: 404 });
+    }
     console.error('Error serving public document attachment:', error);
     return NextResponse.json({ error: 'Failed to serve attachment' }, { status: 500 });
   }

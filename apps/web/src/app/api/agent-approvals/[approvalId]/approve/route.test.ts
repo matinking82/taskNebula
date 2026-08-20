@@ -7,6 +7,9 @@ const canManageMock = jest.fn();
 const evaluatePolicyMock = jest.fn();
 const executeMock = jest.fn();
 const processEffectsMock = jest.fn();
+const requesterAccessMock = jest.fn();
+const canEditIssueMock = jest.fn();
+const canCommentOnIssueMock = jest.fn();
 const dbUpdateMock = jest.fn();
 const inserted: Array<{ table: string; values: Record<string, unknown> }> = [];
 const afterCallbacks: Array<() => Promise<void> | void> = [];
@@ -49,6 +52,13 @@ jest.mock('@/lib/agent-policy/approval-effects', () => ({
 }));
 jest.mock('@/lib/logger', () => ({
   childLogger: () => ({ error: jest.fn() }),
+}));
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) => requesterAccessMock(...args),
+}));
+jest.mock('@/lib/auth/access-control', () => ({
+  canEditIssue: (...args: unknown[]) => canEditIssueMock(...args),
+  canCommentOnIssue: (...args: unknown[]) => canCommentOnIssueMock(...args),
 }));
 
 const approvalTable = {
@@ -182,6 +192,14 @@ describe('POST /api/agent-approvals/:approvalId/approve', () => {
     afterCallbacks.length = 0;
     authMock.mockResolvedValue({ user: { id: 'approver-1' } });
     canManageMock.mockResolvedValue(true);
+    requesterAccessMock.mockResolvedValue({
+      canRead: true,
+      canManage: false,
+      project: { id: 'project-1', organizationId: 'workspace-1' },
+      permissions: { canCreateIssues: true, canEditIssues: true, canAddComments: true },
+    });
+    canEditIssueMock.mockResolvedValue({ allowed: true, issue: { id: 'issue-1' } });
+    canCommentOnIssueMock.mockResolvedValue({ allowed: true, issue: { id: 'issue-1' } });
     evaluatePolicyMock.mockResolvedValue({ decision: 'require_approval' });
     executeMock.mockResolvedValue({
       result: { id: 'issue-1' },
@@ -234,6 +252,23 @@ describe('POST /api/agent-approvals/:approvalId/approve', () => {
 
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({ error: 'approval_policy_changed' });
+    expect(executeMock).not.toHaveBeenCalled();
+  });
+
+  it('expires an approval when the requester lost project access before execution', async () => {
+    requesterAccessMock.mockResolvedValue({
+      canRead: false,
+      canManage: false,
+      project: { id: 'project-1', organizationId: 'workspace-1' },
+      permissions: { canCreateIssues: false, canEditIssues: false, canAddComments: false },
+    });
+
+    const response = await POST(new Request('http://localhost'), {
+      params: Promise.resolve({ approvalId: currentApproval.id }),
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({ error: 'approval_requester_access_changed' });
     expect(executeMock).not.toHaveBeenCalled();
   });
 

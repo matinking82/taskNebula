@@ -1,13 +1,7 @@
 import { auth } from '@/auth';
-import {
-  db,
-  users,
-  organizationMembers,
-  eq,
-  and,
-  hasPermission as roleHasPermission,
-} from '@tasknebula/db';
+import { db, users, eq, hasPermission as roleHasPermission } from '@tasknebula/db';
 import { EmailVerificationBannerClient } from './email-verification-banner-client';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 /**
  * Server component that checks whether the current user's email has
@@ -31,23 +25,19 @@ export async function EmailVerificationBanner() {
       emailVerified: users.emailVerified,
       email: users.email,
       isSuperAdmin: users.isSuperAdmin,
+      status: users.status,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  if (!user) return null;
+  if (!user || user.status !== 'active') return null;
   if (user.emailVerified) return null;
 
   // Trusted roles: super admin or any active org with settings permission.
   let trusted = user.isSuperAdmin === true;
   if (!trusted) {
-    const memberships = await db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(eq(organizationMembers.userId, user.id), eq(organizationMembers.status, 'active'))
-      );
+    const memberships = await listActiveOrganizationMemberships(user.id);
     trusted = memberships.some((membership) =>
       roleHasPermission(membership.role || '', 'org:settings')
     );

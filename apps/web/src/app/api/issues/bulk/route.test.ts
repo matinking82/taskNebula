@@ -4,6 +4,7 @@ const mockAuth = jest.fn();
 const mockSelect = jest.fn();
 const mockTransaction = jest.fn();
 const mockApplyBulk = jest.fn();
+const resolveProjectCapabilityAccessMock = jest.fn();
 
 jest.mock('next/server', () => {
   class MockResponse {
@@ -41,6 +42,11 @@ jest.mock('@/lib/workflows/issue-transition-policy', () => ({
   },
 }));
 
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    resolveProjectCapabilityAccessMock(...args),
+}));
+
 jest.mock('@tasknebula/db', () => {
   const table = (name: string) =>
     new Proxy({ __name: name } as Record<string, string>, {
@@ -58,6 +64,7 @@ jest.mock('@tasknebula/db', () => {
     sprints: table('sprints'),
     projectMembers: table('project_members'),
     organizationMembers: table('organization_members'),
+    organizations: table('organizations'),
     users: table('users'),
     createAuditLog: jest.fn(),
     hasPermission: () => false,
@@ -110,26 +117,30 @@ beforeEach(() => {
   mockSelect.mockReset();
   mockTransaction.mockReset();
   mockApplyBulk.mockReset();
+  resolveProjectCapabilityAccessMock.mockReset();
   mockAuth.mockResolvedValue({ user: { id: 'user-a' } });
+  resolveProjectCapabilityAccessMock.mockResolvedValue({
+    project: { id: 'project-a', organizationId: 'org-a' },
+    canRead: true,
+    permissions: {
+      canEditIssues: true,
+      canDeleteIssues: true,
+      canTransitionIssues: true,
+      canAssignIssues: true,
+      canScheduleIssues: true,
+    },
+  });
 });
 
 it('requires transition permission for bulk status updates', async () => {
-  mockSelect
-    .mockReturnValueOnce(
-      query([{ id: 'issue-a', projectId: 'project-a', organizationId: 'org-a' }])
-    )
-    .mockReturnValueOnce(query([{ isSuperAdmin: false }]))
-    .mockReturnValueOnce(query([{ id: 'project-a', organizationId: 'org-a' }]))
-    .mockReturnValueOnce(query([{ role: 'member' }]))
-    .mockReturnValueOnce(
-      query([
-        {
-          role: 'viewer',
-          canTransitionIssues: 'false',
-          canEditIssues: 'true',
-        },
-      ])
-    );
+  mockSelect.mockReturnValueOnce(
+    query([{ id: 'issue-a', projectId: 'project-a', organizationId: 'org-a' }])
+  );
+  resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+    project: { id: 'project-a', organizationId: 'org-a' },
+    canRead: true,
+    permissions: { canTransitionIssues: false },
+  });
 
   const response = await POST(
     request({
@@ -148,21 +159,14 @@ it('requires transition permission for bulk status updates', async () => {
 });
 
 it('honors an explicit permission denial even when the project role default allows it', async () => {
-  mockSelect
-    .mockReturnValueOnce(
-      query([{ id: 'issue-a', projectId: 'project-a', organizationId: 'org-a' }])
-    )
-    .mockReturnValueOnce(query([{ isSuperAdmin: false }]))
-    .mockReturnValueOnce(query([{ id: 'project-a', organizationId: 'org-a' }]))
-    .mockReturnValueOnce(query([{ role: 'member' }]))
-    .mockReturnValueOnce(
-      query([
-        {
-          role: 'developer',
-          canEditIssues: 'false',
-        },
-      ])
-    );
+  mockSelect.mockReturnValueOnce(
+    query([{ id: 'issue-a', projectId: 'project-a', organizationId: 'org-a' }])
+  );
+  resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+    project: { id: 'project-a', organizationId: 'org-a' },
+    canRead: true,
+    permissions: { canEditIssues: false },
+  });
 
   const response = await POST(
     request({
@@ -177,11 +181,21 @@ it('honors an explicit permission denial even when the project role default allo
 });
 
 function allowAsSuperAdmin(issueIds: string[]) {
-  mockSelect
-    .mockReturnValueOnce(
-      query(issueIds.map((id) => ({ id, projectId: 'project-a', organizationId: 'org-a' })))
-    )
-    .mockReturnValueOnce(query([{ isSuperAdmin: true }]));
+  mockSelect.mockReturnValueOnce(
+    query(issueIds.map((id) => ({ id, projectId: 'project-a', organizationId: 'org-a' })))
+  );
+  resolveProjectCapabilityAccessMock.mockResolvedValue({
+    project: { id: 'project-a', organizationId: 'org-a' },
+    canRead: true,
+    isSuperAdmin: true,
+    permissions: {
+      canEditIssues: true,
+      canDeleteIssues: true,
+      canTransitionIssues: true,
+      canAssignIssues: true,
+      canScheduleIssues: true,
+    },
+  });
 }
 
 function transactionSelectQueue(queue: Record<string, unknown>[][]) {
@@ -190,6 +204,7 @@ function transactionSelectQueue(queue: Record<string, unknown>[][]) {
       const chain = query(queue.shift() ?? []);
       return Object.assign(chain, {
         for: (_mode: string) => chain,
+        innerJoin: (_table: unknown, _condition: unknown) => chain,
       });
     },
     update: jest.fn(),

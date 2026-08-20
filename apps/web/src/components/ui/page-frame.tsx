@@ -18,7 +18,7 @@ export function PageFrame({ children, className, contentClassName }: PageFramePr
       <div className="custom-scrollbar min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div
           className={cn(
-            'mx-auto w-full min-w-0 max-w-[1600px] space-y-5 p-3.5 sm:p-4 lg:p-5 xl:p-6',
+            'mx-auto w-full min-w-0 max-w-[1480px] space-y-4 p-3.5 sm:p-4 lg:p-5 xl:px-6 xl:py-5',
             contentClassName
           )}
         >

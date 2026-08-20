@@ -23,15 +23,29 @@ import {
   eq,
   desc,
   issues,
+  organizations,
   projects,
   workflows,
   workflowStatuses,
-  organizationMembers,
   integrationConnections,
+  auditLogs,
+  issueActivities,
   slackChannelRoutes,
   slackMessageLinks,
+  users,
 } from '@tasknebula/db';
+import { ne, sql } from 'drizzle-orm';
+import { getTranslations } from 'next-intl/server';
 import { callSlackApi, postSlackMessage } from './slack';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
+import { syncIssueLabelsWithExecutor } from '@/lib/labels/sync';
+import { publishEventAwaitingFanOut } from '@/lib/realtime/events';
+import { dispatchAuditLogToSinks } from '@/lib/audit/sink-dispatcher';
+import { runAutomations } from '@/lib/automation/evaluator';
+import { triggerWebhooks } from '@/lib/webhooks/dispatcher';
+import { runTriageOnce } from '@/lib/agents/triage-enqueue';
+import { defaultLocale, isSupportedLocale } from '@/lib/i18n/config';
+import { buildAppUrl } from '@/lib/url/app-url';
 
 export interface CreateFromSlackParams {
   organizationId: string;
@@ -61,6 +75,8 @@ export interface CreateFromSlackParams {
   reporterUserId: string;
   /** Extra labels to apply (e.g. "slack"). The channel route's label is added automatically. */
   extraLabels?: string[];
+  /** Attach non-critical fan-out to a route handler's `after()` lifecycle. */
+  scheduleAfterResponse?: (task: () => Promise<void>) => void;
 }
 
 export interface CreatedIssue {
@@ -95,37 +111,31 @@ export async function createIssueFromSlackMessage(
   );
   if (!projectId) return null;
 
-  const project = await loadProject(projectId);
+  const project = await loadProject(projectId, params.organizationId);
   if (!project) return null;
 
+  const reporterAccess = await resolveProjectCapabilityAccess(params.reporterUserId, projectId);
+  if (
+    !reporterAccess.canRead ||
+    reporterAccess.project?.organizationId !== params.organizationId ||
+    !reporterAccess.permissions.canCreateIssues
+  ) {
+    return null;
+  }
+  const t = await getSlackBridgeTranslator(params.reporterUserId);
+
   // Pick the project's default workflow + first backlog status.
-  const workflowId = await resolveWorkflowId(
-    project.organizationId,
-    project.defaultWorkflowId
-  );
+  const workflowId = await resolveWorkflowId(project.organizationId, project.defaultWorkflowId);
   if (!workflowId) return null;
 
   const [backlogStatus] = await db
     .select()
     .from(workflowStatuses)
     .where(
-      and(
-        eq(workflowStatuses.workflowId, workflowId),
-        eq(workflowStatuses.category, 'backlog')
-      )
+      and(eq(workflowStatuses.workflowId, workflowId), eq(workflowStatuses.category, 'backlog'))
     )
     .limit(1);
   if (!backlogStatus) return null;
-
-  // Next sequential issue number for the project.
-  const [last] = await db
-    .select({ number: issues.number })
-    .from(issues)
-    .where(eq(issues.projectId, projectId))
-    .orderBy(desc(issues.number))
-    .limit(1);
-  const nextNumber = (last?.number ?? 0) + 1;
-  const issueKey = `${project.key}-${nextNumber}`;
 
   // Compose description: caller-supplied body first, then a "From Slack"
   // block with the original message text + permalink + author.
@@ -134,13 +144,14 @@ export async function createIssueFromSlackMessage(
     permalink: params.permalink ?? null,
     authorSlackId: params.slackAuthorId,
     channelName: params.channelName ?? null,
+    t,
   });
   const fullDescription = [params.description?.trim() || '', quotedBlock]
     .filter(Boolean)
     .join('\n\n');
 
   // Labels: caller extras + channel route default + a "slack" tag we always add.
-  const routeLabel = await loadRouteLabel(
+  const routeDefaults = await loadRouteDefaults(
     params.organizationId,
     params.slackTeamId,
     params.slackChannelId
@@ -148,78 +159,256 @@ export async function createIssueFromSlackMessage(
   const labels = Array.from(
     new Set([
       ...(params.extraLabels ?? []),
-      ...(routeLabel ? [routeLabel] : []),
+      ...(routeDefaults.label ? [routeDefaults.label] : []),
       'slack',
     ])
   );
 
-  const issueId = createId();
-  const now = new Date();
-  await db.insert(issues).values({
-    id: issueId,
-    organizationId: project.organizationId,
-    projectId,
-    key: issueKey,
-    number: nextNumber,
-    type: 'task',
-    title: params.title.slice(0, 500) || `Slack: ${(params.messageText ?? '').slice(0, 80)}`,
-    description: fullDescription || null,
-    statusId: backlogStatus.id,
-    priority: 'medium',
-    reporterId: params.reporterUserId,
-    labels,
-    customFields: {},
-    metadata: {
-      source: 'slack',
-      slackTeamId: params.slackTeamId,
-      slackChannelId: params.slackChannelId,
-      slackMessageTs: params.slackMessageTs,
-      slackPermalink: params.permalink ?? null,
-    },
-    createdBy: params.reporterUserId,
-    updatedBy: params.reporterUserId,
-    createdAt: now,
-    updatedAt: now,
-  });
+  const persisted = await db.transaction(async (tx) => {
+    // Slack retries events and interactive submissions. Serialize both the
+    // provider message identity and project number allocation so one message
+    // creates at most one issue and concurrent creates never share a number.
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`slack-message:${params.slackTeamId}:${params.slackChannelId}:${params.slackMessageTs}`}))`
+    );
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`issue-number:${projectId}`}))`);
 
-  // Best-effort: post a confirmation reply in the Slack thread.
-  let threadTs: string | null = null;
-  try {
-    threadTs = await postConfirmationReply({
-      organizationId: params.organizationId,
-      channel: params.slackChannelId,
-      threadTs: params.slackThreadTs ?? params.slackMessageTs,
-      issueKey,
+    const [existing] = await tx
+      .select({
+        issueId: issues.id,
+        issueKey: issues.key,
+        projectId: issues.projectId,
+        organizationId: issues.organizationId,
+        threadTs: slackMessageLinks.slackThreadTs,
+      })
+      .from(slackMessageLinks)
+      .innerJoin(issues, eq(issues.id, slackMessageLinks.issueId))
+      .where(
+        and(
+          eq(slackMessageLinks.organizationId, params.organizationId),
+          eq(slackMessageLinks.slackTeamId, params.slackTeamId),
+          eq(slackMessageLinks.slackChannelId, params.slackChannelId),
+          eq(slackMessageLinks.slackMessageTs, params.slackMessageTs)
+        )
+      )
+      .limit(1);
+    if (existing) {
+      return {
+        created: false as const,
+        issue: {
+          id: existing.issueId,
+          key: existing.issueKey,
+          projectId: existing.projectId,
+          organizationId: existing.organizationId,
+        },
+        threadTs: existing.threadTs,
+        payload: null,
+        auditEvent: null,
+      };
+    }
+
+    const [last] = await tx
+      .select({ number: issues.number })
+      .from(issues)
+      .where(eq(issues.projectId, projectId))
+      .orderBy(desc(issues.number))
+      .limit(1);
+    const nextNumber = (last?.number ?? 0) + 1;
+    const issueKey = `${project.key}-${nextNumber}`;
+    const issueId = createId();
+    const now = new Date();
+
+    const issuePayload = {
+      id: issueId,
+      organizationId: project.organizationId,
+      projectId,
+      key: issueKey,
+      number: nextNumber,
+      type: 'task' as const,
+      title:
+        params.title.trim().slice(0, 500) ||
+        t('bridgeFallbackTitle', {
+          message: (params.messageText ?? '').trim().slice(0, 80) || t('untitledSlackMessage'),
+        }),
+      description: fullDescription || null,
+      statusId: backlogStatus.id,
+      priority: routeDefaults.priority,
+      reporterId: params.reporterUserId,
+      labels,
+      customFields: {},
+      metadata: {
+        source: 'slack',
+        slackTeamId: params.slackTeamId,
+        slackChannelId: params.slackChannelId,
+        slackMessageTs: params.slackMessageTs,
+        slackPermalink: params.permalink ?? null,
+      },
+      createdBy: params.reporterUserId,
+      updatedBy: params.reporterUserId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await tx.insert(issues).values(issuePayload);
+
+    await syncIssueLabelsWithExecutor(
+      {
+        organizationId: project.organizationId,
+        issueId,
+        labels,
+        createdBy: params.reporterUserId,
+      },
+      tx
+    );
+
+    await tx.insert(issueActivities).values({
+      id: createId(),
       issueId,
+      userId: params.reporterUserId,
+      type: 'created',
+      metadata: { source: 'slack' },
+      createdBy: params.reporterUserId,
+      updatedBy: params.reporterUserId,
     });
-  } catch (err) {
-    console.warn('[slack-bridge] confirmation reply failed', err);
-  }
 
-  // Persist the link — this powers all future mirrored comments / status updates.
-  try {
-    await db.insert(slackMessageLinks).values({
+    const auditId = createId();
+    const auditMetadata = {
+      source: 'slack',
+      issueKey,
+      title: issuePayload.title,
+      slackTeamId: params.slackTeamId,
+      slackChannelId: params.slackChannelId,
+      slackMessageTs: params.slackMessageTs,
+    };
+    await tx.insert(auditLogs).values({
+      id: auditId,
+      userId: params.reporterUserId,
+      organizationId: project.organizationId,
+      action: 'issue.created',
+      resourceType: 'issue',
+      resourceId: issueId,
+      projectId,
+      issueId,
+      metadata: auditMetadata,
+      createdAt: now,
+    });
+    const initialThreadTs = params.slackThreadTs ?? params.slackMessageTs;
+    await tx.insert(slackMessageLinks).values({
       organizationId: params.organizationId,
       slackTeamId: params.slackTeamId,
       slackChannelId: params.slackChannelId,
       slackMessageTs: params.slackMessageTs,
-      slackThreadTs: threadTs ?? params.slackThreadTs ?? params.slackMessageTs,
+      slackThreadTs: initialThreadTs,
       issueId,
       permalink: params.permalink ?? null,
     });
-  } catch (err) {
-    // If the unique constraint fires, the message was already linked — that's
-    // fine, we ignore the dup so the caller isn't surprised by a 5xx.
-    console.warn('[slack-bridge] link insert failed (likely dup)', err);
+
+    return {
+      created: true as const,
+      issue: { id: issueId, key: issueKey, projectId, organizationId: project.organizationId },
+      threadTs: initialThreadTs,
+      payload: issuePayload,
+      auditEvent: {
+        id: auditId,
+        metadata: auditMetadata,
+        createdAt: now.toISOString(),
+      },
+    };
+  });
+
+  if (!persisted.created) {
+    return { issue: persisted.issue, threadTs: persisted.threadTs };
   }
 
+  // The core issue, first-class labels, activity, Slack link, and audit row
+  // are durable at this point. Keep derived work attached to the request
+  // lifecycle when a route supplies Next's `after()` scheduler.
+  const completePostCommitWork = async (): Promise<string | null> => {
+    const sideEffects = await Promise.allSettled([
+      publishEventAwaitingFanOut('issue.created', params.reporterUserId, {
+        projectId: persisted.issue.projectId,
+        issueId: persisted.issue.id,
+        organizationId: persisted.issue.organizationId,
+      }),
+      runTriageOnce(persisted.issue.id),
+      dispatchAuditLogToSinks({
+        id: persisted.auditEvent.id,
+        workspaceId: persisted.issue.organizationId,
+        action: 'issue.created',
+        resourceType: 'issue',
+        resourceId: persisted.issue.id,
+        userId: params.reporterUserId,
+        projectId: persisted.issue.projectId,
+        issueId: persisted.issue.id,
+        metadata: persisted.auditEvent.metadata,
+        changes: null,
+        createdAt: persisted.auditEvent.createdAt,
+      }),
+      runAutomations({
+        trigger: 'issue.created',
+        organizationId: persisted.issue.organizationId,
+        projectId: persisted.issue.projectId,
+        payload: persisted.payload,
+        actorUserId: params.reporterUserId,
+      }),
+      triggerWebhooks({
+        event: 'issue.created',
+        organizationId: persisted.issue.organizationId,
+        projectId: persisted.issue.projectId,
+        payload: persisted.payload,
+        actorUserId: params.reporterUserId,
+      }),
+    ]);
+    for (const result of sideEffects) {
+      if (result.status === 'rejected') {
+        console.error('[slack-bridge] post-commit side effect failed', result.reason);
+      }
+    }
+
+    if (!params.slackChannelId) return persisted.threadTs;
+    try {
+      const issueUrl = buildAppUrl(`/issues/${persisted.issue.id}`);
+      const postedThreadTs = await postConfirmationReply({
+        organizationId: params.organizationId,
+        channel: params.slackChannelId,
+        threadTs: params.slackThreadTs ?? params.slackMessageTs,
+        slackTeamId: params.slackTeamId,
+        confirmationText: t('bridgeConfirmationText', {
+          issueKey: persisted.issue.key,
+          issueUrl,
+        }),
+        confirmationBlock: t('bridgeConfirmationBlock', {
+          issueKey: persisted.issue.key,
+          issueUrl,
+        }),
+      });
+      if (!postedThreadTs) return persisted.threadTs;
+      await db
+        .update(slackMessageLinks)
+        .set({ slackThreadTs: postedThreadTs })
+        .where(
+          and(
+            eq(slackMessageLinks.organizationId, params.organizationId),
+            eq(slackMessageLinks.issueId, persisted.issue.id)
+          )
+        );
+      return postedThreadTs;
+    } catch (err) {
+      console.warn('[slack-bridge] confirmation reply failed', err);
+      return persisted.threadTs;
+    }
+  };
+
+  if (params.scheduleAfterResponse) {
+    params.scheduleAfterResponse(async () => {
+      await completePostCommitWork();
+    });
+    return { issue: persisted.issue, threadTs: persisted.threadTs };
+  }
+
+  const threadTs = await completePostCommitWork();
+
   return {
-    issue: {
-      id: issueId,
-      key: issueKey,
-      projectId,
-      organizationId: project.organizationId,
-    },
+    issue: persisted.issue,
     threadTs,
   };
 }
@@ -240,6 +429,7 @@ export async function postMirroredThreadReply(params: {
   const [link] = await db
     .select({
       organizationId: slackMessageLinks.organizationId,
+      slackTeamId: slackMessageLinks.slackTeamId,
       slackChannelId: slackMessageLinks.slackChannelId,
       slackThreadTs: slackMessageLinks.slackThreadTs,
       slackMessageTs: slackMessageLinks.slackMessageTs,
@@ -255,7 +445,8 @@ export async function postMirroredThreadReply(params: {
     .where(
       and(
         eq(integrationConnections.organizationId, link.organizationId),
-        eq(integrationConnections.provider, 'slack')
+        eq(integrationConnections.provider, 'slack'),
+        eq(integrationConnections.externalAccountId, link.slackTeamId)
       )
     )
     .limit(1);
@@ -273,7 +464,7 @@ export async function postMirroredThreadReply(params: {
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function loadProject(projectId: string) {
+async function loadProject(projectId: string, organizationId: string) {
   const [row] = await db
     .select({
       id: projects.id,
@@ -282,7 +473,15 @@ async function loadProject(projectId: string) {
       defaultWorkflowId: projects.defaultWorkflowId,
     })
     .from(projects)
-    .where(eq(projects.id, projectId))
+    .innerJoin(organizations, eq(organizations.id, projects.organizationId))
+    .where(
+      and(
+        eq(projects.id, projectId),
+        eq(projects.organizationId, organizationId),
+        eq(projects.status, 'active'),
+        ne(organizations.status, 'suspended')
+      )
+    )
     .limit(1);
   return row ?? null;
 }
@@ -295,12 +494,7 @@ async function resolveWorkflowId(
   const [wf] = await db
     .select({ id: workflows.id })
     .from(workflows)
-    .where(
-      and(
-        eq(workflows.organizationId, organizationId),
-        eq(workflows.isDefault, true)
-      )
-    )
+    .where(and(eq(workflows.organizationId, organizationId), eq(workflows.isDefault, true)))
     .limit(1);
   return wf?.id ?? null;
 }
@@ -332,13 +526,19 @@ async function resolveProjectId(
   return route?.projectId ?? null;
 }
 
-async function loadRouteLabel(
+async function loadRouteDefaults(
   organizationId: string,
   slackTeamId: string,
   slackChannelId: string
-): Promise<string | null> {
+): Promise<{
+  label: string | null;
+  priority: 'critical' | 'high' | 'medium' | 'low' | 'none';
+}> {
   const [route] = await db
-    .select({ defaultLabel: slackChannelRoutes.defaultLabel })
+    .select({
+      defaultLabel: slackChannelRoutes.defaultLabel,
+      defaultPriority: slackChannelRoutes.defaultPriority,
+    })
     .from(slackChannelRoutes)
     .where(
       and(
@@ -348,7 +548,12 @@ async function loadRouteLabel(
       )
     )
     .limit(1);
-  return route?.defaultLabel ?? null;
+  const priority = ['critical', 'high', 'medium', 'low', 'none'].includes(
+    route?.defaultPriority ?? ''
+  )
+    ? (route!.defaultPriority as 'critical' | 'high' | 'medium' | 'low' | 'none')
+    : 'medium';
+  return { label: route?.defaultLabel ?? null, priority };
 }
 
 function buildSlackQuoteBlock(params: {
@@ -356,20 +561,26 @@ function buildSlackQuoteBlock(params: {
   permalink: string | null;
   authorSlackId: string;
   channelName: string | null;
+  t: Awaited<ReturnType<typeof getSlackBridgeTranslator>>;
 }): string {
-  const lines: string[] = ['---', '*From Slack*'];
+  const lines: string[] = ['---', `*${params.t('bridgeFromSlack')}*`];
   if (params.permalink) {
-    lines.push(`Permalink: ${params.permalink}`);
+    lines.push(params.t('bridgePermalink', { url: params.permalink }));
   }
   lines.push(
-    `Author: <@${params.authorSlackId}>` +
-      (params.channelName ? ` in #${params.channelName}` : '')
+    params.channelName
+      ? params.t('bridgeAuthorInChannel', {
+          author: params.authorSlackId,
+          channel: params.channelName,
+        })
+      : params.t('bridgeAuthor', { author: params.authorSlackId })
   );
-  const quote =
-    params.text
-      .split('\n')
-      .map((line) => `> ${line}`)
-      .join('\n') || '> (no message text)';
+  const quote = params.text.trim()
+    ? params.text
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n')
+    : `> ${params.t('bridgeEmptyMessage')}`;
   lines.push(quote);
   return lines.join('\n');
 }
@@ -382,8 +593,9 @@ async function postConfirmationReply(params: {
   organizationId: string;
   channel: string;
   threadTs: string;
-  issueKey: string;
-  issueId: string;
+  slackTeamId: string;
+  confirmationText: string;
+  confirmationBlock: string;
 }): Promise<string | null> {
   const [conn] = await db
     .select({ accessTokenEnc: integrationConnections.accessTokenEnc })
@@ -391,45 +603,43 @@ async function postConfirmationReply(params: {
     .where(
       and(
         eq(integrationConnections.organizationId, params.organizationId),
-        eq(integrationConnections.provider, 'slack')
+        eq(integrationConnections.provider, 'slack'),
+        eq(integrationConnections.externalAccountId, params.slackTeamId)
       )
     )
     .limit(1);
   if (!conn) return null;
 
-  // Render a small confirmation block. Issue URL is best-effort — we use the
-  // canonical app URL when one is configured.
-  const appBase = (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    'https://app.tasknebula'
-  ).replace(/\/$/, '');
-  const issueUrl = `${appBase}/issues/${params.issueId}`;
-
-  const result = await callSlackApi<{ ts: string }>(
-    'chat.postMessage',
-    conn.accessTokenEnc,
-    {
-      channel: params.channel,
-      thread_ts: params.threadTs,
-      text: `Created TaskNebula issue *${params.issueKey}* — ${issueUrl}`,
-      blocks: [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `:white_check_mark: Created TaskNebula issue *<${issueUrl}|${params.issueKey}>*`,
-          },
+  const result = await callSlackApi<{ ts: string }>('chat.postMessage', conn.accessTokenEnc, {
+    channel: params.channel,
+    thread_ts: params.threadTs,
+    text: params.confirmationText,
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: params.confirmationBlock,
         },
-      ],
-    }
-  );
+      },
+    ],
+  });
 
   if (!result.ok || !result.data?.ts) return null;
   return result.data.ts;
 }
 
+async function getSlackBridgeTranslator(userId: string) {
+  const [user] = await db
+    .select({ locale: users.locale })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const locale = isSupportedLocale(user?.locale) ? user.locale : defaultLocale;
+  return getTranslations({ locale, namespace: 'slackCommands' });
+}
+
 /** Touchpoint exports to keep tree-shakers happy with unused imports. */
 export const __slackBridgeTouchpoints = {
-  organizationMembers,
+  sql,
 };

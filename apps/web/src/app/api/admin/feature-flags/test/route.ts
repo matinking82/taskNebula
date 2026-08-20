@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db, featureFlags, organizations } from '@tasknebula/db';
 import { isSuperAdmin } from '@/lib/auth/permissions';
-import { eq } from 'drizzle-orm';
+import { eq, ne } from 'drizzle-orm';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +54,11 @@ export async function GET(request: NextRequest) {
     // Pick an org to evaluate against. Prefer explicit param, else first active org.
     let organizationId = organizationIdParam ?? undefined;
     if (!organizationId) {
-      const [anyOrg] = await db.select({ id: organizations.id }).from(organizations).limit(1);
+      const [anyOrg] = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(ne(organizations.status, 'suspended'))
+        .limit(1);
       organizationId = anyOrg?.id;
     }
 

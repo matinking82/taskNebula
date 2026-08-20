@@ -28,7 +28,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@tasknebula/db';
 import { sql } from 'drizzle-orm';
 import { getRedisClient, isRedisConfigured } from '@/lib/server/redis';
-import { getLivekitStatus } from '@/lib/chat/livekit';
+import { resolveLivekitStatus } from '@/lib/chat/livekit';
 import { withErrorHandler } from '@/lib/api-handler';
 import { childLogger } from '@/lib/logger';
 
@@ -172,9 +172,11 @@ export const GET = withErrorHandler(
       degraded = true;
     }
 
-    // LiveKit — passive: env-config check only (avoids tying the API process
+    // LiveKit — passive configuration check only (avoids tying the API process
     // healthcheck to LiveKit reachability, which has its own container probe).
-    const livekitStatus = getLivekitStatus();
+    // Admin-stored credentials and environment fallback use the same resolver
+    // as room/token creation so the health surface cannot contradict runtime.
+    const livekitStatus = await resolveLivekitStatus();
     if (livekitStatus.ready) {
       checks.livekit = 'ok';
     } else if (livekitStatus.missing.length > 0 && livekitStatus.missing.length < 4) {

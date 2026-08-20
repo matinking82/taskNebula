@@ -19,6 +19,10 @@ jest.mock('@/lib/auth/permissions', () => ({
   hasPermission: jest.fn(),
 }));
 
+jest.mock('@/lib/auth/access-control', () => ({
+  listActiveOrganizationMemberships: jest.fn(),
+}));
+
 jest.mock('drizzle-orm', () => ({
   and: jest.fn((...conditions: unknown[]) => ({ conditions })),
   desc: jest.fn((column: unknown) => ({ desc: column })),
@@ -72,6 +76,9 @@ describe('GET /api/intake-forms permissions', () => {
     const permissionsModule = jest.requireMock('@/lib/auth/permissions') as {
       hasPermission: jest.Mock;
     };
+    const accessModule = jest.requireMock('@/lib/auth/access-control') as {
+      listActiveOrganizationMemberships: jest.Mock;
+    };
     const dbModule = jest.requireMock('@tasknebula/db') as {
       __mockWhere: jest.Mock;
       __mockOrderBy: jest.Mock;
@@ -79,7 +86,9 @@ describe('GET /api/intake-forms permissions', () => {
 
     authModule.auth.mockResolvedValue({ user: { id: 'user-1' } });
     permissionsModule.hasPermission.mockResolvedValue(true);
-    dbModule.__mockWhere.mockResolvedValue([{ organizationId: 'org-1' }]);
+    accessModule.listActiveOrganizationMemberships.mockResolvedValue([
+      { id: 'membership-1', organizationId: 'org-1', role: 'admin' },
+    ]);
     dbModule.__mockOrderBy.mockResolvedValue([]);
   });
 
@@ -109,9 +118,7 @@ describe('GET /api/intake-forms permissions', () => {
       __mockWhere: jest.Mock;
       __mockOrderBy: jest.Mock;
     };
-    dbModule.__mockWhere
-      .mockResolvedValueOnce([{ organizationId: 'org-1' }])
-      .mockReturnValueOnce({ orderBy: dbModule.__mockOrderBy });
+    dbModule.__mockWhere.mockReturnValueOnce({ orderBy: dbModule.__mockOrderBy });
     dbModule.__mockOrderBy.mockResolvedValueOnce([{ id: 'form-1' }]);
 
     const { GET } = await getRoute();

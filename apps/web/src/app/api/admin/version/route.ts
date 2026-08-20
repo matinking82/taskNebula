@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import { getUpdateStatus } from '@/lib/version';
-import { getSelfUpdateStatus } from '@/lib/version/self-update';
+import { getSelfUpdateStatus, SelfUpdateStateError } from '@/lib/version/self-update';
 import { getVersionUpdatePreferences } from '@/lib/version/preferences';
 
 /**
@@ -47,7 +47,18 @@ export async function GET(request: NextRequest) {
 
   const refresh = request.nextUrl.searchParams.get('refresh') === 'true';
   const status = await getUpdateStatus({ refresh });
-  const selfUpdate = await getSelfUpdateStatus(status);
+  let selfUpdate;
+  try {
+    selfUpdate = await getSelfUpdateStatus(status);
+  } catch (error) {
+    if (error instanceof SelfUpdateStateError) {
+      return NextResponse.json(
+        { error: 'Self-update state is unavailable', reason: 'state_unavailable' },
+        { status: 503 }
+      );
+    }
+    throw error;
+  }
   const updatePreferences = await getVersionUpdatePreferences();
 
   return NextResponse.json({ ...status, updatePreferences, selfUpdate });

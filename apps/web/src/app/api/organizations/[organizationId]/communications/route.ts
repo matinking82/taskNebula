@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { createAuditLog, db, eq, organizations } from '@tasknebula/db';
 import { hasPermission } from '@/lib/auth/permissions';
 import { normalizeWorkspaceCommunicationsSettings } from '@/lib/chat/config';
-import { getLivekitStatus } from '@/lib/chat/livekit';
+import { resolveLivekitStatus } from '@/lib/chat/livekit';
 import { isRedisConfigured } from '@/lib/server/redis';
 
 const workspaceCommunicationsSchema = z.object({
@@ -41,6 +41,8 @@ export async function GET(
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
 
+  const livekitStatus = await resolveLivekitStatus();
+
   return NextResponse.json({
     organizationId: organization.id,
     organizationName: organization.name,
@@ -49,7 +51,7 @@ export async function GET(
     ),
     serviceStatus: {
       redisReady: isRedisConfigured(),
-      livekit: getLivekitStatus(),
+      livekit: livekitStatus,
     },
   });
 }
@@ -114,10 +116,16 @@ export async function PATCH(
     return NextResponse.json({ settings: next });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
     }
 
     console.error('Failed to update communications settings:', error);
-    return NextResponse.json({ error: 'Failed to update communications settings' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update communications settings' },
+      { status: 500 }
+    );
   }
 }

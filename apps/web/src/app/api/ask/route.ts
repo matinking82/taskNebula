@@ -15,11 +15,13 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { and, eq, db, organizationMembers, llmCallAudit } from '@tasknebula/db';
+import { db, llmCallAudit } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { aiDisabledResponse, isAiFeatureEnabled } from '@/lib/ai/feature-gate';
 import { runAsk, AskError, type AskUsage } from '@/lib/agents/ask';
 import { consumeRateLimit } from '@/lib/server/rate-limit';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
+import { resolveProjectAccess } from '@/lib/auth/project-access';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -36,18 +38,7 @@ function sseFrame(event: unknown): Uint8Array {
 }
 
 async function resolveOrganizationId(userId: string, requested: string): Promise<string | null> {
-  const [member] = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, requested),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  return member?.organizationId ?? null;
+  return (await resolveOrganizationAccess(userId, requested)).allowed ? requested : null;
 }
 
 export async function POST(request: NextRequest) {
@@ -102,6 +93,20 @@ export async function POST(request: NextRequest) {
       { error: 'No accessible organization for this user.', code: 'no_org' },
       { status: 403 }
     );
+  }
+
+  if (payload.projectId) {
+    const projectAccess = await resolveProjectAccess(session.user.id, payload.projectId);
+    if (
+      !projectAccess.project ||
+      !projectAccess.canRead ||
+      projectAccess.project.organizationId !== organizationId
+    ) {
+      return NextResponse.json(
+        { error: 'Project is not accessible in this organization.', code: 'project_forbidden' },
+        { status: 403 }
+      );
+    }
   }
 
   // --- spin up the Ask agent ------------------------------------------------

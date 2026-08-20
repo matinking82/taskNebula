@@ -1,127 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  db,
-  sprints,
-  issues,
-  projects,
-  projectMembers,
-  organizationMembers,
-  users,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  type ProjectRole,
-} from '@tasknebula/db';
-import { eq, and, desc, count, inArray } from 'drizzle-orm';
+import { db, sprints, issues, projects } from '@tasknebula/db';
+import { eq, desc, count, inArray } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { publishEvent } from '@/lib/realtime/events';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 // Permission check helper
 async function checkSprintPermission(
   userId: string,
-  projectId: string,
+  projectIdOrKey: string,
   action: 'view' | 'create' | 'manage'
-): Promise<{ allowed: boolean; reason?: string; notFound?: boolean }> {
-  // Get user super admin status
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (user?.isSuperAdmin) {
-    return { allowed: true };
-  }
-
-  // Get project with organization
-  const [project] = await db
-    .select({
-      id: projects.id,
-      organizationId: projects.organizationId,
-    })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
+): Promise<{ allowed: boolean; reason?: string; notFound?: boolean; projectId?: string }> {
+  const access = await resolveProjectCapabilityAccess(userId, projectIdOrKey);
+  if (!access.project || !access.canRead) {
     return { allowed: false, reason: 'Project not found', notFound: true };
   }
 
-  // Check organization membership
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  // Org roles with project:manage have full access
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
-    return { allowed: true };
-  }
-
-  // Get project membership
-  const [projectMember] = await db
-    .select({
-      role: projectMembers.role,
-      canManageSprints: projectMembers.canManageSprints,
-    })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-
-  if (!projectMember) {
-    if (!orgMember) {
-      // Cross-org probe: report the project as not found so its existence
-      // is not leaked to other tenants.
-      return { allowed: false, reason: 'Project not found', notFound: true };
-    }
-    return { allowed: false, reason: 'Not a project member' };
-  }
-
-  // Check role defaults and explicit overrides
-  const roleDefaults =
-    ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  const canManage = resolveProjectMemberPermission(
-    projectMember.canManageSprints,
-    roleDefaults.canManageSprints
-  );
-
   if (action === 'view') {
-    return { allowed: true };
+    return { allowed: true, projectId: access.project.id };
   }
 
   if (action === 'create' || action === 'manage') {
-    if (canManage) {
-      return { allowed: true };
+    if (access.permissions.canManageSprints) {
+      return { allowed: true, projectId: access.project.id };
     }
     return { allowed: false, reason: 'Insufficient permissions to manage sprints' };
   }
 
   return { allowed: false, reason: 'Unknown action' };
-}
-
-// Helper function to resolve projectId (could be ID or key)
-async function resolveProjectId(projectIdOrKey: string): Promise<string | null> {
-  // If it looks like a CUID (contains underscore or is long), use as-is
-  if (projectIdOrKey.includes('_') || projectIdOrKey.length > 20) {
-    return projectIdOrKey;
-  }
-
-  // Otherwise, try to find by key
-  const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.key, projectIdOrKey.toUpperCase()))
-    .limit(1);
-
-  return project?.id || null;
 }
 
 // GET /api/sprints?projectId=xxx
@@ -139,15 +46,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Resolve projectId (could be key or ID)
-    const projectId = await resolveProjectId(projectIdParam);
-    if (!projectId) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
     // Permission check: caller must be able to view this project's sprints.
     // Cross-org probes get a 404 so project existence is not leaked.
-    const permission = await checkSprintPermission(session.user.id, projectId, 'view');
+    const permission = await checkSprintPermission(session.user.id, projectIdParam, 'view');
     if (!permission.allowed) {
       if (permission.notFound) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -157,6 +58,7 @@ export async function GET(request: NextRequest) {
         { status: 403 }
       );
     }
+    const projectId = permission.projectId!;
 
     // Fetch sprints with issue counts
     const sprintList = await db
@@ -225,15 +127,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve projectId (could be key or ID)
-    const projectId = await resolveProjectId(projectIdParam);
-    if (!projectId) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    }
-
     // Check permission to create sprints. Cross-org probes get a 404 so
     // project existence is not leaked.
-    const permission = await checkSprintPermission(session.user.id, projectId, 'create');
+    const permission = await checkSprintPermission(session.user.id, projectIdParam, 'create');
     if (!permission.allowed) {
       if (permission.notFound) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -243,6 +139,7 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+    const projectId = permission.projectId!;
 
     // Validate dates
     const start = new Date(startDate);

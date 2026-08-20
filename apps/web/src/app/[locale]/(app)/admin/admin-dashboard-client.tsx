@@ -55,6 +55,7 @@ import {
   useUpdateFeatureFlag,
 } from '@/lib/hooks/use-feature-flags';
 import { cn } from '@/lib/utils';
+import { getAdminUserGovernanceMessageKey } from '@/lib/admin/user-governance';
 import {
   Activity,
   BarChart3,
@@ -216,6 +217,7 @@ const auditSeverity = (action: string): 'critical' | 'high' | 'medium' | 'low' =
 
 export function AdminDashboardClient() {
   const t = useTranslations('pagesAdmin');
+  const adminDialogsT = useTranslations('adminDialogs');
   const errorT = useTranslations('componentErrors.admin');
   const pathname = usePathname();
   const router = useRouter();
@@ -320,6 +322,8 @@ export function AdminDashboardClient() {
       return payload as { auditLogs: AdminAuditLog[] };
     },
     enabled: activeTab === 'audit',
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const { data: featureFlags, isLoading: flagsLoading, error: flagsError } = useFeatureFlags();
@@ -373,10 +377,13 @@ export function AdminDashboardClient() {
       });
       setDeleteUser(null);
     },
-    onError: () => {
+    onError: (error) => {
+      const governanceKey = getAdminUserGovernanceMessageKey(
+        error instanceof Error ? error.message : null
+      );
       toast({
         title: t('users.deleteFailedTitle'),
-        description: t('users.deleteFailedTitle'),
+        description: governanceKey ? adminDialogsT(governanceKey) : t('users.deleteFailedTitle'),
         variant: 'destructive',
       });
     },

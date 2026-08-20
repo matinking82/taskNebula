@@ -11,14 +11,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { db, standups, and, eq, desc } from '@tasknebula/db';
 import {
-  db,
-  standups,
-  organizationMembers,
-  and,
-  eq,
-  desc,
-} from '@tasknebula/db';
+  listActiveOrganizationMemberships,
+  resolveOrganizationAccess,
+} from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -37,20 +34,13 @@ export async function GET(request: NextRequest) {
   let organizationId = searchParams.get('organizationId');
 
   if (!organizationId) {
-    const [membership] = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
+    const [membership] = await listActiveOrganizationMemberships(session.user.id);
     if (!membership) {
       return new NextResponse(null, { status: 204 });
     }
     organizationId = membership.organizationId;
+  } else if (!(await resolveOrganizationAccess(session.user.id, organizationId)).allowed) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const dateKey = todayDateKey();

@@ -1,11 +1,5 @@
-import {
-  and,
-  db,
-  eq,
-  hasPermission as roleHasPermission,
-  organizationMembers,
-  users,
-} from '@tasknebula/db';
+import { db, eq, hasPermission as roleHasPermission, users } from '@tasknebula/db';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 /**
  * Shared helper: is the calling user allowed to administer templates in the
@@ -13,31 +7,22 @@ import {
  * list + use.
  */
 export async function getTemplateAuthz(userId: string, organizationId: string | null) {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  const isSuperAdmin = user?.isSuperAdmin === true;
-
   if (!organizationId) {
+    const [user] = await db
+      .select({ isSuperAdmin: users.isSuperAdmin, status: users.status })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const isSuperAdmin = user?.status === 'active' && user.isSuperAdmin === true;
     return { isSuperAdmin, isMember: isSuperAdmin, canAdminister: isSuperAdmin };
   }
 
-  const [member] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  const isMember = Boolean(member);
-  const canAdminister = roleHasPermission(member?.role || '', 'org:settings', isSuperAdmin);
-  return { isSuperAdmin, isMember: isMember || isSuperAdmin, canAdminister };
+  const access = await resolveOrganizationAccess(userId, organizationId);
+  const canAdminister =
+    access.allowed && roleHasPermission(access.role || '', 'org:settings', access.isSuperAdmin);
+  return {
+    isSuperAdmin: access.isSuperAdmin,
+    isMember: access.allowed,
+    canAdminister,
+  };
 }

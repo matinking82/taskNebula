@@ -64,6 +64,7 @@ jest.mock('@tasknebula/db', () => ({
     id: 'organizationMembers.id',
     organizationId: 'organizationMembers.organizationId',
     userId: 'organizationMembers.userId',
+    status: 'organizationMembers.status',
   },
   projects: {
     organizationId: 'projects.organizationId',
@@ -89,6 +90,7 @@ jest.mock('@tasknebula/db', () => ({
     name: 'users.name',
     email: 'users.email',
     image: 'users.image',
+    status: 'users.status',
   },
 }));
 
@@ -111,12 +113,15 @@ function orderBuilder(result: unknown) {
 }
 
 function limitBuilder(result: unknown) {
-  return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue(result),
-      }),
+  const query = {
+    innerJoin: jest.fn(),
+    where: jest.fn().mockReturnValue({
+      limit: jest.fn().mockResolvedValue(result),
     }),
+  };
+  query.innerJoin.mockReturnValue(query);
+  return {
+    from: jest.fn().mockReturnValue(query),
   };
 }
 

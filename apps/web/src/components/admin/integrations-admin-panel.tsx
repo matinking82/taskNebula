@@ -43,38 +43,30 @@ type ListResponse = {
   providers: ProviderSummary[];
 };
 
-const PROVIDER_META: Record<
-  Provider,
-  { label: string; scopeHint?: string; redirectHint?: string }
-> = {
+const PROVIDER_META: Record<Provider, { redirectPath: string; hasScope: boolean }> = {
   slack: {
-    label: 'Slack',
-    scopeHint: 'channels:read,chat:write',
-    redirectHint: 'https://your-domain/api/integrations/slack/callback',
+    redirectPath: '/api/integrations/slack/callback',
+    hasScope: true,
   },
   gitlab: {
-    label: 'GitLab',
-    scopeHint: 'read_api read_repository',
-    redirectHint: 'https://your-domain/api/integrations/gitlab/callback',
+    redirectPath: '/api/integrations/gitlab/callback',
+    hasScope: true,
   },
   jira: {
-    label: 'Jira (Atlassian)',
-    scopeHint: 'read:jira-user read:jira-work write:jira-work offline_access',
-    redirectHint: 'https://your-domain/api/integrations/jira/callback',
+    redirectPath: '/api/integrations/jira/callback',
+    hasScope: true,
   },
   github: {
-    label: 'GitHub',
-    scopeHint: 'repo read:user',
-    redirectHint: 'https://your-domain/api/integrations/github/callback',
+    redirectPath: '/api/integrations/github/callback',
+    hasScope: true,
   },
   google: {
-    label: 'Google',
-    redirectHint: 'https://your-domain/api/auth/callback/google',
+    redirectPath: '/api/auth/callback/google',
+    hasScope: false,
   },
   sentry: {
-    label: 'Sentry',
-    scopeHint: 'org:read project:read event:read',
-    redirectHint: 'https://your-domain/api/integrations/sentry/callback',
+    redirectPath: '/api/integrations/sentry/callback',
+    hasScope: true,
   },
 };
 
@@ -215,12 +207,12 @@ function ProviderRow({
   removing: boolean;
 }) {
   const t = useTranslations('adminPanels');
-  const meta = PROVIDER_META[provider.provider];
+  const providerLabel = t(`integrations.providerLabel.${provider.provider}`);
   return (
     <li className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium">{meta.label}</span>
+          <span className="text-sm font-medium">{providerLabel}</span>
           {provider.configured ? (
             <span className="chip-emerald inline-flex items-center gap-1 text-[11px]">
               <Check className="h-3 w-3" />
@@ -290,6 +282,7 @@ function ConfigureDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const meta = PROVIDER_META[provider];
+  const providerLabel = t(`integrations.providerLabel.${provider}`);
 
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
@@ -303,7 +296,7 @@ function ConfigureDialog({
       queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
       toast({
         title: t('integrations.credentialsSaved'),
-        description: t('integrations.credentialsSavedDescription', { provider: meta.label }),
+        description: t('integrations.credentialsSavedDescription', { provider: providerLabel }),
       });
       onOpenChange(false);
     },
@@ -333,9 +326,11 @@ function ConfigureDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t('integrations.configureProvider', { provider: meta.label })}</DialogTitle>
+          <DialogTitle>
+            {t('integrations.configureProvider', { provider: providerLabel })}
+          </DialogTitle>
           <DialogDescription>
-            {t('integrations.configureDescription', { provider: meta.label })}
+            {t('integrations.configureDescription', { provider: providerLabel })}
           </DialogDescription>
         </DialogHeader>
 
@@ -381,7 +376,7 @@ function ConfigureDialog({
               id={`integration-${provider}-redirect`}
               value={redirectUri}
               onChange={(e) => setRedirectUri(e.target.value)}
-              placeholder={meta.redirectHint}
+              placeholder={t('integrations.redirectHint', { path: meta.redirectPath })}
             />
           </div>
 
@@ -394,7 +389,7 @@ function ConfigureDialog({
               id={`integration-${provider}-scope`}
               value={scope}
               onChange={(e) => setScope(e.target.value)}
-              placeholder={meta.scopeHint}
+              placeholder={meta.hasScope ? t(`integrations.scopeHint.${provider}`) : undefined}
             />
           </div>
         </div>

@@ -38,7 +38,6 @@ const PUBLIC_AUTH_ROUTES = [
 // they explain the next step and expose the resend action. Entry and recovery
 // forms, on the other hand, should still send an authenticated user home.
 const SIGNED_IN_AUTH_REDIRECT_ROUTES = new Set<string>([
-  '/auth/signin',
   '/auth/signup',
   '/auth/error',
   '/auth/forgot-password',
@@ -140,6 +139,11 @@ export default auth((req) => {
     return NextResponse.redirect(signInUrl);
   }
 
+  // The edge middleware can only see the signed JWT, not the durable user
+  // status. Keep `/auth/signin` reachable here and let its Node.js Server
+  // Component re-check the database before redirecting an active user home.
+  // Otherwise an administrator-deactivated account with a stale JWT loops
+  // forever between `/dashboard` and `/auth/signin`.
   if (isLoggedIn && SIGNED_IN_AUTH_REDIRECT_ROUTES.has(pathname)) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }

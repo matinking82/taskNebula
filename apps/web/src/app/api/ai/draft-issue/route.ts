@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { and, eq } from 'drizzle-orm';
-import {
-  createAuditLog,
-  db,
-  notifications,
-  organizationMembers,
-  projects,
-  users,
-  issues,
-  organizations,
-} from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
+import { createAuditLog, db, notifications, projects, issues, organizations } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { aiDisabledResponse, isAiFeatureEnabled } from '@/lib/ai/feature-gate';
 import { AiDraftError, draftIssue, type DraftProvider } from '@/lib/ai/draft-issue';
@@ -20,6 +11,8 @@ import { resolveProviderApiKeyFromSettings } from '@/lib/agents/credentials';
 import { normalizeWorkspaceAgentSettings } from '@/lib/agents/config';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
 import { evaluateInjectionRisk } from '@/lib/ai/safety/sandbox';
+import { canReadProject } from '@/lib/auth/access-control';
+import { isProductFeatureEnabled, PRODUCT_FEATURE_FLAGS } from '@/lib/feature-flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,34 +21,6 @@ const bodySchema = z.object({
   prompt: z.string().min(3).max(4000),
   provider: z.enum(['native', 'openai', 'anthropic']).optional(),
 });
-
-async function userHasProjectAccess(userId: string, projectIdOrKey: string) {
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (user?.isSuperAdmin) return true;
-
-  // Accept the URL segment whether it's a canonical cuid ID or a project
-  // key (e.g. /projects/N/backlog). Other issue routes already do this via
-  // resolveProjectByIdOrKey; draft-issue must match.
-  const project = await resolveProjectByIdOrKey(projectIdOrKey);
-  if (!project) return false;
-
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  return !!orgMember;
-}
 
 async function resolveProviderAndKey(
   requested: DraftProvider | undefined,
@@ -128,22 +93,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const hasAccess = await userHasProjectAccess(session.user.id, body.projectId);
-  if (!hasAccess) {
+  const project = await resolveProjectByIdOrKey(body.projectId, session.user.id);
+  if (!project || !(await canReadProject(session.user.id, project))) {
     return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 });
   }
 
-  // The URL segment can be either the project id or its key (e.g. "WEB" for
-  // a Website project). Resolve both so we never reject a legitimate Backlog-page click.
-  const project = await resolveProjectByIdOrKey(body.projectId);
-  if (!project) {
-    return NextResponse.json(
-      {
-        error: `No project matching "${body.projectId}". Open the project from the Projects list and retry from its Backlog.`,
-        code: 'project_not_found',
-      },
-      { status: 404 }
-    );
+  if (
+    !(await isProductFeatureEnabled(
+      PRODUCT_FEATURE_FLAGS.AI_ISSUE_DRAFTING,
+      project.organizationId
+    ))
+  ) {
+    return aiDisabledResponse();
   }
 
   // Reject upfront if the workspace's AI toggle is off — admins should

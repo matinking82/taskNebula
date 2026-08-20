@@ -8,6 +8,7 @@ import {
   type SelfUpdateBackupPreflight,
   type SelfUpdateBackupSnapshot,
 } from './backup';
+import { parseSelfUpdateBackupSnapshot } from './backup-schema';
 
 export const SELF_UPDATE_JOB_KEY = 'version_self_update_job';
 
@@ -42,6 +43,7 @@ export type SelfUpdateBlockedReason =
   | 'disabled'
   | 'missing_webhook'
   | 'missing_secret'
+  | 'weak_secret'
   | 'checks_disabled'
   | 'no_update'
   | 'missing_docker_image'
@@ -99,9 +101,20 @@ export class SelfUpdateError extends Error {
   }
 }
 
+export class SelfUpdateStateError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'SelfUpdateStateError';
+  }
+}
+
 function boolEnv(name: string): boolean {
   const value = process.env[name]?.trim().toLowerCase();
   return value === '1' || value === 'true' || value === 'yes' || value === 'on';
+}
+
+function webhookSecretIsStrong(value: string | null | undefined): boolean {
+  return Boolean(value && Buffer.byteLength(value, 'utf8') >= 32);
 }
 
 function cleanUrl(value: string | undefined): string | null {
@@ -169,6 +182,10 @@ function normalizeJob(value: unknown): SelfUpdateJob | null {
     typeof raw.digest === 'string' && DOCKER_DIGEST.test(raw.digest) ? raw.digest : null;
   const createdAt = typeof raw.createdAt === 'string' ? raw.createdAt : '';
   const updatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : '';
+  const backup =
+    raw.backup === null || raw.backup === undefined
+      ? null
+      : parseSelfUpdateBackupSnapshot(raw.backup);
 
   if (
     typeof raw.id !== 'string' ||
@@ -182,6 +199,7 @@ function normalizeJob(value: unknown): SelfUpdateJob | null {
   ) {
     return null;
   }
+  if (raw.backup !== null && raw.backup !== undefined && !backup) return null;
 
   return {
     id: raw.id,
@@ -193,10 +211,7 @@ function normalizeJob(value: unknown): SelfUpdateJob | null {
     digest,
     imageRef:
       typeof raw.imageRef === 'string' ? raw.imageRef : digest ? `${repository}@${digest}` : null,
-    backup:
-      raw.backup && typeof raw.backup === 'object'
-        ? (raw.backup as SelfUpdateBackupSnapshot)
-        : null,
+    backup,
     releaseUrl:
       typeof raw.releaseUrl === 'string' && raw.releaseUrl.startsWith('https://')
         ? raw.releaseUrl
@@ -221,15 +236,59 @@ async function readSelfUpdateJob(): Promise<SelfUpdateJob | null> {
       .from(systemSettings)
       .where(eq(systemSettings.key, SELF_UPDATE_JOB_KEY))
       .limit(1);
-    return normalizeJob(row?.value);
+    if (!row) return null;
+    const job = normalizeJob(row.value);
+    if (!job) {
+      throw new SelfUpdateStateError('Stored self-update state is invalid');
+    }
+    return job;
   } catch (err) {
-    console.warn('[self-update] failed to read update job:', err);
-    return null;
+    if (err instanceof SelfUpdateStateError) throw err;
+    throw new SelfUpdateStateError('Failed to read self-update state', { cause: err });
   }
 }
 
-async function writeSelfUpdateJob(job: SelfUpdateJob): Promise<void> {
-  await db
+type SelfUpdateAuditInput = {
+  userId: string;
+  action: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+type SelfUpdateTransitionResult = {
+  job: SelfUpdateJob;
+  applied: boolean;
+};
+
+function auditValues(input: SelfUpdateAuditInput & { job: SelfUpdateJob }) {
+  return {
+    userId: input.userId,
+    action: input.action,
+    resourceType: 'self_update',
+    resourceId: input.job.id,
+    changes: {
+      currentVersion: input.job.currentVersion,
+      targetVersion: input.job.targetVersion,
+      status: input.job.status,
+    },
+    metadata: {
+      repository: input.job.repository,
+      imageTag: input.job.imageTag,
+      digest: input.job.digest,
+      webhookStatus: input.job.webhookStatus,
+      ...input.metadata,
+    },
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+  };
+}
+
+async function upsertJob(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  job: SelfUpdateJob
+) {
+  await tx
     .insert(systemSettings)
     .values({
       key: SELF_UPDATE_JOB_KEY,
@@ -245,7 +304,7 @@ async function writeSelfUpdateJob(job: SelfUpdateJob): Promise<void> {
     });
 }
 
-async function queueSelfUpdateJob(job: SelfUpdateJob): Promise<void> {
+async function queueSelfUpdateJob(job: SelfUpdateJob, audit: SelfUpdateAuditInput): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${SELF_UPDATE_JOB_KEY}))`);
     const [row] = await tx
@@ -258,55 +317,56 @@ async function queueSelfUpdateJob(job: SelfUpdateJob): Promise<void> {
       throw new SelfUpdateError('Another self-update request is already active', 409, 'active_job');
     }
 
-    await tx
-      .insert(systemSettings)
-      .values({
-        key: SELF_UPDATE_JOB_KEY,
-        value: job,
-        category: 'general',
-        description:
-          'Last TaskNebula self-update request. The privileged updater runs outside the web container.',
-        updatedBy: job.triggeredBy,
-      })
-      .onConflictDoUpdate({
-        target: systemSettings.key,
-        set: { value: job, updatedAt: new Date(), updatedBy: job.triggeredBy },
-      });
+    await upsertJob(tx, job);
+    await tx.insert(systemAuditLogs).values(auditValues({ ...audit, job }));
   });
 }
 
-async function auditSelfUpdate(input: {
-  userId: string;
-  action: string;
-  job: SelfUpdateJob;
-  ipAddress?: string | null;
-  userAgent?: string | null;
-  metadata?: Record<string, unknown>;
-}) {
-  try {
-    await db.insert(systemAuditLogs).values({
-      userId: input.userId,
-      action: input.action,
-      resourceType: 'self_update',
-      resourceId: input.job.id,
-      changes: {
-        currentVersion: input.job.currentVersion,
-        targetVersion: input.job.targetVersion,
-        status: input.job.status,
-      },
-      metadata: {
-        repository: input.job.repository,
-        imageTag: input.job.imageTag,
-        digest: input.job.digest,
-        webhookStatus: input.job.webhookStatus,
-        ...input.metadata,
-      },
-      ipAddress: input.ipAddress ?? null,
-      userAgent: input.userAgent ?? null,
-    });
-  } catch (err) {
-    console.warn('[self-update] failed to write audit log:', err);
+function canApplyTransition(current: SelfUpdateJob, next: SelfUpdateJob): boolean {
+  if (current.id !== next.id) return false;
+  if (current.status === 'succeeded' || current.status === 'failed') return false;
+  if (current.status === 'running' && (next.status === 'queued' || next.status === 'requested')) {
+    return false;
   }
+  if (current.status === 'requested' && next.status === 'queued') return false;
+  return true;
+}
+
+async function transitionSelfUpdateJob(input: {
+  next: SelfUpdateJob;
+  audit: SelfUpdateAuditInput;
+  ignoredAction?: string;
+}): Promise<SelfUpdateTransitionResult> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${SELF_UPDATE_JOB_KEY}))`);
+    const [row] = await tx
+      .select({ value: systemSettings.value })
+      .from(systemSettings)
+      .where(eq(systemSettings.key, SELF_UPDATE_JOB_KEY))
+      .limit(1);
+    const current = normalizeJob(row?.value);
+    if (!current || current.id !== input.next.id) {
+      throw new SelfUpdateError('Self-update job was not found', 404, 'invalid_target');
+    }
+
+    const applied = canApplyTransition(current, input.next);
+    const job = applied ? input.next : current;
+    if (applied) await upsertJob(tx, job);
+    await tx.insert(systemAuditLogs).values(
+      auditValues({
+        ...input.audit,
+        action: applied ? input.audit.action : (input.ignoredAction ?? input.audit.action),
+        job,
+        metadata: {
+          ...input.audit.metadata,
+          previousStatus: current.status,
+          requestedStatus: input.next.status,
+          transitionApplied: applied,
+        },
+      })
+    );
+    return { job, applied };
+  });
 }
 
 function manualCommands(status: UpdateStatus): string {
@@ -343,6 +403,7 @@ function baseStatus(
   if (!enabled) blockedReason = 'disabled';
   else if (!webhookUrl) blockedReason = 'missing_webhook';
   else if (!webhookSecret) blockedReason = 'missing_secret';
+  else if (!webhookSecretIsStrong(webhookSecret)) blockedReason = 'weak_secret';
   else if (status.checkDisabled) blockedReason = 'checks_disabled';
   else if (!status.image.latestTag) blockedReason = 'missing_docker_image';
   else if (!status.image.latestDigest) blockedReason = 'missing_digest';
@@ -353,14 +414,15 @@ function baseStatus(
   return {
     enabled,
     available: blockedReason === null,
-    mode: enabled && webhookUrl && webhookSecret ? 'external-webhook' : 'manual',
+    mode:
+      enabled && webhookUrl && webhookSecretIsStrong(webhookSecret) ? 'external-webhook' : 'manual',
     blockedReason,
     targetVersion,
     repository: status.image.repository,
     digest: status.image.latestDigest,
     imageRef: imageRef(status),
     backupPreflight,
-    webhookConfigured: Boolean(webhookUrl && webhookSecret),
+    webhookConfigured: Boolean(webhookUrl && webhookSecretIsStrong(webhookSecret)),
     manualCommands: manualCommands(status),
     job,
   };
@@ -381,8 +443,16 @@ async function settleCompletedJob(status: UpdateStatus, job: SelfUpdateJob | nul
     failureReason: null,
   };
   try {
-    await writeSelfUpdateJob(next);
-    return next;
+    const transition = await transitionSelfUpdateJob({
+      next,
+      audit: {
+        userId: job.triggeredBy,
+        action: 'self_update.succeeded',
+        metadata: { source: 'version_observation' },
+      },
+      ignoredAction: 'self_update.observation_ignored',
+    });
+    return transition.job;
   } catch (err) {
     console.warn('[self-update] failed to settle completed job:', err);
     return job;
@@ -440,6 +510,9 @@ async function sendWebhook(job: SelfUpdateJob, status: UpdateStatus) {
   const webhookSecret = process.env.TASKNEBULA_SELF_UPDATE_WEBHOOK_SECRET?.trim();
   if (!webhookUrl || !webhookSecret) {
     throw new SelfUpdateError('Self-update webhook is not configured', 412, 'missing_webhook');
+  }
+  if (!webhookSecretIsStrong(webhookSecret)) {
+    throw new SelfUpdateError('Self-update webhook secret is too short', 412, 'weak_secret');
   }
 
   const body = JSON.stringify(buildWebhookPayload({ job, status }));
@@ -555,11 +628,9 @@ export async function startSelfUpdate(input: SelfUpdateStartInput): Promise<Self
     webhookStatus: null,
   };
 
-  await queueSelfUpdateJob(job);
-  await auditSelfUpdate({
+  await queueSelfUpdateJob(job, {
     userId: input.triggeredBy,
     action: 'self_update.queued',
-    job,
     ipAddress: input.ipAddress,
     userAgent: input.userAgent,
   });
@@ -579,15 +650,18 @@ export async function startSelfUpdate(input: SelfUpdateStartInput): Promise<Self
       backup,
       updatedAt: backup.completedAt ?? new Date().toISOString(),
     };
-    await writeSelfUpdateJob(job);
-    await auditSelfUpdate({
-      userId: input.triggeredBy,
-      action: 'self_update.backup_completed',
-      job,
-      ipAddress: input.ipAddress,
-      userAgent: input.userAgent,
-      metadata: { backup },
+    const backupTransition = await transitionSelfUpdateJob({
+      next: job,
+      audit: {
+        userId: input.triggeredBy,
+        action: 'self_update.backup_completed',
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        metadata: { backup },
+      },
+      ignoredAction: 'self_update.backup_transition_ignored',
     });
+    job = backupTransition.job;
 
     const webhookStatus = await sendWebhook(job, input.status);
     const requestedAt = new Date().toISOString();
@@ -598,14 +672,16 @@ export async function startSelfUpdate(input: SelfUpdateStartInput): Promise<Self
       updatedAt: requestedAt,
       webhookStatus,
     };
-    await writeSelfUpdateJob(job);
-    await auditSelfUpdate({
-      userId: input.triggeredBy,
-      action: 'self_update.requested',
-      job,
-      ipAddress: input.ipAddress,
-      userAgent: input.userAgent,
+    const requestedTransition = await transitionSelfUpdateJob({
+      next: job,
+      audit: {
+        userId: input.triggeredBy,
+        action: 'self_update.requested',
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+      },
     });
+    job = requestedTransition.job;
     return baseStatus(input.status, job, existing.backupPreflight);
   } catch (err) {
     const failedAt = new Date().toISOString();
@@ -623,15 +699,28 @@ export async function startSelfUpdate(input: SelfUpdateStartInput): Promise<Self
       backup,
       failureReason: err instanceof Error ? err.message.slice(0, 500) : 'Unknown error',
     };
-    await writeSelfUpdateJob(job);
-    await auditSelfUpdate({
-      userId: input.triggeredBy,
-      action: 'self_update.failed',
-      job,
-      ipAddress: input.ipAddress,
-      userAgent: input.userAgent,
-      metadata: { error: job.failureReason },
+    const failedTransition = await transitionSelfUpdateJob({
+      next: job,
+      audit: {
+        userId: input.triggeredBy,
+        action: 'self_update.failed',
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        metadata: { error: job.failureReason },
+      },
+      ignoredAction: 'self_update.failure_transition_ignored',
     });
+    job = failedTransition.job;
+    // A fast, authenticated updater callback may advance the job before the
+    // initiating request persists its acknowledgement. Preserve that stronger
+    // state and treat the request as accepted instead of reporting a false
+    // failure or downgrading the callback result.
+    if (
+      !failedTransition.applied &&
+      (job.status === 'requested' || job.status === 'running' || job.status === 'succeeded')
+    ) {
+      return baseStatus(input.status, job, existing.backupPreflight);
+    }
     if (err instanceof SelfUpdateError) throw err;
     if (err instanceof SelfUpdateBackupError) {
       throw new SelfUpdateError(
@@ -656,6 +745,7 @@ export async function handleSelfUpdateCallback(
     throw new SelfUpdateError('Self-update job was not found', 404, 'invalid_target');
   }
 
+  const callbackBackup = validateCallbackBackup(job, input.backup);
   const now = new Date().toISOString();
   const next: SelfUpdateJob = {
     ...job,
@@ -670,9 +760,58 @@ export async function handleSelfUpdateCallback(
       typeof input.webhookStatus === 'number' && Number.isFinite(input.webhookStatus)
         ? input.webhookStatus
         : job.webhookStatus,
-    backup: input.backup ?? job.backup,
+    backup: callbackBackup,
   };
 
-  await writeSelfUpdateJob(next);
-  return next;
+  const transition = await transitionSelfUpdateJob({
+    next,
+    audit: {
+      userId: job.triggeredBy,
+      action: `self_update.${input.status}`,
+      metadata: {
+        source: 'external_updater_callback',
+        message: input.message?.slice(0, 500) ?? null,
+      },
+    },
+    ignoredAction: 'self_update.callback_ignored',
+  });
+  return transition.job;
 }
+
+function validateCallbackBackup(
+  job: SelfUpdateJob,
+  candidate: SelfUpdateBackupSnapshot | null | undefined
+): SelfUpdateBackupSnapshot | null {
+  if (candidate === null || candidate === undefined) return job.backup;
+  if (
+    !job.backup ||
+    candidate.id !== job.id ||
+    canonicalJson(candidate) !== canonicalJson(job.backup)
+  ) {
+    throw new SelfUpdateError(
+      'Callback backup does not match the recorded snapshot',
+      409,
+      'invalid_target'
+    );
+  }
+  return job.backup;
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const object = value as Record<string, unknown>;
+    return `{${Object.keys(object)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(object[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export const __test__ = {
+  normalizeJob,
+  readSelfUpdateJob,
+  validateCallbackBackup,
+  webhookSecretIsStrong,
+};

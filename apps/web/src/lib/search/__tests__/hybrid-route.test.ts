@@ -32,6 +32,14 @@ import { auth } from '@/auth';
 // --- DB mock -----------------------------------------------------------------
 const execMock = jest.fn();
 const selectMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
+const listActiveOrganizationMembershipsMock = jest.fn();
+
+jest.mock('@/lib/auth/access-control', () => ({
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
+  listActiveOrganizationMemberships: (...args: unknown[]) =>
+    listActiveOrganizationMembershipsMock(...args),
+}));
 
 jest.mock('@tasknebula/db', () => {
   const sqlTag = (strings: TemplateStringsArray | string[], ...values: unknown[]) => {
@@ -61,20 +69,6 @@ jest.mock('@tasknebula/db', () => {
   };
 });
 
-/**
- * The membership lookup in the route is `db.select(...).from(...).where(...).limit(1)`.
- * This helper builds a chain resolving to the given rows.
- */
-function membershipChain(rows: unknown[]) {
-  return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue(rows),
-      }),
-    }),
-  };
-}
-
 // --- Module under test (imported after mocks) --------------------------------
 import { POST } from '@/app/api/search/hybrid/route';
 import { looksLikeFreeText } from '@/lib/search/hybrid';
@@ -83,7 +77,17 @@ beforeEach(() => {
   execMock.mockReset();
   selectMock.mockReset();
   // Default: the session user is a member of org_1.
-  selectMock.mockReturnValue(membershipChain([{ organizationId: 'org_1' }]));
+  resolveOrganizationAccessMock.mockReset();
+  resolveOrganizationAccessMock.mockResolvedValue({
+    allowed: true,
+    isSuperAdmin: false,
+    role: 'member',
+    membershipId: 'membership-1',
+  });
+  listActiveOrganizationMembershipsMock.mockReset();
+  listActiveOrganizationMembershipsMock.mockResolvedValue([
+    { id: 'membership-1', organizationId: 'org_1', role: 'member' },
+  ]);
   (auth as jest.Mock).mockReset();
   delete process.env.OPENAI_API_KEY;
 });
@@ -112,7 +116,12 @@ describe('POST /api/search/hybrid', () => {
   it('rejects an organizationId the caller is not a member of with 403', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' } });
     // Membership lookup for the requested org comes back empty.
-    selectMock.mockReturnValue(membershipChain([]));
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: false,
+      isSuperAdmin: false,
+      role: null,
+      membershipId: null,
+    });
     const res = await POST(makeRequest({ query: 'login bug', organizationId: 'org_other' }));
     expect(res.status).toBe(403);
     // The hybrid query must never run for a non-member.
@@ -121,7 +130,7 @@ describe('POST /api/search/hybrid', () => {
 
   it('rejects a caller with no organization membership at all with 403', async () => {
     (auth as jest.Mock).mockResolvedValue({ user: { id: 'u1' } });
-    selectMock.mockReturnValue(membershipChain([]));
+    listActiveOrganizationMembershipsMock.mockResolvedValue([]);
     const res = await POST(makeRequest({ query: 'login bug' }));
     expect(res.status).toBe(403);
     expect(execMock).not.toHaveBeenCalled();

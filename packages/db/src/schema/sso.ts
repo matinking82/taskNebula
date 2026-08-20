@@ -1,15 +1,8 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  jsonb,
-  boolean,
-  uniqueIndex,
-  index,
-} from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, jsonb, boolean, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { organizations } from './organizations';
+import { users } from './users';
 
 /**
  * SSO Configurations (per workspace / organization).
@@ -68,9 +61,10 @@ export type NewSsoConfig = typeof ssoConfigs.$inferInsert;
  * Argon2/bcrypt hash of the secret — the plaintext token is shown to the
  * admin exactly once at creation time (same pattern as `api_keys`).
  *
- * `scopes` is reserved for future per-token policy (e.g. `users:read`,
- * `groups:write`). The scaffolding implementation treats any non-revoked
- * token as full SCIM admin.
+ * `token_digest` is a deterministic SHA-256 lookup key. `token_hash` remains
+ * the verifier so a leaked database still does not expose usable credentials.
+ * Empty scopes are retained only for backwards compatibility with legacy
+ * tokens; newly issued tokens always carry explicit least-privilege scopes.
  */
 export const scimTokens = pgTable(
   'scim_tokens',
@@ -82,11 +76,14 @@ export const scimTokens = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull().unique(),
+    tokenDigest: text('token_digest'),
+    tokenPrefix: text('token_prefix'),
     name: text('name').notNull(),
     scopes: text('scopes')
       .array()
       .notNull()
-      .default(sql`'{}'::text[]`),
+      .default(sql`ARRAY['users:read', 'users:write', 'groups:read', 'groups:write']::text[]`),
+    createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     lastUsedAt: timestamp('last_used_at'),
     revokedAt: timestamp('revoked_at'),
@@ -94,6 +91,7 @@ export const scimTokens = pgTable(
   (table) => ({
     workspaceIdx: index('scim_tokens_workspace_idx').on(table.workspaceId),
     tokenHashIdx: uniqueIndex('scim_tokens_token_hash_idx').on(table.tokenHash),
+    tokenDigestIdx: uniqueIndex('scim_tokens_token_digest_idx').on(table.tokenDigest),
   })
 );
 

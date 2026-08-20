@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { createId } from '@paralleldrive/cuid2';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
-import { agentProviders, and, db, eq, inArray, organizations } from '@tasknebula/db';
+import {
+  agentProviders,
+  and,
+  auditLogs,
+  db,
+  eq,
+  inArray,
+  organizations,
+  sql,
+  systemAuditLogs,
+} from '@tasknebula/db';
 import { generateAgentSecret, type AgentProviderKind } from '@/lib/agents/sessions';
 import { getLocalAgentRunnerStatus } from '@/lib/agents/local-runner';
 
@@ -34,7 +45,7 @@ async function requireSuperAdmin() {
 
 async function ensureOrganization(organizationId: string) {
   const [organization] = await db
-    .select({ id: organizations.id, name: organizations.name })
+    .select({ id: organizations.id, name: organizations.name, status: organizations.status })
     .from(organizations)
     .where(eq(organizations.id, organizationId))
     .limit(1);
@@ -116,44 +127,98 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
-  const organization = await ensureOrganization(parsed.organizationId);
-  if (!organization) {
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`tasknebula:local-runner:${parsed.organizationId}:${parsed.provider}`}))`
+    );
+    const [organization] = await tx
+      .select({ id: organizations.id, name: organizations.name, status: organizations.status })
+      .from(organizations)
+      .where(eq(organizations.id, parsed.organizationId))
+      .limit(1);
+    if (!organization) return { kind: 'not_found' as const };
+    if (organization.status === 'suspended' && parsed.enabled) {
+      return { kind: 'suspended' as const };
+    }
+
+    const [existing] = await tx
+      .select()
+      .from(agentProviders)
+      .where(
+        and(
+          eq(agentProviders.workspaceId, parsed.organizationId),
+          eq(agentProviders.provider, parsed.provider)
+        )
+      )
+      .limit(1)
+      .for('update');
+    const hmacSecret = existing?.hmacSecret || generateAgentSecret();
+
+    await tx
+      .insert(agentProviders)
+      .values({
+        id: existing?.id ?? createId(),
+        workspaceId: parsed.organizationId,
+        provider: parsed.provider,
+        endpointUrl: `local://${parsed.provider}`,
+        hmacSecret,
+        enabled: parsed.enabled,
+      })
+      .onConflictDoUpdate({
+        target: [agentProviders.workspaceId, agentProviders.provider],
+        set: {
+          endpointUrl: `local://${parsed.provider}`,
+          enabled: parsed.enabled,
+          hmacSecret,
+          updatedAt: new Date(),
+        },
+      });
+
+    const changes = {
+      enabled: { from: existing?.enabled ?? false, to: parsed.enabled },
+      endpointMode: {
+        from: existing
+          ? existing.endpointUrl.startsWith('local://')
+            ? 'local_cli'
+            : 'webhook'
+          : null,
+        to: 'local_cli',
+      },
+    };
+    const metadata = { kind: 'local_agent_runner', provider: parsed.provider };
+    await tx.insert(auditLogs).values({
+      id: createId(),
+      userId: guard.session.user.id,
+      organizationId: parsed.organizationId,
+      action: 'agent.config_updated',
+      resourceType: 'agent_provider',
+      resourceId: `${parsed.organizationId}:${parsed.provider}`,
+      changes,
+      metadata,
+    });
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: guard.session.user.id,
+      action: 'agent.local_runner_updated',
+      resourceType: 'agent_provider',
+      resourceId: `${parsed.organizationId}:${parsed.provider}`,
+      organizationId: parsed.organizationId,
+      changes,
+      metadata,
+    });
+
+    return { kind: 'updated' as const, organization };
+  });
+
+  if (result.kind === 'not_found') {
     return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   }
-
-  const [existing] = await db
-    .select()
-    .from(agentProviders)
-    .where(
-      and(
-        eq(agentProviders.workspaceId, parsed.organizationId),
-        eq(agentProviders.provider, parsed.provider)
-      )
-    )
-    .limit(1);
-
-  if (existing) {
-    await db
-      .update(agentProviders)
-      .set({
-        endpointUrl: `local://${parsed.provider}`,
-        enabled: parsed.enabled,
-        hmacSecret: existing.hmacSecret || generateAgentSecret(),
-        updatedAt: new Date(),
-      })
-      .where(eq(agentProviders.id, existing.id));
-  } else {
-    await db.insert(agentProviders).values({
-      workspaceId: parsed.organizationId,
-      provider: parsed.provider,
-      endpointUrl: `local://${parsed.provider}`,
-      hmacSecret: generateAgentSecret(),
-      enabled: parsed.enabled,
-    });
+  if (result.kind === 'suspended') {
+    return NextResponse.json({ error: 'organization_suspended' }, { status: 409 });
   }
 
   return NextResponse.json({
-    organization,
+    organization: result.organization,
     providers: await loadLocalProviders(parsed.organizationId),
   });
 }

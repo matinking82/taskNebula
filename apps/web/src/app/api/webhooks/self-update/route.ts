@@ -4,18 +4,27 @@ import { z } from 'zod';
 import {
   handleSelfUpdateCallback,
   SelfUpdateError,
+  SelfUpdateStateError,
   type SelfUpdateCallbackInput,
 } from '@/lib/version/self-update';
+import { selfUpdateBackupSnapshotSchema } from '@/lib/version/backup-schema';
 
 const MAX_CLOCK_SKEW_SECONDS = 5 * 60;
 
-const callbackSchema = z.object({
-  jobId: z.string().min(8).max(128),
-  status: z.enum(['running', 'succeeded', 'failed']),
-  message: z.string().max(500).optional().nullable(),
-  webhookStatus: z.number().int().min(100).max(599).optional().nullable(),
-  backup: z.unknown().optional().nullable(),
-});
+const callbackSchema = z
+  .object({
+    jobId: z.string().min(8).max(128),
+    status: z.enum(['running', 'succeeded', 'failed']),
+    message: z.string().max(500).optional().nullable(),
+    webhookStatus: z.number().int().min(100).max(599).optional().nullable(),
+    backup: selfUpdateBackupSnapshotSchema.optional().nullable(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.backup && value.backup.id !== value.jobId) {
+      context.addIssue({ code: 'custom', path: ['backup', 'id'], message: 'job_id_mismatch' });
+    }
+  });
 
 function signature(secret: string, timestamp: string, body: string) {
   return crypto.createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
@@ -30,7 +39,7 @@ function validSignature(secret: string, timestamp: string, body: string, header:
 
 export async function POST(request: NextRequest) {
   const secret = process.env.TASKNEBULA_SELF_UPDATE_WEBHOOK_SECRET?.trim();
-  if (!secret) {
+  if (!secret || Buffer.byteLength(secret, 'utf8') < 32) {
     return NextResponse.json({ error: 'Self-update callback is not configured' }, { status: 503 });
   }
 
@@ -65,6 +74,12 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     if (err instanceof SelfUpdateError) {
       return NextResponse.json({ error: err.message, reason: err.reason }, { status: err.status });
+    }
+    if (err instanceof SelfUpdateStateError) {
+      return NextResponse.json(
+        { error: 'Self-update state is unavailable', reason: 'state_unavailable' },
+        { status: 503 }
+      );
     }
     return NextResponse.json({ error: 'Failed to update self-update job' }, { status: 500 });
   }

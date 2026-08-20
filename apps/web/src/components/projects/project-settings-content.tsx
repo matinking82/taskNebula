@@ -200,20 +200,18 @@ export function ProjectSettingsContent({
     <Tabs
       value={activeTab}
       onValueChange={handleTabChange}
-      className={cn('flex min-h-0 flex-1 flex-col', isDialog && 'md:flex-row')}
+      className="flex min-h-0 flex-1 flex-col md:flex-row"
     >
       <div
         className={cn(
-          'border-border bg-background shrink-0 border-b',
-          isDialog && 'md:bg-muted/10 md:w-64 md:border-b-0 md:border-r'
+          'border-border bg-background shrink-0 border-b md:w-56 md:border-b-0 md:border-e',
+          isDialog && 'md:bg-muted/10 md:w-64'
         )}
       >
         <TabsList
           aria-label={t('settings_sections_aria')}
           className={cn(
-            'h-auto w-full justify-start gap-0 overflow-x-auto rounded-none bg-transparent p-0',
-            isDialog &&
-              'md:max-h-full md:flex-col md:items-stretch md:gap-1 md:overflow-y-auto md:overflow-x-hidden md:p-2'
+            'h-auto w-full justify-start gap-0 overflow-x-auto rounded-none bg-transparent p-0 md:max-h-full md:flex-col md:items-stretch md:gap-0.5 md:overflow-y-auto md:overflow-x-hidden md:border-b-0 md:p-2'
           )}
         >
           {visibleTabs.map((tab) => {
@@ -223,9 +221,7 @@ export function ProjectSettingsContent({
                 key={tab.value}
                 value={tab.value}
                 className={cn(
-                  'text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-foreground flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:bg-transparent',
-                  isDialog &&
-                    'md:data-[state=active]:bg-accent/60 md:w-full md:justify-start md:rounded-md md:border-b-0 md:border-l-2 md:px-3 md:py-2.5'
+                  'text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-foreground md:data-[state=active]:bg-accent/60 flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-none border-b border-transparent px-3 py-2 text-sm data-[state=active]:bg-transparent md:-mb-0 md:w-full md:justify-start md:rounded-md md:border-b-0 md:px-3 md:py-2.5'
                 )}
               >
                 <Icon className="h-4 w-4" />

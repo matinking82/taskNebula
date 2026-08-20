@@ -7,13 +7,11 @@ import {
   eq,
   hasPermission as roleHasPermission,
   issues,
-  organizationMembers,
   projectMembers,
   projectTemplates,
   projects,
   ROLE_DEFAULT_PERMISSIONS,
   templateUsages,
-  users,
   workflows,
   workflowStatuses,
   type ProjectRole,
@@ -22,6 +20,8 @@ import { createId } from '@paralleldrive/cuid2';
 import { auth } from '@/auth';
 import { sql } from 'drizzle-orm';
 import { getTemplateAuthz } from '@/lib/templates/authz';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,17 +91,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const payload = (template.payload ?? {}) as UsePayload;
   const overrides = body.overrides ?? {};
 
+  let response: NextResponse;
   try {
     if (template.kind === 'project') {
-      return await instantiateProject({ template, payload, overrides, userId });
-    }
-    if (template.kind === 'issue') {
-      return await instantiateIssue({ template, payload, overrides, userId });
-    }
-    if (template.kind === 'doc') {
+      response = await instantiateProject({ template, payload, overrides, userId });
+    } else if (template.kind === 'issue') {
+      response = await instantiateIssue({ template, payload, overrides, userId });
+    } else if (template.kind === 'doc') {
       // Docs have their own permission model; return the payload and let the
       // client hand it off to /api/docs/pages creation.
-      return NextResponse.json(
+      response = NextResponse.json(
         {
           kind: 'doc',
           payload: { ...payload, ...overrides },
@@ -110,22 +109,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         },
         { status: 200 }
       );
+    } else {
+      response = NextResponse.json(
+        { error: `Unsupported template kind: ${template.kind}` },
+        { status: 400 }
+      );
     }
-    return NextResponse.json(
-      { error: `Unsupported template kind: ${template.kind}` },
-      { status: 400 }
-    );
   } catch (error) {
     console.error('[api/templates/:id/use] failed', error);
     return NextResponse.json({ error: 'Failed to instantiate template' }, { status: 500 });
-  } finally {
-    // Best-effort usage bookkeeping. Counter increment must not fail the
-    // primary instantiation; swallow + log any errors.
-    db.update(projectTemplates)
+  }
+
+  if (response.ok) {
+    // Best-effort usage bookkeeping. Only successful instantiations count.
+    await db
+      .update(projectTemplates)
       .set({ usageCount: sql`${projectTemplates.usageCount} + 1` })
       .where(eq(projectTemplates.id, template.id))
       .catch((err) => console.error('[templates] usageCount bump failed', err));
   }
+  return response;
 }
 
 async function instantiateProject({
@@ -147,31 +150,14 @@ async function instantiateProject({
     );
   }
 
-  // Verify caller can create projects in this organization.
-  const [member] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
+  // Verify caller can create projects in this active organization.
+  const organizationAccess = await resolveOrganizationAccess(userId, organizationId);
   const canCreateProject = roleHasPermission(
-    member?.role || '',
+    organizationAccess.role || '',
     'project:create',
-    user?.isSuperAdmin === true
+    organizationAccess.isSuperAdmin
   );
-  if (!canCreateProject) {
+  if (!organizationAccess.allowed || !canCreateProject) {
     return NextResponse.json(
       { error: 'Project creation requires project:create permission in this organization' },
       { status: 403 }
@@ -278,44 +264,12 @@ async function instantiateIssue({
     );
   }
 
-  // Resolve project by id OR key.
-  let project = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, projectIdInput))
-    .limit(1)
-    .then((r) => r[0]);
-
-  if (!project) {
-    project = await db
-      .select()
-      .from(projects)
-      .where(eq(projects.key, String(projectIdInput).toUpperCase()))
-      .limit(1)
-      .then((r) => r[0]);
-  }
-
-  if (!project) {
+  const projectAccess = await resolveProjectCapabilityAccess(userId, projectIdInput);
+  const project = projectAccess.project;
+  if (!project || !projectAccess.canRead) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
-
-  // Membership check.
-  const [member] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId)
-      )
-    )
-    .limit(1);
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (!member && !user?.isSuperAdmin) {
+  if (!projectAccess.permissions.canCreateIssues) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

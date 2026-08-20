@@ -1,6 +1,9 @@
 import { db, eq, systemSettings } from '@tasknebula/db';
 
 export const VERSION_UPDATE_PREFERENCES_KEY = 'version_update_preferences';
+export const VERSION_UPDATE_PREFERENCES_ADVISORY_LOCK = 'tasknebula:version-update-preferences:v1';
+
+type VersionPreferencesDbClient = Pick<typeof db, 'select' | 'insert'>;
 
 export type VersionUpdatePreferences = {
   bannerEnabled: boolean;
@@ -65,9 +68,12 @@ export function normalizeVersionUpdatePreferences(
   };
 }
 
-export async function getVersionUpdatePreferences(): Promise<VersionUpdatePreferences> {
+export async function getVersionUpdatePreferences(
+  client: VersionPreferencesDbClient = db,
+  options: { fallbackOnError?: boolean } = {}
+): Promise<VersionUpdatePreferences> {
   try {
-    const [row] = await db
+    const [row] = await client
       .select({
         value: systemSettings.value,
         updatedAt: systemSettings.updatedAt,
@@ -82,6 +88,7 @@ export async function getVersionUpdatePreferences(): Promise<VersionUpdatePrefer
       updatedBy: row?.updatedBy ?? null,
     });
   } catch (err) {
+    if (options.fallbackOnError === false) throw err;
     console.warn('[version] failed to read update preferences:', err);
     return normalizeVersionUpdatePreferences(null);
   }
@@ -89,9 +96,10 @@ export async function getVersionUpdatePreferences(): Promise<VersionUpdatePrefer
 
 export async function updateVersionUpdatePreferences(
   input: VersionUpdatePreferencesInput,
-  userId: string
+  userId: string,
+  client: VersionPreferencesDbClient = db
 ): Promise<VersionUpdatePreferences> {
-  const current = await getVersionUpdatePreferences();
+  const current = await getVersionUpdatePreferences(client, { fallbackOnError: false });
   const now = new Date();
   const next: VersionUpdatePreferences = {
     ...current,
@@ -100,7 +108,7 @@ export async function updateVersionUpdatePreferences(
     updatedBy: userId,
   };
 
-  await db
+  await client
     .insert(systemSettings)
     .values({
       key: VERSION_UPDATE_PREFERENCES_KEY,

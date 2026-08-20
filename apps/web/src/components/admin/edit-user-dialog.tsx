@@ -23,6 +23,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Crown, AlertTriangle } from 'lucide-react';
+import { getAdminUserGovernanceMessageKey } from '@/lib/admin/user-governance';
 
 type EditUserDialogProps = {
   userId: string;
@@ -41,8 +42,14 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
     status: 'active' as UserStatus,
     isSuperAdmin: false,
   });
+  const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
 
-  const { data: user, isLoading } = useQuery({
+  const {
+    data: user,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['admin-user', userId],
     queryFn: async () => {
       const response = await fetch(`/api/admin/users/${userId}`);
@@ -53,13 +60,19 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
   });
 
   useEffect(() => {
+    if (!open) {
+      setHydratedUserId(null);
+      return;
+    }
+
     if (user) {
       setFormData({
         status: user.status || 'active',
         isSuperAdmin: user.isSuperAdmin || false,
       });
+      setHydratedUserId(userId);
     }
-  }, [user]);
+  }, [open, user, userId]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -84,10 +97,13 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
       });
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error) => {
+      const governanceKey = getAdminUserGovernanceMessageKey(
+        error instanceof Error ? error.message : null
+      );
       toast({
         title: t('editUser.toastFailedTitle'),
-        description: t('editUser.toastFailedTitle'),
+        description: governanceKey ? t(governanceKey) : t('editUser.toastFailedTitle'),
         variant: 'destructive',
       });
     },
@@ -106,9 +122,16 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
           <DialogDescription>{t('editUser.description')}</DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
+        {isLoading || (!isError && hydratedUserId !== userId) ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+          </div>
+        ) : isError ? (
+          <div className="space-y-3 py-8 text-center">
+            <p className="text-muted-foreground text-sm">{t('editUser.loadFailed')}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+              {t('editUser.retry')}
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
@@ -129,7 +152,7 @@ export function EditUserDialog({ userId, open, onOpenChange }: EditUserDialogPro
                 value={formData.status}
                 onValueChange={(value: UserStatus) => setFormData({ ...formData, status: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger id="status" aria-label={t('editUser.status')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

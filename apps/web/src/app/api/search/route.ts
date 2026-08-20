@@ -5,7 +5,6 @@ import {
   issues,
   workflowStatuses,
   searchHistory,
-  organizationMembers,
   parseJQL,
   issuePriorityEnum,
   issueTypeEnum,
@@ -16,6 +15,7 @@ import { withValidation } from '@/lib/api-validation';
 import { hybridSearch, looksLikeFreeText } from '@/lib/search/hybrid';
 import { resolveApiActor } from '@/lib/auth/api-actor';
 import { canReadProject } from '@/lib/auth/access-control';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,18 +80,10 @@ export const GET = withValidation({ query: searchQuerySchema })(async (request, 
     // Active organization membership alone does not grant private-project
     // visibility; org administrators and explicit project members are handled
     // consistently by the canonical access-control helper.
-    const [orgMember] = await db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, actor.userId),
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-    if (!orgMember) {
+    const organizationAccess = await resolveOrganizationAccess(actor.userId, organizationId, {
+      allowSuperAdmin: actor.authType === 'session',
+    });
+    if (!organizationAccess.allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const projectCandidates = await db

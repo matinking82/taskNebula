@@ -84,10 +84,13 @@ async function getOrgRecipients(
     })
     .from(organizationMembers)
     .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
     .where(
       and(
         eq(organizationMembers.organizationId, organizationId),
         eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active'),
+        ne(organizations.status, 'suspended'),
         ne(organizationMembers.userId, excludeUserId)
       )
     );
@@ -101,6 +104,7 @@ async function getOrgRecipients(
  */
 async function getProjectRecipients(
   projectId: string,
+  organizationId: string,
   excludeUserId: string
 ): Promise<{ userId: string; email: string; name: string | null }[]> {
   const rows = await db
@@ -111,7 +115,23 @@ async function getProjectRecipients(
     })
     .from(projectMembers)
     .innerJoin(users, eq(users.id, projectMembers.userId))
-    .where(and(eq(projectMembers.projectId, projectId), ne(projectMembers.userId, excludeUserId)));
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.userId, projectMembers.userId),
+        eq(organizationMembers.organizationId, organizationId)
+      )
+    )
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .where(
+      and(
+        eq(projectMembers.projectId, projectId),
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active'),
+        ne(organizations.status, 'suspended'),
+        ne(projectMembers.userId, excludeUserId)
+      )
+    );
 
   return rows.filter((r) => r.email);
 }
@@ -250,7 +270,11 @@ export function notifyProjectArchived(input: ProjectEventInput): void {
 
 async function _notifyProjectArchived(input: ProjectEventInput): Promise<void> {
   try {
-    const recipients = await getProjectRecipients(input.project.id, input.actorUserId);
+    const recipients = await getProjectRecipients(
+      input.project.id,
+      input.project.organizationId,
+      input.actorUserId
+    );
     if (recipients.length === 0) return;
 
     const { actorName, organization } = await resolveActorAndOrg(

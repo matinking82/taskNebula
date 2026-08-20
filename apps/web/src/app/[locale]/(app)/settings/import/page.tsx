@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, organizationMembers, projects } from '@tasknebula/db';
-import { and, asc, eq } from 'drizzle-orm';
+import { db, projects } from '@tasknebula/db';
+import { asc, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
-import { requirePermission } from '@/lib/auth/permissions';
+import { getPermittedOrganizationIds } from '@/lib/auth/permissions';
 import { ImportWizard } from './import-wizard';
 import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
@@ -26,19 +26,11 @@ export default async function ImportSettingsPage() {
     redirect('/auth/signin?callbackUrl=/settings/import');
   }
 
-  const [primaryOrg] = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    )
-    .limit(1);
+  const [organizationId] = await getPermittedOrganizationIds(session.user.id, 'org:settings');
 
-  if (!primaryOrg) {
+  if (!organizationId) {
     redirect('/dashboard?error=insufficient-permission');
   }
-
-  await requirePermission(primaryOrg.organizationId, 'org:settings');
 
   const targetProjects = await db
     .select({
@@ -47,7 +39,7 @@ export default async function ImportSettingsPage() {
       name: projects.name,
     })
     .from(projects)
-    .where(eq(projects.organizationId, primaryOrg.organizationId))
+    .where(eq(projects.organizationId, organizationId))
     .orderBy(asc(projects.name));
 
   const t = await getTranslations('pagesSettings');
@@ -55,7 +47,7 @@ export default async function ImportSettingsPage() {
   return (
     <PageFrame contentClassName="max-w-5xl">
       <PageHeader title={t('import.title')} description={t('import.subtitle')} />
-      <ImportWizard workspaceId={primaryOrg.organizationId} projects={targetProjects} />
+      <ImportWizard workspaceId={organizationId} projects={targetProjects} />
     </PageFrame>
   );
 }

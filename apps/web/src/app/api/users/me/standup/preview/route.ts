@@ -12,8 +12,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, organizationMembers, eq, and } from '@tasknebula/db';
 import { runStandupForUser } from '@/lib/agents/standup-runner';
+import {
+  listActiveOrganizationMemberships,
+  resolveOrganizationAccess,
+} from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -38,16 +41,7 @@ export async function POST(request: NextRequest) {
   let organizationId = body.organizationId;
   if (!organizationId) {
     // Pick the user's first active org membership.
-    const [membership] = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
+    const [membership] = await listActiveOrganizationMemberships(session.user.id);
     if (!membership) {
       return NextResponse.json(
         { error: 'No active organization for current user.' },
@@ -57,18 +51,7 @@ export async function POST(request: NextRequest) {
     organizationId = membership.organizationId;
   } else {
     // Authorise the override.
-    const [membership] = await db
-      .select({ id: organizationMembers.id })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-    if (!membership) {
+    if (!(await resolveOrganizationAccess(session.user.id, organizationId)).allowed) {
       return NextResponse.json(
         { error: 'You are not a member of that organization.' },
         { status: 403 }

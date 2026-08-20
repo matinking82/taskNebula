@@ -18,7 +18,9 @@ import {
   desc,
   inArray,
   ilike,
+  ne,
   or,
+  organizations,
   organizationMembers,
   integrationConnections,
   issues,
@@ -27,9 +29,10 @@ import {
 } from '@tasknebula/db';
 import { createId } from '@paralleldrive/cuid2';
 import { getTranslations } from 'next-intl/server';
-import { parseSlackUserMention, type ParsedSlashCommand } from './slack';
+import { callSlackApi, parseSlackUserMention, type ParsedSlashCommand } from './slack';
 import { defaultLocale, isSupportedLocale, type Locale } from '@/lib/i18n/config';
 import { triggerWebhooks } from '@/lib/webhooks/dispatcher';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 import {
   applyPreparedIssueStatusTransition,
   isWorkflowTransitionError,
@@ -77,7 +80,7 @@ export async function resolveSlackOrg(teamId: string): Promise<{
   botUserId: string | null;
   locale: Locale;
 } | null> {
-  const [row] = await db
+  const rows = await db
     .select({
       organizationId: integrationConnections.organizationId,
       id: integrationConnections.id,
@@ -85,16 +88,26 @@ export async function resolveSlackOrg(teamId: string): Promise<{
       locale: users.locale,
     })
     .from(integrationConnections)
+    .innerJoin(organizations, eq(organizations.id, integrationConnections.organizationId))
     .leftJoin(users, eq(users.id, integrationConnections.connectedById))
     .where(
       and(
         eq(integrationConnections.provider, 'slack'),
-        eq(integrationConnections.externalAccountId, teamId)
+        eq(integrationConnections.externalAccountId, teamId),
+        ne(organizations.status, 'suspended')
       )
     )
-    .limit(1);
+    .limit(2);
 
-  if (!row) return null;
+  if (rows.length !== 1) {
+    if (rows.length > 1) {
+      console.error('[slack] ambiguous workspace identity; refusing to route inbound payload', {
+        teamId,
+      });
+    }
+    return null;
+  }
+  const row = rows[0]!;
   const metadata = (row.metadata ?? {}) as Record<string, unknown>;
   return {
     organizationId: row.organizationId,
@@ -117,16 +130,48 @@ export async function resolveSlackOrg(teamId: string): Promise<{
  *
  * Returns null when no match is found.
  */
-async function lookupTaskNebulaUserBySlackId(
+export async function lookupTaskNebulaUserBySlackId(
   organizationId: string,
-  slackUserId: string
+  slackUserId: string,
+  slackTeamId: string
 ): Promise<string | null> {
-  // The current users schema does not have a slackUserId column. Until we add
-  // one, we can't map Slack users to TN users automatically — return null so
-  // the caller can surface a helpful message.
-  void organizationId;
-  void slackUserId;
-  return null;
+  const [connection] = await db
+    .select({ accessTokenEnc: integrationConnections.accessTokenEnc })
+    .from(integrationConnections)
+    .innerJoin(organizations, eq(organizations.id, integrationConnections.organizationId))
+    .where(
+      and(
+        eq(integrationConnections.organizationId, organizationId),
+        eq(integrationConnections.provider, 'slack'),
+        eq(integrationConnections.externalAccountId, slackTeamId),
+        ne(organizations.status, 'suspended')
+      )
+    )
+    .limit(1);
+  if (!connection?.accessTokenEnc) return null;
+
+  const profile = await callSlackApi<{
+    user?: { deleted?: boolean; is_bot?: boolean; profile?: { email?: string } };
+  }>('users.info', connection.accessTokenEnc, { user: slackUserId });
+  const email = profile.ok ? profile.data?.user?.profile?.email?.trim().toLowerCase() : null;
+  if (!email || profile.data?.user?.deleted || profile.data?.user?.is_bot) return null;
+
+  const [member] = await db
+    .select({ userId: users.id })
+    .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
+    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
+    .where(
+      and(
+        eq(organizationMembers.organizationId, organizationId),
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active'),
+        ilike(users.email, email),
+        ne(organizations.status, 'suspended')
+      )
+    )
+    .limit(1);
+  return member?.userId ?? null;
 }
 
 /**
@@ -171,7 +216,7 @@ async function handleListMine(
   ctx: SlackCommandContext,
   t: SlackTranslator
 ): Promise<SlackSlashResponse> {
-  const userId = await lookupTaskNebulaUserBySlackId(organizationId, ctx.slackUserId);
+  const userId = await lookupTaskNebulaUserBySlackId(organizationId, ctx.slackUserId, ctx.teamId);
   if (!userId) {
     return ephemeral(t('userUnmapped'));
   }
@@ -180,6 +225,7 @@ async function handleListMine(
     .select({
       key: issues.key,
       title: issues.title,
+      projectId: issues.projectId,
       statusName: workflowStatuses.name,
       category: workflowStatuses.category,
     })
@@ -189,7 +235,15 @@ async function handleListMine(
     .orderBy(desc(issues.updatedAt))
     .limit(15);
 
-  const open = rows.filter((r) => r.category !== 'done');
+  const readable = await Promise.all(
+    rows.map(async (row) => ({
+      row,
+      allowed: (await resolveProjectCapabilityAccess(userId, row.projectId)).canRead,
+    }))
+  );
+  const open = readable
+    .filter(({ row, allowed }) => allowed && row.category !== 'done')
+    .map(({ row }) => row);
   if (open.length === 0) {
     return ephemeral(t('noOpenAssigned'));
   }
@@ -201,9 +255,12 @@ async function handleListMine(
 async function handleSearch(
   organizationId: string,
   query: string,
-  _ctx: SlackCommandContext,
+  ctx: SlackCommandContext,
   t: SlackTranslator
 ): Promise<SlackSlashResponse> {
+  const userId = await lookupTaskNebulaUserBySlackId(organizationId, ctx.slackUserId, ctx.teamId);
+  if (!userId) return ephemeral(t('userUnmapped'));
+
   const q = query.trim();
   if (!q) {
     return ephemeral(t('searchUsage'));
@@ -214,6 +271,7 @@ async function handleSearch(
     .select({
       key: issues.key,
       title: issues.title,
+      projectId: issues.projectId,
       statusName: workflowStatuses.name,
     })
     .from(issues)
@@ -225,9 +283,20 @@ async function handleSearch(
       )
     )
     .orderBy(desc(issues.updatedAt))
-    .limit(5);
+    .limit(25);
 
-  if (rows.length === 0) {
+  const accessRows = await Promise.all(
+    rows.map(async (row) => ({
+      row,
+      allowed: (await resolveProjectCapabilityAccess(userId, row.projectId)).canRead,
+    }))
+  );
+  const visibleRows = accessRows
+    .filter(({ allowed }) => allowed)
+    .map(({ row }) => row)
+    .slice(0, 5);
+
+  if (visibleRows.length === 0) {
     return ephemeral(t('searchNoMatches', { query: q }));
   }
 
@@ -237,11 +306,11 @@ async function handleSearch(
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*${t('searchTopMatches', { count: rows.length, query: q })}*`,
+        text: `*${t('searchTopMatches', { count: visibleRows.length, query: q })}*`,
       },
     },
     { type: 'divider' },
-    ...rows.map((r) => ({
+    ...visibleRows.map((r) => ({
       type: 'section',
       text: {
         type: 'mrkdwn',
@@ -250,7 +319,7 @@ async function handleSearch(
     })),
   ];
 
-  return ephemeral(t('searchSummary', { count: rows.length, query: q }), blocks);
+  return ephemeral(t('searchSummary', { count: visibleRows.length, query: q }), blocks);
 }
 
 async function handleAssign(
@@ -275,9 +344,24 @@ async function handleAssign(
     return ephemeral(t('issueNotFound', { issueKey }));
   }
 
-  const newAssigneeId = await lookupTaskNebulaUserBySlackId(organizationId, slackUserId);
+  const newAssigneeId = await lookupTaskNebulaUserBySlackId(
+    organizationId,
+    slackUserId,
+    ctx.teamId
+  );
   if (!newAssigneeId) {
     return ephemeral(t('assigneeUnmapped'));
+  }
+
+  const actorUserId = await lookupTaskNebulaUserBySlackId(
+    organizationId,
+    ctx.slackUserId,
+    ctx.teamId
+  );
+  if (!actorUserId) return ephemeral(t('userUnmapped'));
+  const access = await resolveProjectCapabilityAccess(actorUserId, issueRow.projectId);
+  if (!access.canRead || !access.permissions.canAssignIssues) {
+    return ephemeral(t('issueNotFound', { issueKey }));
   }
 
   await db
@@ -326,7 +410,11 @@ async function handleStatus(
     return ephemeral(t('issueNotFound', { issueKey }));
   }
 
-  const actorUserId = await lookupTaskNebulaUserBySlackId(organizationId, ctx.slackUserId);
+  const actorUserId = await lookupTaskNebulaUserBySlackId(
+    organizationId,
+    ctx.slackUserId,
+    ctx.teamId
+  );
   if (!actorUserId) {
     return ephemeral(t('userUnmapped'));
   }

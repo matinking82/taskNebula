@@ -6,20 +6,18 @@ import {
   intakeForms,
   intakeSubmissions,
   issues,
+  organizations,
   projects,
   workflows,
   workflowStatuses,
 } from '@tasknebula/db';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { getClientIp } from '@/lib/auth/rate-limit';
 import { checkIntakeRateLimit } from '@/lib/intake/rate-limit';
 import { isCaptchaConfigured, verifyCaptcha } from '@/lib/intake/captcha';
-import {
-  buildIssueDescription,
-  deriveIssueTitle,
-  validateSubmission,
-} from '@/lib/intake/schema';
+import { buildIssueDescription, deriveIssueTitle, validateSubmission } from '@/lib/intake/schema';
 import type { IntakeFieldDefinition } from '@tasknebula/db';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,16 +41,12 @@ function hashIp(ip: string): string {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const { slug } = await params;
 
-    const [form] = await db
-      .select()
-      .from(intakeForms)
-      .where(eq(intakeForms.slug, slug))
-      .limit(1);
+    const [form] = await db.select().from(intakeForms).where(eq(intakeForms.slug, slug)).limit(1);
 
     if (!form || !form.isPublic) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
@@ -71,7 +65,7 @@ export async function POST(
           headers: {
             'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)),
           },
-        },
+        }
       );
     }
 
@@ -94,16 +88,17 @@ export async function POST(
       }
     }
 
-    const submissionPayload = (body.payload && typeof body.payload === 'object')
-      ? (body.payload as Record<string, unknown>)
-      : body;
+    const submissionPayload =
+      body.payload && typeof body.payload === 'object'
+        ? (body.payload as Record<string, unknown>)
+        : body;
 
     const fields = (form.fields as IntakeFieldDefinition[]) ?? [];
     const result = validateSubmission(fields, submissionPayload);
     if (!result.ok) {
       return NextResponse.json(
         { error: 'Validation failed', issues: result.issues },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -112,7 +107,7 @@ export async function POST(
     // queryable without parsing the JSONB payload at read time.
     const emailField = fields.find((f) => f.type === 'email');
     const submittedByEmail = emailField
-      ? (result.value[emailField.name] as string | undefined) ?? null
+      ? ((result.value[emailField.name] as string | undefined) ?? null)
       : null;
 
     const userAgent = request.headers.get('user-agent')?.slice(0, 500) ?? null;
@@ -126,8 +121,16 @@ export async function POST(
       .from(projects)
       .where(eq(projects.id, form.projectId))
       .limit(1);
-    if (!project) {
+    if (!project || project.status !== 'active') {
       return NextResponse.json({ error: 'Form is misconfigured' }, { status: 500 });
+    }
+    const [organization] = await db
+      .select({ status: organizations.status })
+      .from(organizations)
+      .where(eq(organizations.id, project.organizationId))
+      .limit(1);
+    if (!organization || organization.status === 'suspended') {
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
     let workflowId = project.defaultWorkflowId ?? null;
@@ -136,10 +139,7 @@ export async function POST(
         .select()
         .from(workflows)
         .where(
-          and(
-            eq(workflows.organizationId, project.organizationId),
-            eq(workflows.isDefault, true),
-          ),
+          and(eq(workflows.organizationId, project.organizationId), eq(workflows.isDefault, true))
         )
         .limit(1);
       workflowId = defaultWorkflow?.id ?? null;
@@ -170,25 +170,33 @@ export async function POST(
       return NextResponse.json({ error: 'Form is misconfigured' }, { status: 500 });
     }
 
-    // Allocate the next issue number for the project. Done via a fresh
-    // SELECT rather than a sequence so we stay consistent with the
-    // authenticated /api/issues path (which also does max+1).
-    const [lastIssue] = await db
-      .select()
-      .from(issues)
-      .where(eq(issues.projectId, project.id))
-      .orderBy(desc(issues.number))
-      .limit(1);
-    const nextNumber = (lastIssue?.number ?? 0) + 1;
-    const issueKey = `${project.key}-${nextNumber}`;
-
     // Issues require a non-null reporter user. For public intake we
     // attribute to the auto-assign user when set, otherwise the project
     // lead, otherwise the project creator. None of these are perfect,
     // but they keep the schema honest without needing a synthetic
     // "system" user.
-    const reporterId =
-      form.autoAssignUserId ?? project.leadId ?? project.createdBy;
+    const reporterCandidates = Array.from(
+      new Set(
+        [form.autoAssignUserId, project.leadId, project.createdBy].filter(
+          (candidate): candidate is string => Boolean(candidate)
+        )
+      )
+    );
+    const eligibleReporters = new Set<string>();
+    for (const candidate of reporterCandidates) {
+      const candidateAccess = await resolveOrganizationAccess(candidate, project.organizationId, {
+        allowSuperAdmin: false,
+      });
+      if (candidateAccess.allowed) eligibleReporters.add(candidate);
+    }
+    const reporterId = reporterCandidates.find((candidate) => eligibleReporters.has(candidate));
+    if (!reporterId) {
+      return NextResponse.json({ error: 'Form is misconfigured' }, { status: 500 });
+    }
+    const assigneeId =
+      form.autoAssignUserId && eligibleReporters.has(form.autoAssignUserId)
+        ? form.autoAssignUserId
+        : null;
 
     const submissionId = createId();
     const issueId = createId();
@@ -199,35 +207,48 @@ export async function POST(
       submittedByEmail,
     });
 
-    await db.insert(issues).values({
-      id: issueId,
-      organizationId: project.organizationId,
-      projectId: project.id,
-      key: issueKey,
-      number: nextNumber,
-      title: issueTitle,
-      description: issueDescription,
-      statusId: statusRow.id,
-      priority: 'medium',
-      type: 'task',
-      reporterId,
-      assigneeId: form.autoAssignUserId ?? null,
-      labels: ['intake'],
-      customFields: {},
-      metadata: { source: 'intake', intakeFormId: form.id, intakeSlug: form.slug },
-      createdBy: reporterId,
-      updatedBy: reporterId,
-    });
+    const issueKey = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${project.id}))`);
+      const [lastIssue] = await tx
+        .select()
+        .from(issues)
+        .where(eq(issues.projectId, project.id))
+        .orderBy(desc(issues.number))
+        .limit(1);
+      const nextNumber = (lastIssue?.number ?? 0) + 1;
+      const nextIssueKey = `${project.key}-${nextNumber}`;
 
-    await db.insert(intakeSubmissions).values({
-      id: submissionId,
-      intakeFormId: form.id,
-      submittedByEmail,
-      submittedPayload: result.value,
-      status: 'converted',
-      createdIssueId: issueId,
-      ipHash,
-      userAgent,
+      await tx.insert(issues).values({
+        id: issueId,
+        organizationId: project.organizationId,
+        projectId: project.id,
+        key: nextIssueKey,
+        number: nextNumber,
+        title: issueTitle,
+        description: issueDescription,
+        statusId: statusRow.id,
+        priority: 'medium',
+        type: 'task',
+        reporterId,
+        assigneeId,
+        labels: ['intake'],
+        customFields: {},
+        metadata: { source: 'intake', intakeFormId: form.id, intakeSlug: form.slug },
+        createdBy: reporterId,
+        updatedBy: reporterId,
+      });
+
+      await tx.insert(intakeSubmissions).values({
+        id: submissionId,
+        intakeFormId: form.id,
+        submittedByEmail,
+        submittedPayload: result.value,
+        status: 'converted',
+        createdIssueId: issueId,
+        ipHash,
+        userAgent,
+      });
+      return nextIssueKey;
     });
 
     return NextResponse.json(
@@ -236,7 +257,7 @@ export async function POST(
         submissionId,
         issueKey,
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     console.error('Public intake submit error:', error);
@@ -250,7 +271,7 @@ export async function POST(
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const { slug } = await params;

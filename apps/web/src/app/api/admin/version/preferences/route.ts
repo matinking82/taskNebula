@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
+import { createId } from '@paralleldrive/cuid2';
+import { db, sql, systemAuditLogs } from '@tasknebula/db';
 import {
   getVersionUpdatePreferences,
+  VERSION_UPDATE_PREFERENCES_ADVISORY_LOCK,
+  VERSION_UPDATE_PREFERENCES_KEY,
   updateVersionUpdatePreferences,
 } from '@/lib/version/preferences';
 
@@ -49,6 +53,31 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const preferences = await updateVersionUpdatePreferences(parsed.data, authz.userId);
+  const preferences = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${VERSION_UPDATE_PREFERENCES_ADVISORY_LOCK}))`
+    );
+    const previous = await getVersionUpdatePreferences(tx, { fallbackOnError: false });
+    const next = await updateVersionUpdatePreferences(parsed.data, authz.userId, tx);
+    const changes = Object.fromEntries(
+      Object.entries(parsed.data).map(([key, value]) => [
+        key,
+        {
+          from: previous[key as keyof typeof previous],
+          to: value,
+        },
+      ])
+    );
+
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: authz.userId,
+      action: 'version.preferences_updated',
+      resourceType: 'system_setting',
+      resourceId: VERSION_UPDATE_PREFERENCES_KEY,
+      changes,
+    });
+    return next;
+  });
   return NextResponse.json(preferences);
 }

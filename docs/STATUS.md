@@ -1,6 +1,6 @@
 # TaskNebula project status
 
-**Verified:** 2026-08-13 · **Version:** 0.16.0 · **Lifecycle:** beta,
+**Verified:** 2026-08-20 · **Version:** 0.17.0 · **Lifecycle:** beta,
 self-hostable
 
 This is the only live capability snapshot. Future work belongs in
@@ -11,13 +11,13 @@ This is the only live capability snapshot. Future work belongs in
 
 The values below are a dated inventory, not agent instructions:
 
-| Surface                                    | 2026-08-13 tree |
+| Surface                                    | 2026-08-20 tree |
 | ------------------------------------------ | --------------: |
-| Next.js API `route.ts` files               |             283 |
+| Next.js API `route.ts` files               |             274 |
 | Drizzle `pgTable` definitions              |             120 |
 | Schema files excluding the re-export index |              55 |
-| Journaled SQL migrations                   |              64 |
-| Web Jest test files                        |             300 |
+| Journaled SQL migrations                   |              68 |
+| Web Jest test files                        |             342 |
 | Playwright spec files                      |               9 |
 | Locale catalogs                            |              30 |
 
@@ -40,8 +40,9 @@ The values below are a dated inventory, not agent instructions:
   admission, checkpoints/events, leased recovery/cancellation and fenced
   database effects; local Claude/Codex subprocesses receive an allowlisted
   environment. The separate research topology has focused library tests.
-- Enterprise scaffolding: SAML/SCIM, audit/SIEM, trust and AI transparency
-  surfaces, permission/security scheme configuration.
+- Enterprise controls: SAML/SCIM lifecycle and scoped tokens, audit/SIEM,
+  database-backed LiveKit/SMTP/storage settings, session revocation, trust and
+  AI transparency surfaces, and permission/security scheme configuration.
 - CI: MCP build, i18n parity, public-repository hygiene, UI and documentation
   contracts, OpenAPI drift, type-check, lint, and tests run on pushes and pull
   requests to `main`; browser E2E remains a local/release gate.

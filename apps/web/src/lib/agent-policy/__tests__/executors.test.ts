@@ -25,17 +25,20 @@ jest.mock('@tasknebula/db', () => {
     issueComments: table('issue_comments'),
     issues: table('issues'),
     organizationMembers: table('organization_members'),
+    organizations: table('organizations'),
     projectMembers: table('project_members'),
     projects: table('projects'),
     sprints: table('sprints'),
     workflowStatuses: table('workflow_statuses'),
     workflows: table('workflows'),
+    users: table('users'),
   };
 });
 
 jest.mock('drizzle-orm', () => ({
   and: (...conditions: unknown[]) => ({ op: 'and', conditions }),
   desc: (column: unknown) => ({ op: 'desc', column }),
+  ne: (left: unknown, right: unknown) => ({ op: 'ne', left, right }),
   sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
 }));
 
@@ -64,6 +67,7 @@ import { executeApprovedAgentAction } from '../executors';
 function queryChain(rows: Row[]) {
   const chain = {
     from: (_table: unknown) => chain,
+    innerJoin: (_table: unknown, _condition: unknown) => chain,
     where: (_condition: unknown) => chain,
     orderBy: (..._args: unknown[]) => chain,
     limit: (count: number) => Promise.resolve(rows.slice(0, count)),

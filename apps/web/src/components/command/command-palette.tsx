@@ -57,7 +57,9 @@ import {
 export interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCloseAutoFocus?: React.ComponentProps<typeof DialogContent>['onCloseAutoFocus'];
   hasWorkspaceAccess?: boolean;
+  defaultOrganizationId?: string | null;
 }
 
 interface HistoryEntry {
@@ -363,14 +365,17 @@ function useHistory(organizationId: string | null, open: boolean) {
 export function CommandPalette({
   open,
   onOpenChange,
+  onCloseAutoFocus,
   hasWorkspaceAccess = true,
+  defaultOrganizationId = null,
 }: CommandPaletteProps) {
   const t = useTranslations('searchCommand');
   const tNav = useTranslations('nav');
   const router = useRouter();
   const { currentOrganizationId } = useOrganization();
+  const effectiveOrganizationId = currentOrganizationId ?? defaultOrganizationId;
   const { hasAny: hasAnyOrgPermission, isLoading: isLoadingOrgPermissions } =
-    useOrganizationPermissions(currentOrganizationId ?? undefined);
+    useOrganizationPermissions(effectiveOrganizationId ?? undefined);
   const [rawInput, setRawInput] = React.useState('');
   const [tab, setTab] = React.useState<OmnibarTab>('all');
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -414,11 +419,11 @@ export function CommandPalette({
   const search = useOmnibarSearch({
     query: textQuery,
     tab,
-    organizationId: hasWorkspaceAccess ? currentOrganizationId : null,
+    organizationId: hasWorkspaceAccess ? effectiveOrganizationId : null,
     facets,
   });
 
-  const history = useHistory(hasWorkspaceAccess ? currentOrganizationId : null, open);
+  const history = useHistory(hasWorkspaceAccess ? effectiveOrganizationId : null, open);
 
   const close = React.useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -438,13 +443,13 @@ export function CommandPalette({
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('tasknebula:ask-ai', {
-            detail: { prompt, organizationId: currentOrganizationId },
+            detail: { prompt, organizationId: effectiveOrganizationId },
           })
         );
       }
       close();
     },
-    [close, currentOrganizationId, hasWorkspaceAccess]
+    [close, effectiveOrganizationId, hasWorkspaceAccess]
   );
 
   const removeChip = React.useCallback((facet: Facet) => {
@@ -498,7 +503,7 @@ export function CommandPalette({
   // sentence-ish input (more than a single word OR ends with `?`).
   const showAskCta =
     hasWorkspaceAccess &&
-    Boolean(currentOrganizationId) &&
+    Boolean(effectiveOrganizationId) &&
     askPrompt.length > 0 &&
     (askPrompt.includes(' ') || askPrompt.endsWith('?') || tab === 'ask');
 
@@ -508,6 +513,7 @@ export function CommandPalette({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        onCloseAutoFocus={onCloseAutoFocus}
         onKeyDown={onContentKeyDown}
         className={cn(
           'w-[92vw] max-w-2xl gap-0 overflow-hidden p-0',

@@ -4,13 +4,16 @@ import {
   db,
   initiatives,
   initiativeProjects,
-  organizationMembers,
   projects,
   MAX_INITIATIVE_DEPTH,
 } from '@tasknebula/db';
 import { eq, and, inArray, asc } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { buildInitiativeIndex, validateInitiativeDepth } from '@/lib/initiatives/depth';
+import {
+  listActiveOrganizationMemberships,
+  resolveOrganizationAccess,
+} from '@/lib/auth/access-control';
 
 /**
  * GET /api/initiatives — list every initiative in the user's organizations
@@ -31,12 +34,7 @@ export async function GET(request: NextRequest) {
   const workspaceIdParam = request.nextUrl.searchParams.get('workspaceId');
 
   // Resolve which workspaces the caller can see.
-  const memberships = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    );
+  const memberships = await listActiveOrganizationMemberships(session.user.id);
 
   if (memberships.length === 0) {
     return NextResponse.json({ initiatives: [] });
@@ -118,19 +116,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Membership check
-  const [membership] = await db
-    .select()
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, session.user.id),
-        eq(organizationMembers.organizationId, workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  if (!membership) {
+  if (!(await resolveOrganizationAccess(session.user.id, workspaceId)).allowed) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

@@ -22,6 +22,13 @@ import { OrganizationMultiSelect } from '@/components/admin/organization-multi-s
 
 const PLANS = ['free', 'starter', 'growth', 'enterprise'] as const;
 
+const PLAN_LABEL_KEYS = {
+  free: 'orgForm.planFree',
+  starter: 'orgForm.planStarter',
+  growth: 'orgForm.planGrowth',
+  enterprise: 'orgForm.planEnterprise',
+} as const;
+
 interface FeatureFlag {
   id: string;
   key: string;
@@ -154,16 +161,13 @@ export function EditFeatureFlagDialog({ flag, open, onOpenChange }: EditFeatureF
               <Label>{t('flagForm.plans')}</Label>
               <div className="grid grid-cols-2 gap-2">
                 {PLANS.map((plan) => (
-                  <label
-                    key={plan}
-                    className="flex cursor-pointer items-center gap-2 text-sm capitalize"
-                  >
+                  <label key={plan} className="flex cursor-pointer items-center gap-2 text-sm">
                     <Checkbox
                       id={`edit-plan-${plan}`}
                       checked={enabledForPlans.includes(plan)}
                       onCheckedChange={() => togglePlan(plan)}
                     />
-                    {plan}
+                    {t(PLAN_LABEL_KEYS[plan])}
                   </label>
                 ))}
               </div>

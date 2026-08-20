@@ -2,6 +2,7 @@ const authMock = jest.fn();
 const dbSelectMock = jest.fn();
 const dbInsertMock = jest.fn();
 const publishEventMock = jest.fn();
+const resolveProjectCapabilityAccessMock = jest.fn();
 
 class MockNextRequest {
   private readonly bodyValue: string;
@@ -54,6 +55,11 @@ jest.mock('@/auth', () => ({
 
 jest.mock('@/lib/realtime/events', () => ({
   publishEvent: (...args: unknown[]) => publishEventMock(...args),
+}));
+
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    resolveProjectCapabilityAccessMock(...args),
 }));
 
 jest.mock('@paralleldrive/cuid2', () => ({
@@ -174,6 +180,23 @@ describe('/api/sprints route', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    resolveProjectCapabilityAccessMock.mockImplementation(
+      async (_userId: string, projectIdOrKey: string) => ({
+        project: { id: projectIdOrKey, organizationId: 'org-1' },
+        canRead: true,
+        canManage: true,
+        isSuperAdmin: false,
+        isOrgOwner: false,
+        isOrgAdmin: false,
+        role: 'product_owner',
+        permissions: {
+          canManageSprints: true,
+          canStartSprint: true,
+          canCompleteSprint: true,
+          canDeleteSprint: true,
+        },
+      })
+    );
   });
 
   describe('GET', () => {
@@ -195,8 +218,11 @@ describe('/api/sprints route', () => {
 
     it('returns 404 when project key does not resolve', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      // resolveProjectId: short key lookup returns []
-      dbSelectMock.mockReturnValueOnce(chainable([]));
+      resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+        project: null,
+        canRead: false,
+        permissions: {},
+      });
       const response = await GET(
         new NextRequestCtor('http://localhost:3002/api/sprints?projectId=PRJ')
       );
@@ -206,14 +232,11 @@ describe('/api/sprints route', () => {
 
     it('returns 404 when caller is not a member of the project organization', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      // Long projectId skips key lookup; view permission check runs first.
-      dbSelectMock
-        .mockReturnValueOnce(chainable([{ isSuperAdmin: false }])) // users
-        .mockReturnValueOnce(
-          chainable([{ id: 'project_long_id_1234567890', organizationId: 'org-1' }])
-        ) // project
-        .mockReturnValueOnce(chainable([])) // no org membership (cross-org probe)
-        .mockReturnValueOnce(chainable([])); // no project membership
+      resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+        project: { id: 'project_long_id_1234567890', organizationId: 'org-other' },
+        canRead: false,
+        permissions: {},
+      });
 
       const response = await GET(
         new NextRequestCtor(
@@ -224,31 +247,26 @@ describe('/api/sprints route', () => {
       await expect(response.json()).resolves.toEqual({ error: 'Project not found' });
     });
 
-    it('returns 403 when an in-org caller is not a project member', async () => {
+    it('returns 404 when an in-org caller cannot read the project', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      dbSelectMock
-        .mockReturnValueOnce(chainable([{ isSuperAdmin: false }])) // users
-        .mockReturnValueOnce(
-          chainable([{ id: 'project_long_id_1234567890', organizationId: 'org-1' }])
-        ) // project
-        .mockReturnValueOnce(chainable([{ role: 'member' }])) // org member (not admin/owner)
-        .mockReturnValueOnce(chainable([])); // no project membership
+      resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+        project: { id: 'project_long_id_1234567890', organizationId: 'org-1' },
+        canRead: false,
+        permissions: {},
+      });
 
       const response = await GET(
         new NextRequestCtor(
           'http://localhost:3002/api/sprints?projectId=project_long_id_1234567890'
         )
       );
-      expect(response.status).toBe(403);
-      await expect(response.json()).resolves.toEqual({ error: 'Not a project member' });
+      expect(response.status).toBe(404);
+      await expect(response.json()).resolves.toEqual({ error: 'Project not found' });
     });
 
     it('returns sprints with issue counts on happy path', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      // Long projectId skips key lookup. First call = view permission (super
-      // admin bypass). Second = sprints list. Third = issue counts.
       dbSelectMock
-        .mockReturnValueOnce(chainable([{ isSuperAdmin: true }]))
         .mockReturnValueOnce(
           chainable([
             {
@@ -309,7 +327,11 @@ describe('/api/sprints route', () => {
 
     it('returns 404 when project cannot be resolved', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      dbSelectMock.mockReturnValueOnce(chainable([])); // resolveProjectId returns null
+      resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+        project: null,
+        canRead: false,
+        permissions: {},
+      });
       const response = await POST(
         new NextRequestCtor('http://localhost:3002/api/sprints', {
           method: 'POST',
@@ -327,14 +349,11 @@ describe('/api/sprints route', () => {
 
     it('returns 403 when user has no permission', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      // long projectId skips key lookup, goes straight to permission check
-      dbSelectMock
-        .mockReturnValueOnce(chainable([{ isSuperAdmin: false }])) // users
-        .mockReturnValueOnce(
-          chainable([{ id: 'proj_long_id_1234567890', organizationId: 'org-1' }])
-        ) // project
-        .mockReturnValueOnce(chainable([{ role: 'member' }])) // orgMember (not owner)
-        .mockReturnValueOnce(chainable([])); // projectMember empty
+      resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+        project: { id: 'proj_long_id_1234567890', organizationId: 'org-1' },
+        canRead: true,
+        permissions: { canManageSprints: false },
+      });
 
       const response = await POST(
         new NextRequestCtor('http://localhost:3002/api/sprints', {
@@ -348,18 +367,18 @@ describe('/api/sprints route', () => {
         })
       );
       expect(response.status).toBe(403);
-      await expect(response.json()).resolves.toEqual({ error: 'Not a project member' });
+      await expect(response.json()).resolves.toEqual({
+        error: 'Insufficient permissions to manage sprints',
+      });
     });
 
     it('preserves an explicit sprint-management denial over a permissive role default', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      dbSelectMock
-        .mockReturnValueOnce(chainable([{ isSuperAdmin: false }]))
-        .mockReturnValueOnce(
-          chainable([{ id: 'proj_long_id_1234567890', organizationId: 'org-1' }])
-        )
-        .mockReturnValueOnce(chainable([{ role: 'member' }]))
-        .mockReturnValueOnce(chainable([{ role: 'product_owner', canManageSprints: 'false' }]));
+      resolveProjectCapabilityAccessMock.mockResolvedValueOnce({
+        project: { id: 'proj_long_id_1234567890', organizationId: 'org-1' },
+        canRead: true,
+        permissions: { canManageSprints: false },
+      });
 
       const response = await POST(
         new NextRequestCtor('http://localhost:3002/api/sprints', {
@@ -381,9 +400,6 @@ describe('/api/sprints route', () => {
 
     it('returns 400 when duration exceeds 90 days', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      // Super admin bypass for permissions
-      dbSelectMock.mockReturnValueOnce(chainable([{ isSuperAdmin: true }]));
-
       const response = await POST(
         new NextRequestCtor('http://localhost:3002/api/sprints', {
           method: 'POST',
@@ -403,8 +419,6 @@ describe('/api/sprints route', () => {
 
     it('returns 400 when end date <= start date', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      dbSelectMock.mockReturnValueOnce(chainable([{ isSuperAdmin: true }]));
-
       const response = await POST(
         new NextRequestCtor('http://localhost:3002/api/sprints', {
           method: 'POST',
@@ -424,8 +438,6 @@ describe('/api/sprints route', () => {
 
     it('creates sprint and publishes event on happy path', async () => {
       authMock.mockResolvedValue({ user: { id: 'user-1' } });
-      // super admin bypass
-      dbSelectMock.mockReturnValueOnce(chainable([{ isSuperAdmin: true }]));
       // post-insert project lookup that resolves organizationId for the SSE event
       dbSelectMock.mockReturnValueOnce(chainable([{ organizationId: 'org-1' }]));
       dbInsertMock.mockReturnValueOnce(

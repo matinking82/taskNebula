@@ -15,6 +15,11 @@ const txInsertMock = jest.fn();
 const txSelectMock = jest.fn();
 const dbSelectMock = jest.fn();
 const dbTransactionMock = jest.fn();
+const resolveOrganizationAccessMock = jest.fn();
+
+jest.mock('@/lib/auth/access-control', () => ({
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
+}));
 
 jest.mock('@tasknebula/db', () => ({
   db: {
@@ -113,14 +118,16 @@ function makeWhereChain(returnValue: unknown[]) {
 
 function setupHappyPathPreflights() {
   // 1) org lookup -> exists
-  // 2) membership lookup -> owner
-  // 3) actor user lookup -> not super admin (ok, owner suffices)
-  // 4) existing workflow lookup -> none
+  // 2) existing workflow lookup -> none
   dbSelectMock
     .mockReturnValueOnce({ from: makeWhereChain([{ id: 'org_1' }]).from })
-    .mockReturnValueOnce({ from: makeWhereChain([{ role: 'owner' }]).from })
-    .mockReturnValueOnce({ from: makeWhereChain([{ isSuperAdmin: false }]).from })
     .mockReturnValueOnce({ from: makeWhereChain([]).from });
+  resolveOrganizationAccessMock.mockResolvedValue({
+    allowed: true,
+    isSuperAdmin: false,
+    role: 'owner',
+    membershipId: 'membership-1',
+  });
 }
 
 type InsertChain = { values: jest.Mock };
@@ -150,6 +157,7 @@ describe('applyWorkspaceSeed transactional behavior', () => {
     dbTransactionMock.mockReset();
     txInsertMock.mockReset();
     txSelectMock.mockReset();
+    resolveOrganizationAccessMock.mockReset();
   });
 
   it('inserts all entities through tx.insert and returns ids', async () => {
@@ -197,12 +205,13 @@ describe('applyWorkspaceSeed transactional behavior', () => {
   });
 
   it('forbids non-admin users', async () => {
-    // org found, membership is "member", actor not super admin.
-    dbSelectMock
-      .mockReturnValueOnce({ from: makeWhereChain([{ id: 'org_1' }]).from })
-      .mockReturnValueOnce({ from: makeWhereChain([{ role: 'member' }]).from })
-      .mockReturnValueOnce({ from: makeWhereChain([{ isSuperAdmin: false }]).from })
-      .mockReturnValueOnce({ from: makeWhereChain([]).from });
+    dbSelectMock.mockReturnValueOnce({ from: makeWhereChain([{ id: 'org_1' }]).from });
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: true,
+      isSuperAdmin: false,
+      role: 'member',
+      membershipId: 'membership-1',
+    });
 
     await expect(
       applyWorkspaceSeed({

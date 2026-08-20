@@ -147,6 +147,24 @@ jest.mock('@/auth', () => ({
   auth: jest.fn(),
 }));
 
+const mockAiFeatureEnabled = jest.fn();
+jest.mock('@/lib/ai/feature-gate', () => ({
+  isAiFeatureEnabled: () => mockAiFeatureEnabled(),
+  aiDisabledResponse: () => new Response(JSON.stringify({ error: 'Not found' }), { status: 404 }),
+}));
+
+const mockProductFeatureEnabled = jest.fn();
+jest.mock('@/lib/feature-flags', () => ({
+  PRODUCT_FEATURE_FLAGS: { AGENT_DISPATCH: 'agent_dispatch' },
+  isProductFeatureEnabled: (...args: unknown[]) => mockProductFeatureEnabled(...args),
+}));
+
+const mockResolveProjectCapabilityAccess = jest.fn();
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    mockResolveProjectCapabilityAccess(...args),
+}));
+
 const mockResolveLocalAgentRunner = jest.fn();
 const mockRunLocalAgentSession = jest.fn();
 const mockValidateAgentProviderEndpoint = jest.fn();
@@ -214,6 +232,7 @@ function seedHappyPath(opts: { hmacSecret: string }) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (authMock as unknown as jest.Mock).mockReset();
   fake.inserted = [];
   fake.updated = [];
   for (const k of Object.keys(fake.rows)) fake.rows[k] = [];
@@ -227,6 +246,12 @@ beforeEach(() => {
     Promise.resolve(new URL(value))
   );
   mockPostAgentProviderEndpoint.mockReset();
+  mockAiFeatureEnabled.mockResolvedValue(true);
+  mockProductFeatureEnabled.mockResolvedValue(true);
+  mockResolveProjectCapabilityAccess.mockResolvedValue({
+    canManage: true,
+    permissions: { canAssignIssues: true },
+  });
 });
 
 afterAll(() => {
@@ -251,6 +276,17 @@ function buildRequest(body: unknown): {
 }
 
 describe('POST /api/issues/[id]/dispatch-agent', () => {
+  it('returns 404 when agents are paused globally by the admin control plane', async () => {
+    mockAiFeatureEnabled.mockResolvedValueOnce(false);
+
+    const res = await dispatchHandler(buildRequest({ provider: 'cursor' }) as never, {
+      params: Promise.resolve({ issueId: 'issue_1' }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(mockResolveProjectCapabilityAccess).not.toHaveBeenCalled();
+  });
+
   it('returns 401 when unauthenticated', async () => {
     (authMock as unknown as jest.Mock).mockResolvedValueOnce(null);
     const res = await dispatchHandler(buildRequest({ provider: 'cursor' }) as never, {
@@ -272,6 +308,21 @@ describe('POST /api/issues/[id]/dispatch-agent', () => {
     expect(res.status).toBe(422);
     const body = await res.json();
     expect(body.error).toMatch(/not configured/i);
+  });
+
+  it('returns 404 when the admin rollout flag disables agent dispatch', async () => {
+    (authMock as unknown as jest.Mock).mockResolvedValue({
+      user: { id: 'user_caller' },
+    });
+    seedHappyPath({ hmacSecret: 'unused' });
+    mockProductFeatureEnabled.mockResolvedValueOnce(false);
+
+    const res = await dispatchHandler(buildRequest({ provider: 'cursor' }) as never, {
+      params: Promise.resolve({ issueId: 'issue_1' }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(mockProductFeatureEnabled).toHaveBeenCalledWith('agent_dispatch', 'org_1');
   });
 
   it('signs the outbound dispatch and stores an agent_sessions row', async () => {

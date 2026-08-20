@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  db,
-  sprints,
-  issues,
-  workflowStatuses,
-  projects,
-  projectMembers,
-  organizationMembers,
-  users,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  type ProjectRole,
-} from '@tasknebula/db';
+import { db, sprints, issues, workflowStatuses, projects } from '@tasknebula/db';
 import { eq, count, and, ne } from 'drizzle-orm';
 import { publishEvent } from '@/lib/realtime/events';
 import { runAutomations } from '@/lib/automation/evaluator';
 import { notifySprintEvent } from '@/lib/notifications/send-sprint-notification';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 // Granular permission check helper
 async function checkSprintPermission(
@@ -25,115 +13,23 @@ async function checkSprintPermission(
   projectId: string,
   action: 'view' | 'manage' | 'start' | 'complete' | 'delete'
 ): Promise<{ allowed: boolean; reason?: string; notFound?: boolean }> {
-  // Get user super admin status
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (user?.isSuperAdmin) {
-    return { allowed: true };
-  }
-
-  // Get project with organization
-  const [project] = await db
-    .select({
-      id: projects.id,
-      organizationId: projects.organizationId,
-    })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
-    return { allowed: false, reason: 'Project not found', notFound: true };
-  }
-
-  // Check organization membership
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  // Org roles with project:manage have full access
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
-    return { allowed: true };
-  }
-
-  // Get project membership with all permission columns
-  const [projectMember] = await db
-    .select()
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-
-  if (!projectMember) {
-    if (!orgMember) {
-      // Cross-org probe: report the sprint as not found so its existence
-      // is not leaked to other tenants.
-      return { allowed: false, reason: 'Sprint not found', notFound: true };
-    }
-    return { allowed: false, reason: 'Not a project member' };
+  const access = await resolveProjectCapabilityAccess(userId, projectId);
+  if (!access.project || !access.canRead) {
+    return { allowed: false, reason: 'Sprint not found', notFound: true };
   }
 
   if (action === 'view') {
     return { allowed: true };
   }
-
-  // Get role defaults
-  const roleDefaults =
-    ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
-  // Check specific permissions based on action
-  switch (action) {
-    case 'manage':
-      if (
-        resolveProjectMemberPermission(
-          projectMember.canManageSprints,
-          roleDefaults.canManageSprints
-        )
-      ) {
-        return { allowed: true };
-      }
-      return { allowed: false, reason: 'No permission to manage sprints' };
-
-    case 'start':
-      if (
-        resolveProjectMemberPermission(projectMember.canStartSprint, roleDefaults.canStartSprint)
-      ) {
-        return { allowed: true };
-      }
-      return { allowed: false, reason: 'No permission to start sprints' };
-
-    case 'complete':
-      if (
-        resolveProjectMemberPermission(
-          projectMember.canCompleteSprint,
-          roleDefaults.canCompleteSprint
-        )
-      ) {
-        return { allowed: true };
-      }
-      return { allowed: false, reason: 'No permission to complete sprints' };
-
-    case 'delete':
-      if (
-        resolveProjectMemberPermission(projectMember.canDeleteSprint, roleDefaults.canDeleteSprint)
-      ) {
-        return { allowed: true };
-      }
-      return { allowed: false, reason: 'No permission to delete sprints' };
-
-    default:
-      return { allowed: false, reason: 'Unknown action' };
-  }
+  const allowed = {
+    manage: access.permissions.canManageSprints,
+    start: access.permissions.canStartSprint,
+    complete: access.permissions.canCompleteSprint,
+    delete: access.permissions.canDeleteSprint,
+  }[action];
+  return allowed
+    ? { allowed: true }
+    : { allowed: false, reason: `No permission to ${action} sprints` };
 }
 
 // GET /api/sprints/[sprintId]

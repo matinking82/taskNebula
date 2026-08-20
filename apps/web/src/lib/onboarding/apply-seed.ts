@@ -10,7 +10,6 @@
 import {
   db,
   organizations,
-  organizationMembers,
   teams,
   teamMembers,
   projects,
@@ -19,7 +18,6 @@ import {
   workflowStatuses,
   sprints,
   issues,
-  users,
   ROLE_DEFAULT_PERMISSIONS,
   hasPermission as roleHasPermission,
   type ProjectRole,
@@ -27,6 +25,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { workspaceSeedSchema, type WorkspaceSeed } from './bootstrapper';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export class ApplySeedError extends Error {
   constructor(
@@ -78,23 +77,9 @@ export async function applyWorkspaceSeed(input: ApplySeedInput): Promise<ApplySe
   if (!org) {
     throw new ApplySeedError('not_found', 'Organization does not exist.');
   }
-  const [member] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.organizationId, input.organizationId),
-        eq(organizationMembers.userId, input.userId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  const [actor] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, input.userId))
-    .limit(1);
-  const canApply = roleHasPermission(member?.role || '', 'org:settings', actor?.isSuperAdmin);
+  const access = await resolveOrganizationAccess(input.userId, input.organizationId);
+  const canApply =
+    access.allowed && roleHasPermission(access.role || '', 'org:settings', access.isSuperAdmin);
   if (!canApply) {
     throw new ApplySeedError(
       'forbidden',

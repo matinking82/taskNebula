@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -129,25 +128,18 @@ export function AgentActivityPanel({
         promptOverride: promptOverride.trim() || undefined,
       });
       setPromptOverride('');
-    } catch (err) {
+    } catch {
       setError(t('agent.dispatch_failed'));
     }
   };
 
   return (
-    <section className="surface-card space-y-4 rounded-lg p-4 shadow-none">
+    <section className="border-border space-y-4 border-t pt-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 gap-3">
-          <span className="icon-tile icon-tile-accent-blue shrink-0">
-            <Bot className="h-3.5 w-3.5" />
-          </span>
+        <div className="flex min-w-0 gap-2.5">
+          <Bot className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-sm font-semibold">{t('agent.title')}</h3>
-              <Badge variant="outline" className="h-5 rounded-sm px-1.5 text-[10px]">
-                {t('agent.beta')}
-              </Badge>
-            </div>
+            <h3 className="truncate text-sm font-semibold">{t('agent.title')}</h3>
             <p className="text-muted-foreground text-xs">
               {assigneeName
                 ? t('agent.assignedTo', { name: assigneeName })
@@ -176,7 +168,7 @@ export function AgentActivityPanel({
         ) : null}
       </header>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <ul className="border-border divide-border divide-y border-y">
         {[
           { key: 'issueContext', icon: Workflow },
           { key: 'descriptionContext', icon: FileText },
@@ -184,46 +176,42 @@ export function AgentActivityPanel({
         ].map((item) => {
           const Icon = item.icon;
           return (
-            <div
-              key={item.key}
-              className="border-border/60 bg-surface/50 flex min-h-16 flex-col justify-between rounded-md border px-2.5 py-2"
-            >
+            <li key={item.key} className="flex min-h-9 items-center gap-2 py-2 text-xs">
               <Icon className="text-muted-foreground h-3.5 w-3.5" />
-              <span className="text-[11px] font-medium leading-tight">
-                {t(`agent.${item.key}`)}
-              </span>
-            </div>
+              <span className="min-w-0 flex-1 truncate">{t(`agent.${item.key}`)}</span>
+              <CheckCircle2 className="text-accent-emerald h-3.5 w-3.5" aria-hidden="true" />
+            </li>
           );
         })}
-      </div>
+      </ul>
 
       {latestSession ? (
-        <div className="bg-muted/30 grid gap-2 rounded-md border border-dashed p-3 text-xs">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-            <span className="text-muted-foreground">{t('agent.sessionStatus')}</span>
-            <span className="font-medium">{t(`agent.providers.${latestSession.provider}`)}</span>
+        <dl className="border-border divide-border divide-y border-y text-xs">
+          <div className="flex min-h-9 items-center justify-between gap-2 py-2">
+            <dt className="text-muted-foreground">{t('agent.sessionStatus')}</dt>
+            <dd className="font-medium">{t(`agent.providers.${latestSession.provider}`)}</dd>
           </div>
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-            <span className="text-muted-foreground">{t('agent.runner')}</span>
-            <span className="max-w-full truncate font-mono text-[11px] sm:max-w-[60%] sm:text-end">
+          <div className="flex min-h-9 items-center justify-between gap-2 py-2">
+            <dt className="text-muted-foreground">{t('agent.runner')}</dt>
+            <dd className="max-w-[65%] truncate text-end font-mono text-[11px]">
               {latestLocalRun?.command
                 ? t('agent.localRunner', { command: latestLocalRun.command })
                 : t('agent.webhookRunner')}
-            </span>
+            </dd>
           </div>
           {latestLocalRun?.status ? (
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-              <span className="text-muted-foreground">{t('agent.runnerStatus')}</span>
-              <span className="font-medium">{formatRunnerStatus(latestLocalRun.status)}</span>
+            <div className="flex min-h-9 items-center justify-between gap-2 py-2">
+              <dt className="text-muted-foreground">{t('agent.runnerStatus')}</dt>
+              <dd className="font-medium">{formatRunnerStatus(latestLocalRun.status)}</dd>
             </div>
           ) : null}
           {latestLocalRun?.exitCode !== null && latestLocalRun?.exitCode !== undefined ? (
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-              <span className="text-muted-foreground">{t('agent.exitCode')}</span>
-              <span className="font-mono text-[11px]">{latestLocalRun.exitCode}</span>
+            <div className="flex min-h-9 items-center justify-between gap-2 py-2">
+              <dt className="text-muted-foreground">{t('agent.exitCode')}</dt>
+              <dd className="font-mono text-[11px]">{latestLocalRun.exitCode}</dd>
             </div>
           ) : null}
-        </div>
+        </dl>
       ) : null}
 
       <div className="grid gap-2">
@@ -281,14 +269,14 @@ export function AgentActivityPanel({
         {sessions.length === 0 ? (
           <p className="text-muted-foreground text-xs">{t('agent.noSessions')}</p>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="border-border divide-border divide-y border-y">
             {sessions.slice(0, 4).map((session) => {
               const localRun = readLocalRun(session.payload);
               const Icon = stateIcon(session.state);
               return (
                 <li
                   key={session.id}
-                  className="bg-background/70 border-border/50 flex flex-col gap-2 rounded-md border px-2 py-2 sm:flex-row sm:items-start sm:justify-between"
+                  className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-start sm:justify-between"
                 >
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-1.5">

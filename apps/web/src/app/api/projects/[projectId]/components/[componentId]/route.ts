@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, components, organizationMembers } from '@tasknebula/db';
+import { db, components } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { eq, and, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { resolveProjectByIdOrKey } from '@/lib/projects/server';
-import { canManageProject, canReadProject } from '@/lib/auth/access-control';
+import {
+  canManageProject,
+  canReadProject,
+  resolveOrganizationAccess,
+} from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,18 +107,10 @@ export async function PATCH(
     const body = updateComponentSchema.parse(await request.json());
 
     if (body.leadId) {
-      const [leadMember] = await db
-        .select({ id: organizationMembers.id })
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.userId, body.leadId),
-            eq(organizationMembers.organizationId, project.organizationId),
-            eq(organizationMembers.status, 'active')
-          )
-        )
-        .limit(1);
-      if (!leadMember) {
+      const leadAccess = await resolveOrganizationAccess(body.leadId, project.organizationId, {
+        allowSuperAdmin: false,
+      });
+      if (!leadAccess.allowed) {
         return NextResponse.json(
           { error: 'Component lead must be an active member of the organization' },
           { status: 400 }

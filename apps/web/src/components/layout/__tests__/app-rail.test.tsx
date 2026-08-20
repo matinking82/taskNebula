@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { AppRail } from '../app-rail';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -84,8 +85,27 @@ describe('AppRail', () => {
     render(<AppRail />);
 
     const myIssues = screen.getByRole('link', { name: /my issues/i });
-    expect(myIssues).toHaveClass('h-10', 'w-10', 'justify-center');
+    expect(myIssues).toHaveClass('h-9', 'w-9', 'justify-center');
     expect(screen.getByText('My Issues')).toHaveClass('sr-only');
+  });
+
+  it('exposes the context-panel focus toggle without changing global destinations', async () => {
+    const user = userEvent.setup();
+    const onToggleContext = jest.fn();
+
+    const { rerender } = render(<AppRail onToggleContext={onToggleContext} />);
+
+    const collapseButton = screen.getByRole('button', { name: /collapse/i });
+    expect(collapseButton).toHaveAttribute('aria-expanded', 'true');
+    await user.click(collapseButton);
+    expect(onToggleContext).toHaveBeenCalledTimes(1);
+
+    rerender(<AppRail contextCollapsed onToggleContext={onToggleContext} />);
+    expect(screen.getByRole('button', { name: /expand/i })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    expect(screen.getByRole('link', { name: /my issues/i })).toBeInTheDocument();
   });
 
   it('marks My Issues active under locale-prefixed issue pages', () => {

@@ -11,9 +11,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { hasPermission } from '@/lib/auth/permissions';
-import { db, auditLogSinks, eq } from '@tasknebula/db';
-import { deliverToSink } from '@/lib/audit/sink-dispatcher';
+import { auditLogSinks, db, eq, systemAuditLogs } from '@tasknebula/db';
+import { deliverToSink, persistSinkOutcome } from '@/lib/audit/sink-dispatcher';
 import type { SinkType } from '@/lib/audit/sink-dispatcher';
+import { createId } from '@paralleldrive/cuid2';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,20 +27,13 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const { sinkId } = await params;
-  const [sink] = await db
-    .select()
-    .from(auditLogSinks)
-    .where(eq(auditLogSinks.id, sinkId))
-    .limit(1);
+  const [sink] = await db.select().from(auditLogSinks).where(eq(auditLogSinks.id, sinkId)).limit(1);
   if (!sink) {
     return NextResponse.json({ error: 'Sink not found' }, { status: 404 });
   }
   const canManage = await hasPermission(sink.workspaceId, 'org:settings');
   if (!canManage) {
-    return NextResponse.json(
-      { error: 'Insufficient permissions' },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
   const result = await deliverToSink(
@@ -67,6 +61,52 @@ export async function POST(
       createdAt: new Date().toISOString(),
     }
   );
+  try {
+    await db.transaction(async (tx) => {
+      await persistSinkOutcome(
+        {
+          id: sink.id,
+          workspaceId: sink.workspaceId,
+          type: sink.type as SinkType,
+          name: sink.name,
+          config: (sink.config as Record<string, unknown>) ?? {},
+          signingSecret: sink.signingSecret,
+          successCount: sink.successCount,
+          failureCount: sink.failureCount,
+        },
+        result,
+        tx
+      );
+      await tx.insert(systemAuditLogs).values({
+        id: createId(),
+        userId: session.user.id,
+        action: result.ok ? 'audit_sink.test_ok' : 'audit_sink.test_failed',
+        resourceType: 'audit_log_sink',
+        resourceId: sink.id,
+        organizationId: sink.workspaceId,
+        metadata: {
+          type: sink.type,
+          statusCode: result.statusCode,
+          durationMs: result.durationMs,
+          error: result.error,
+        },
+      });
+    });
+  } catch (error) {
+    console.error('[audit-sink-test] delivery outcome could not be recorded', {
+      sinkId: sink.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      {
+        error: 'audit_sink_test_outcome_unrecorded',
+        code: 'audit_sink_test_outcome_unrecorded',
+        deliveryUncertain: true,
+        result,
+      },
+      { status: 503 }
+    );
+  }
 
-  return NextResponse.json({ result });
+  return NextResponse.json({ result }, { status: result.ok ? 200 : 502 });
 }

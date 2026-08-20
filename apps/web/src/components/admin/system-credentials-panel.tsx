@@ -45,6 +45,8 @@ type StorageResponse = {
     uploadsDir: string;
     s3Bucket: string;
     s3Region: string;
+    s3Endpoint: string;
+    s3ForcePathStyle: boolean;
     s3AccessKey: string;
     s3SecretKeyPreview: string | null;
     updatedAt: string | null;
@@ -52,6 +54,13 @@ type StorageResponse = {
     configured: boolean;
   };
 };
+
+class StorageRequestError extends Error {
+  constructor(readonly code?: string) {
+    super(code);
+    this.name = 'StorageRequestError';
+  }
+}
 
 type RegistrationMode = 'allow_registration' | 'invite_only' | 'admin_created_only';
 
@@ -505,6 +514,14 @@ function LivekitSection() {
     onSuccess: () => {
       setApiSecret('');
       queryClient.invalidateQueries({ queryKey: ['admin', 'system', 'livekit'] });
+      queryClient.invalidateQueries({
+        queryKey: ['admin-realtime-health'],
+        refetchType: 'all',
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['workspace-communications'],
+        refetchType: 'all',
+      });
       queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
       toast({ title: t('systemCredentials.livekit.saved') });
     },
@@ -525,25 +542,26 @@ function LivekitSection() {
         error?: string;
         source?: string;
         roomName?: string;
+        activeRoomCount?: number;
       };
       if (!res.ok || !payload.success) {
-        throw new Error(payload.error || t('systemCredentials.livekit.testError'));
+        throw new Error(payload.error || t('systemCredentials.livekit.connectionTestError'));
       }
       return payload;
     },
     onSuccess: (result) => {
       toast({
-        title: t('systemCredentials.livekit.tokenMinted'),
-        description: t('systemCredentials.livekit.tokenMintedDescription', {
-          roomName: result.roomName ?? '',
+        title: t('systemCredentials.livekit.connectionVerified'),
+        description: t('systemCredentials.livekit.connectionVerifiedDescription', {
           source: result.source ?? '',
+          roomCount: result.activeRoomCount ?? 0,
         }),
       });
     },
     onError: () => {
       toast({
         title: t('systemCredentials.testFailed'),
-        description: t('systemCredentials.livekit.testError'),
+        description: t('systemCredentials.livekit.connectionTestError'),
         variant: 'destructive',
       });
     },
@@ -627,7 +645,7 @@ function LivekitSection() {
           title={
             !stored?.configured
               ? t('systemCredentials.livekit.saveFirst')
-              : t('systemCredentials.livekit.mintTitle')
+              : t('systemCredentials.livekit.verifyTitle')
           }
         >
           {testMutation.isPending ? (
@@ -635,7 +653,7 @@ function LivekitSection() {
           ) : (
             <Radio className="me-1.5 h-3.5 w-3.5" />
           )}
-          {t('systemCredentials.livekit.mintTest')}
+          {t('systemCredentials.livekit.verify')}
         </Button>
       </div>
     </div>
@@ -664,6 +682,8 @@ function StorageSection() {
   const [uploadsDir, setUploadsDir] = useState('');
   const [s3Bucket, setS3Bucket] = useState('');
   const [s3Region, setS3Region] = useState('');
+  const [s3Endpoint, setS3Endpoint] = useState('');
+  const [s3ForcePathStyle, setS3ForcePathStyle] = useState(false);
   const [s3AccessKey, setS3AccessKey] = useState('');
   const [s3SecretKey, setS3SecretKey] = useState('');
 
@@ -672,6 +692,8 @@ function StorageSection() {
     setUploadsDir(data.storage.uploadsDir);
     setS3Bucket(data.storage.s3Bucket);
     setS3Region(data.storage.s3Region);
+    setS3Endpoint(data.storage.s3Endpoint);
+    setS3ForcePathStyle(data.storage.s3ForcePathStyle);
     setS3AccessKey(data.storage.s3AccessKey);
   }, [data?.storage]);
 
@@ -684,14 +706,17 @@ function StorageSection() {
           uploadsDir: uploadsDir.trim(),
           s3Bucket: s3Bucket.trim(),
           s3Region: s3Region.trim(),
+          s3Endpoint: s3Endpoint.trim(),
+          s3ForcePathStyle,
           s3AccessKey: s3AccessKey.trim(),
           s3SecretKey: s3SecretKey.trim() ? s3SecretKey : undefined,
         }),
       });
-      const payload = await res
-        .json()
-        .catch(() => ({ error: t('systemCredentials.storage.saveError') }));
-      if (!res.ok) throw new Error(payload.error || t('systemCredentials.storage.saveError'));
+      const payload = (await res.json().catch(() => ({}))) as StorageResponse & {
+        error?: string;
+        code?: string;
+      };
+      if (!res.ok) throw new StorageRequestError(payload.code);
       return payload as StorageResponse;
     },
     onSuccess: () => {
@@ -700,10 +725,48 @@ function StorageSection() {
       queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
       toast({ title: t('systemCredentials.storage.saved') });
     },
-    onError: () => {
+    onError: (error) => {
+      const description =
+        error instanceof StorageRequestError && error.code === 'storage_backend_change_blocked'
+          ? t('systemCredentials.storage.backendChangeBlocked')
+          : error instanceof StorageRequestError && error.code === 'storage_s3_config_incomplete'
+            ? t('systemCredentials.storage.s3Incomplete')
+            : error instanceof StorageRequestError && error.code === 'storage_local_root_forbidden'
+              ? t('systemCredentials.storage.localRootForbidden')
+              : t('systemCredentials.storage.saveError');
       toast({
         title: t('systemCredentials.saveFailed'),
-        description: t('systemCredentials.storage.loadError'),
+        description,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const testMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/admin/system/storage/test', { method: 'POST' });
+      const payload = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        source?: string;
+        mode?: string;
+      };
+      if (!res.ok || !payload.success) throw new Error('storage_test_failed');
+      return payload;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+      toast({
+        title: t('systemCredentials.storage.testPassed'),
+        description: t('systemCredentials.storage.testPassedDescription', {
+          mode: result.mode ?? '',
+          source: result.source ?? '',
+        }),
+      });
+    },
+    onError: () => {
+      toast({
+        title: t('systemCredentials.testFailed'),
+        description: t('systemCredentials.storage.testError'),
         variant: 'destructive',
       });
     },
@@ -746,6 +809,29 @@ function StorageSection() {
               placeholder={t('systemCredentials.storage.s3RegionPlaceholder')}
             />
           </Field>
+          <Field label={t('systemCredentials.storage.s3Endpoint')}>
+            <Input
+              type="url"
+              value={s3Endpoint}
+              onChange={(e) => setS3Endpoint(e.target.value)}
+              placeholder={t('systemCredentials.storage.s3EndpointPlaceholder')}
+            />
+          </Field>
+          <div className="surface-subtle flex items-center justify-between gap-4 rounded-md p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="storage-s3-force-path-style">
+                {t('systemCredentials.storage.s3ForcePathStyle')}
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                {t('systemCredentials.storage.s3ForcePathStyleDescription')}
+              </p>
+            </div>
+            <Switch
+              id="storage-s3-force-path-style"
+              checked={s3ForcePathStyle}
+              onCheckedChange={setS3ForcePathStyle}
+            />
+          </div>
           <Field label={t('systemCredentials.storage.s3AccessKey')}>
             <Input
               value={s3AccessKey}
@@ -786,6 +872,24 @@ function StorageSection() {
             <Save className="me-1.5 h-3.5 w-3.5" />
           )}
           {t('systemCredentials.save')}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => testMutation.mutate()}
+          disabled={testMutation.isPending || !stored?.configured}
+          title={
+            !stored?.configured
+              ? t('systemCredentials.storage.saveFirst')
+              : t('systemCredentials.storage.testTitle')
+          }
+        >
+          {testMutation.isPending ? (
+            <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <HardDrive className="me-1.5 h-3.5 w-3.5" />
+          )}
+          {t('systemCredentials.storage.test')}
         </Button>
       </div>
     </div>

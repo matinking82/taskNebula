@@ -18,6 +18,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { PageFrame } from '@/components/ui/page-frame';
+import { PageHeader } from '@/components/ui/page-header';
 import { useOrganization } from '@/lib/hooks/use-organization';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -101,13 +103,16 @@ function InitiativeRow({ node, depth }: { node: InitiativeNode; depth: number })
     <div className="border-border border-b last:border-b-0">
       <div
         className="hover:bg-accent/40 flex items-center gap-3 px-3 py-2.5 transition-colors"
-        style={{ paddingLeft: `${depth * 20 + 12}px` }}
+        style={{ paddingInlineStart: `${depth * 20 + 12}px` }}
       >
         <button
           type="button"
           aria-label={expanded ? t('initiative_collapse') : t('initiative_expand')}
           onClick={() => setExpanded((v) => !v)}
-          className={cn('text-muted-foreground h-4 w-4 shrink-0', !hasChildren && 'invisible')}
+          className={cn(
+            'text-muted-foreground focus-visible:ring-ring -m-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm focus-visible:outline-none focus-visible:ring-2',
+            !hasChildren && 'invisible'
+          )}
         >
           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
@@ -130,10 +135,10 @@ function InitiativeRow({ node, depth }: { node: InitiativeNode; depth: number })
             aria-label={`${node.name} — ${rollup?.percent ?? 0}%`}
           />
         </div>
-        <div className="text-muted-foreground w-12 shrink-0 text-right font-mono text-xs tabular-nums">
+        <div className="text-muted-foreground w-12 shrink-0 text-end font-mono text-xs tabular-nums">
           {rollup ? `${rollup.percent}%` : '—'}
         </div>
-        <div className="text-muted-foreground w-24 shrink-0 text-right text-xs">
+        <div className="text-muted-foreground w-24 shrink-0 text-end text-xs">
           {formattedTarget}
         </div>
       </div>
@@ -218,27 +223,25 @@ export function InitiativesClient() {
   }
 
   return (
-    <div className="animate-fade-in flex h-full flex-col">
-      <div className="border-border bg-background border-b px-6 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <span className="kicker">{t('initiatives_kicker')}</span>
-            <h1 className="text-2xl font-semibold tracking-tight">{t('initiatives_title')}</h1>
-            <p className="text-muted-foreground text-sm">{t('initiatives_subtitle')}</p>
-          </div>
-          {canCreate ? (
-            <Button size="sm" className="shrink-0" onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('initiatives_new')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
+    <>
+      <PageFrame className="animate-fade-in" contentClassName="max-w-7xl">
+        <PageHeader
+          kicker={t('initiatives_kicker')}
+          title={t('initiatives_title')}
+          description={t('initiatives_subtitle')}
+          actions={
+            canCreate ? (
+              <Button size="sm" className="shrink-0" onClick={() => setIsCreateOpen(true)}>
+                <Plus className="me-2 h-4 w-4" />
+                {t('initiatives_new')}
+              </Button>
+            ) : null
+          }
+        />
 
-      <div className="flex-1 overflow-auto px-6 py-6">
         {isLoading ? (
           <div className="surface-card text-muted-foreground flex items-center justify-center py-12 shadow-none">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="me-2 h-4 w-4 animate-spin" />
             {t('initiatives_loading')}
           </div>
         ) : isEmpty ? (
@@ -252,7 +255,7 @@ export function InitiativesClient() {
             </div>
             {canCreate ? (
               <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 {t('initiatives_new')}
               </Button>
             ) : (
@@ -271,8 +274,8 @@ export function InitiativesClient() {
                 <div className="flex-1">{t('initiatives_col_name')}</div>
                 <div className="w-[68px] shrink-0">{t('initiatives_col_status')}</div>
                 <div className="w-40 shrink-0">{t('initiatives_col_progress')}</div>
-                <div className="w-12 shrink-0 text-right">{t('initiatives_col_percent')}</div>
-                <div className="w-24 shrink-0 text-right">{t('initiatives_col_target')}</div>
+                <div className="w-12 shrink-0 text-end">{t('initiatives_col_percent')}</div>
+                <div className="w-24 shrink-0 text-end">{t('initiatives_col_target')}</div>
               </div>
               {data!.initiatives.map((node) => (
                 <InitiativeRow key={node.id} node={node} depth={0} />
@@ -280,7 +283,7 @@ export function InitiativesClient() {
             </div>
           </section>
         )}
-      </div>
+      </PageFrame>
 
       <Dialog
         open={isCreateOpen}
@@ -329,6 +332,6 @@ export function InitiativesClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

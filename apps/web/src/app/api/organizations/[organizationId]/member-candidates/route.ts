@@ -78,7 +78,7 @@ export async function GET(
       .where(eq(organizationMembers.organizationId, organizationId));
 
     const workspaceCandidates = orgMembers
-      .filter((member) => member.memberStatus === 'active')
+      .filter((member) => member.memberStatus === 'active' && member.status === 'active')
       .filter((member) => !existingProjectUserIds.has(member.id))
       .map((member) => ({
         id: member.id,

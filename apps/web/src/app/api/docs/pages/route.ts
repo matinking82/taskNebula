@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     let resolvedSpaceId = spaceId;
 
     if (!resolvedSpaceId && projectIdParam) {
-      const projectId = await resolveProjectId(projectIdParam);
+      const projectId = await resolveProjectId(projectIdParam, session.user.id);
       if (!projectId) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
       }
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
       projectId = access.projectId;
       permissions = access.permissions;
     } else if (projectId) {
-      const resolvedProjectId = await resolveProjectId(projectId);
+      const resolvedProjectId = await resolveProjectId(projectId, session.user.id);
       if (!resolvedProjectId) {
         return NextResponse.json({ error: 'Project not found' }, { status: 404 });
       }

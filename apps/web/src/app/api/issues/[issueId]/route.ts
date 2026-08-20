@@ -11,12 +11,6 @@ import {
   workflowStatuses,
   projects,
   sprints,
-  projectMembers,
-  organizationMembers,
-  users,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  type ProjectRole,
 } from '@tasknebula/db';
 import { eq, and } from 'drizzle-orm';
 import { publishEvent } from '@/lib/realtime/events';
@@ -30,7 +24,8 @@ import {
   stripAgentPolicyMarker,
 } from '@/lib/agent-policy/guard';
 import { apiActorCanAccessOrganization, resolveApiActor } from '@/lib/auth/api-actor';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 import {
   applyPreparedIssueStatusTransition,
   isWorkflowTransitionError,
@@ -61,67 +56,14 @@ async function checkIssuePermission(
   action: IssueAction,
   issueReporterId?: string | null
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // Get user super admin status
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (user?.isSuperAdmin) {
-    return { allowed: true };
-  }
-
-  // Get project with organization
-  const [project] = await db
-    .select({
-      id: projects.id,
-      organizationId: projects.organizationId,
-    })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
+  const access = await resolveProjectCapabilityAccess(userId, projectId);
+  if (!access.project) {
     return { allowed: false, reason: 'Project not found' };
   }
-
-  // Check organization membership
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  // Org roles with project:manage have full access
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
-    return { allowed: true };
-  }
-  if (!orgMember) {
-    return { allowed: false, reason: 'Not an active organization member' };
-  }
-
-  // Get project membership with all permission columns
-  const [projectMember] = await db
-    .select()
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-
-  if (!projectMember) {
-    return { allowed: false, reason: 'Not a project member' };
-  }
-
-  // Get role defaults
-  const roleDefaults =
-    ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
+  if (!access.canRead) return { allowed: false, reason: 'Project access denied' };
+  if (access.canManage) return { allowed: true };
   const isOwnIssue = issueReporterId === userId;
+  const permissions = access.permissions;
 
   // Check specific permissions based on action
   switch (action) {
@@ -130,80 +72,44 @@ async function checkIssuePermission(
 
     case 'edit':
       // Check if can edit all issues or own issues
-      if (resolveProjectMemberPermission(projectMember.canEditIssues, roleDefaults.canEditIssues)) {
-        return { allowed: true };
-      }
-      if (
-        isOwnIssue &&
-        resolveProjectMemberPermission(
-          projectMember.canEditOwnIssues,
-          roleDefaults.canEditOwnIssues
-        )
-      ) {
+      if (permissions.canEditIssues || (isOwnIssue && permissions.canEditOwnIssues)) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to edit issues' };
 
     case 'delete':
       // Check if can delete all issues or own issues
-      if (
-        resolveProjectMemberPermission(projectMember.canDeleteIssues, roleDefaults.canDeleteIssues)
-      ) {
-        return { allowed: true };
-      }
-      if (
-        isOwnIssue &&
-        resolveProjectMemberPermission(
-          projectMember.canDeleteOwnIssues,
-          roleDefaults.canDeleteOwnIssues
-        )
-      ) {
+      if (permissions.canDeleteIssues || (isOwnIssue && permissions.canDeleteOwnIssues)) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to delete issues' };
 
     case 'assign':
-      if (
-        resolveProjectMemberPermission(projectMember.canAssignIssues, roleDefaults.canAssignIssues)
-      ) {
+      if (permissions.canAssignIssues) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to assign issues' };
 
     case 'transition':
-      if (
-        resolveProjectMemberPermission(
-          projectMember.canTransitionIssues,
-          roleDefaults.canTransitionIssues
-        )
-      ) {
+      if (permissions.canTransitionIssues) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to transition issues' };
 
     case 'schedule':
-      if (
-        resolveProjectMemberPermission(
-          projectMember.canScheduleIssues,
-          roleDefaults.canScheduleIssues
-        )
-      ) {
+      if (permissions.canScheduleIssues) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to schedule issues' };
 
     case 'close':
-      if (
-        resolveProjectMemberPermission(projectMember.canCloseIssues, roleDefaults.canCloseIssues)
-      ) {
+      if (permissions.canCloseIssues) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to close issues' };
 
     case 'reopen':
-      if (
-        resolveProjectMemberPermission(projectMember.canReopenIssues, roleDefaults.canReopenIssues)
-      ) {
+      if (permissions.canReopenIssues) {
         return { allowed: true };
       }
       return { allowed: false, reason: 'No permission to reopen issues' };
@@ -417,18 +323,12 @@ export const PATCH = withValidation({
     }
 
     if (issueInput.assigneeId) {
-      const [assigneeMembership] = await db
-        .select({ userId: organizationMembers.userId })
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.userId, issueInput.assigneeId),
-            eq(organizationMembers.organizationId, currentIssue.organizationId),
-            eq(organizationMembers.status, 'active')
-          )
-        )
-        .limit(1);
-      if (!assigneeMembership) {
+      const assigneeAccess = await resolveOrganizationAccess(
+        issueInput.assigneeId,
+        currentIssue.organizationId,
+        { allowSuperAdmin: false }
+      );
+      if (!assigneeAccess.allowed) {
         return NextResponse.json({ error: 'invalid_assignee' }, { status: 400 });
       }
     }

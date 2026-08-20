@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, and, eq } from '@tasknebula/db';
+import { auditLogs, db, and, eq, sql } from '@tasknebula/db';
 import { integrationConnections } from '@tasknebula/db/src/schema/integration-connections';
 import { asTokenEnvelope, decryptToken } from '@/lib/integrations/token-crypto';
 import { hasPermission } from '@/lib/auth/permissions';
@@ -34,41 +34,59 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const [connection] = await db
-    .select()
-    .from(integrationConnections)
-    .where(
-      and(
-        eq(integrationConnections.organizationId, organizationId),
-        eq(integrationConnections.provider, 'slack')
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`slack-organization:${organizationId}`}))`
+    );
+    const [connection] = await tx
+      .select()
+      .from(integrationConnections)
+      .where(
+        and(
+          eq(integrationConnections.organizationId, organizationId),
+          eq(integrationConnections.provider, 'slack')
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
+    if (!connection) return { alreadyDisconnected: true, revokeSucceeded: null };
 
-  if (!connection) {
-    // Nothing to delete — treat as idempotent success.
-    return NextResponse.json({ ok: true, alreadyDisconnected: true });
-  }
-
-  // Best-effort upstream revoke.
-  const envelope = asTokenEnvelope(connection.accessTokenEnc);
-  if (envelope) {
-    try {
-      const token = decryptToken(envelope);
-      await fetch('https://slack.com/api/auth.revoke', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Bearer ${token}`,
-        },
-        body: new URLSearchParams({ token }).toString(),
-      });
-    } catch (err) {
-      console.warn('Slack auth.revoke failed (ignored):', err);
+    let revokeSucceeded: boolean | null = null;
+    const envelope = asTokenEnvelope(connection.accessTokenEnc);
+    if (envelope) {
+      try {
+        const token = decryptToken(envelope);
+        const response = await fetch('https://slack.com/api/auth.revoke', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Bearer ${token}`,
+          },
+          body: new URLSearchParams({ token }).toString(),
+          signal: AbortSignal.timeout(5_000),
+        });
+        const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
+        revokeSucceeded = response.ok && payload?.ok === true;
+      } catch (err) {
+        revokeSucceeded = false;
+        console.warn('Slack auth.revoke failed:', err);
+      }
     }
-  }
 
-  await db.delete(integrationConnections).where(eq(integrationConnections.id, connection.id));
+    await tx.delete(integrationConnections).where(eq(integrationConnections.id, connection.id));
+    await tx.insert(auditLogs).values({
+      userId: session.user.id,
+      organizationId,
+      action: 'organization.updated',
+      resourceType: 'integration_connection',
+      resourceId: connection.id,
+      metadata: {
+        kind: 'slack_disconnected',
+        workspaceId: connection.externalAccountId,
+        revokeSucceeded,
+      },
+    });
+    return { alreadyDisconnected: false, revokeSucceeded };
+  });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, ...result });
 }

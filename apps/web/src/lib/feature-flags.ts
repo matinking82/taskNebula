@@ -1,16 +1,26 @@
 import { db, featureFlags, organizations } from '@tasknebula/db';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+
+export const PRODUCT_FEATURE_FLAGS = {
+  AI_ISSUE_DRAFTING: 'ai_issue_drafting',
+  AI_MULTI_ISSUE_DRAFTING: 'ai_multi_issue_drafting',
+  AI_ISSUE_ASSIST: 'ai_issue_assist',
+  AGENT_DISPATCH: 'agent_dispatch',
+} as const;
+
+export type ProductFeatureFlag = (typeof PRODUCT_FEATURE_FLAGS)[keyof typeof PRODUCT_FEATURE_FLAGS];
 
 /**
  * Check if a feature is enabled for a specific organization
- * 
+ *
  * @param featureKey - The unique key of the feature flag
  * @param organizationId - The organization ID to check
  * @returns true if the feature is enabled, false otherwise
  */
 export async function isFeatureEnabled(
   featureKey: string,
-  organizationId: string
+  organizationId: string,
+  options: { defaultWhenMissing?: boolean } = {}
 ): Promise<boolean> {
   try {
     // Get the feature flag
@@ -21,9 +31,8 @@ export async function isFeatureEnabled(
       .limit(1);
 
     // If flag doesn't exist or is disabled globally, return false
-    if (!flag || !flag.isEnabled) {
-      return false;
-    }
+    if (!flag) return options.defaultWhenMissing === true;
+    if (!flag.isEnabled) return false;
 
     // Get organization details
     const [org] = await db
@@ -32,7 +41,7 @@ export async function isFeatureEnabled(
       .where(eq(organizations.id, organizationId))
       .limit(1);
 
-    if (!org) {
+    if (!org || org.status === 'suspended') {
       return false;
     }
 
@@ -70,20 +79,27 @@ export async function isFeatureEnabled(
 }
 
 /**
+ * Product-owned flags preserve the behavior that existed before the flag was
+ * introduced, while a configured flag becomes an immediate admin-controlled
+ * rollout gate. Database failures still fail closed in `isFeatureEnabled`.
+ */
+export async function isProductFeatureEnabled(
+  featureKey: ProductFeatureFlag,
+  organizationId: string
+): Promise<boolean> {
+  return isFeatureEnabled(featureKey, organizationId, { defaultWhenMissing: true });
+}
+
+/**
  * Get all enabled features for an organization
- * 
+ *
  * @param organizationId - The organization ID
  * @returns Array of enabled feature keys
  */
-export async function getEnabledFeatures(
-  organizationId: string
-): Promise<string[]> {
+export async function getEnabledFeatures(organizationId: string): Promise<string[]> {
   try {
     // Get all enabled feature flags
-    const flags = await db
-      .select()
-      .from(featureFlags)
-      .where(eq(featureFlags.isEnabled, true));
+    const flags = await db.select().from(featureFlags).where(eq(featureFlags.isEnabled, true));
 
     // Get organization details
     const [org] = await db
@@ -92,7 +108,7 @@ export async function getEnabledFeatures(
       .where(eq(organizations.id, organizationId))
       .limit(1);
 
-    if (!org) {
+    if (!org || org.status === 'suspended') {
       return [];
     }
 
@@ -141,9 +157,8 @@ function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return Math.abs(hash);
 }
-

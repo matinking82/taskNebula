@@ -49,18 +49,21 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const previous = await getRegistrationPolicy();
-  const next = await upsertRegistrationPolicy(parsed.data.mode, authz.userId);
+  const next = await db.transaction(async (tx) => {
+    const previous = await getRegistrationPolicy(tx);
+    const saved = await upsertRegistrationPolicy(parsed.data.mode, authz.userId, tx);
 
-  await db.insert(systemAuditLogs).values({
-    id: createId(),
-    userId: authz.userId,
-    action: 'system.registration_policy_updated',
-    resourceType: 'system_setting',
-    resourceId: REGISTRATION_POLICY_KEY,
-    changes: {
-      mode: { from: previous.mode, to: next.mode },
-    },
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: authz.userId,
+      action: 'system.registration_policy_updated',
+      resourceType: 'system_setting',
+      resourceId: REGISTRATION_POLICY_KEY,
+      changes: {
+        mode: { from: previous.mode, to: saved.mode },
+      },
+    });
+    return saved;
   });
 
   return NextResponse.json({ registration: next });

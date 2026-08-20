@@ -22,11 +22,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { sql } from 'drizzle-orm';
+import crypto from 'node:crypto';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
-import { db, orgTokenBudgets } from '@tasknebula/db';
+import { db, organizations, orgTokenBudgets, systemAuditLogs } from '@tasknebula/db';
 import { eq } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,24 +38,31 @@ const bodySchema = z.object({
 
 function startOfNextUtcDay(): Date {
   const now = new Date();
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
-  );
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 }
 
-async function authorize(request: NextRequest): Promise<boolean> {
+function secretsMatch(provided: string, expected: string) {
+  const left = Buffer.from(provided);
+  const right = Buffer.from(expected);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+async function authorize(request: NextRequest) {
   // Cron secret path — kubernetes/external scheduler.
   const cronHeader = request.headers.get('x-cron-secret');
   const expected = process.env.CRON_SECRET;
-  if (expected && cronHeader && cronHeader === expected) return true;
+  if (expected && cronHeader && secretsMatch(cronHeader, expected)) {
+    return { userId: 'system:cron', actorKind: 'cron' as const };
+  }
 
   const session = await auth();
-  if (!session?.user?.id) return false;
-  return isSuperAdmin();
+  if (!session?.user?.id || !(await isSuperAdmin())) return null;
+  return { userId: session.user.id, actorKind: 'admin' as const };
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await authorize(request))) {
+  const actor = await authorize(request);
+  if (!actor) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -63,10 +71,7 @@ export async function POST(request: NextRequest) {
     body = bodySchema.parse(await request.json().catch(() => ({})));
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: err.errors },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid input', details: err.errors }, { status: 400 });
     }
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
@@ -75,42 +80,59 @@ export async function POST(request: NextRequest) {
   const monthlyReset = body.scope === 'monthly' || body.scope === 'both';
   const nextResetsAt = startOfNextUtcDay();
 
-  const setClauses: string[] = [];
+  const updates: Record<string, unknown> = {
+    periodResetsAt: nextResetsAt,
+    updatedAt: new Date(),
+  };
   if (dailyReset) {
-    setClauses.push(
-      `daily_used_tokens = 0`,
-      `daily_used_cost = '0'::numeric`
-    );
+    updates.dailyUsedTokens = 0;
+    updates.dailyUsedCost = '0';
   }
   if (monthlyReset) {
-    setClauses.push(
-      `monthly_used_tokens = 0`,
-      `monthly_used_cost = '0'::numeric`
-    );
+    updates.monthlyUsedTokens = 0;
+    updates.monthlyUsedCost = '0';
   }
-  setClauses.push(`period_resets_at = ${nextResetsAt.getTime()}`);
-  setClauses.push(`updated_at = now()`);
 
-  // We don't try to do this in raw SQL because Drizzle's sql template
-  // composition is the safer route for the timestamp param. The query
-  // is small so two writes is fine.
   if (body.organizationId) {
-    const updates: Record<string, unknown> = {
-      periodResetsAt: nextResetsAt,
-      updatedAt: new Date(),
-    };
-    if (dailyReset) {
-      updates.dailyUsedTokens = 0;
-      updates.dailyUsedCost = '0';
+    const result = await db.transaction(async (tx) => {
+      const [organization] = await tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.id, body.organizationId!))
+        .limit(1);
+      if (!organization) return { kind: 'not_found' as const };
+
+      await tx
+        .insert(orgTokenBudgets)
+        .values({
+          organizationId: body.organizationId!,
+          periodResetsAt: nextResetsAt,
+          dailyUsedTokens: 0,
+          dailyUsedCost: '0',
+          monthlyUsedTokens: 0,
+          monthlyUsedCost: '0',
+        })
+        .onConflictDoUpdate({
+          target: orgTokenBudgets.organizationId,
+          set: updates,
+        });
+
+      await tx.insert(systemAuditLogs).values({
+        id: createId(),
+        userId: actor.userId,
+        action: 'ai_usage.counters_reset',
+        resourceType: 'organization',
+        resourceId: body.organizationId!,
+        organizationId: body.organizationId!,
+        metadata: { scope: body.scope, actorKind: actor.actorKind, affectedOrganizations: 1 },
+      });
+      return { kind: 'reset' as const };
+    });
+
+    if (result.kind === 'not_found') {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
-    if (monthlyReset) {
-      updates.monthlyUsedTokens = 0;
-      updates.monthlyUsedCost = '0';
-    }
-    await db
-      .update(orgTokenBudgets)
-      .set(updates)
-      .where(eq(orgTokenBudgets.organizationId, body.organizationId));
+
     return NextResponse.json({
       ok: true,
       scope: body.scope,
@@ -118,14 +140,25 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  await db.execute(sql`
-    UPDATE ${orgTokenBudgets}
-    SET
-      ${dailyReset ? sql`daily_used_tokens = 0, daily_used_cost = '0'::numeric,` : sql``}
-      ${monthlyReset ? sql`monthly_used_tokens = 0, monthly_used_cost = '0'::numeric,` : sql``}
-      period_resets_at = ${nextResetsAt.toISOString()}::timestamptz,
-      updated_at = now()
-  `);
+  const affectedOrganizations = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(orgTokenBudgets)
+      .set(updates)
+      .returning({ organizationId: orgTokenBudgets.organizationId });
+    await tx.insert(systemAuditLogs).values({
+      id: createId(),
+      userId: actor.userId,
+      action: 'ai_usage.counters_reset',
+      resourceType: 'ai_usage',
+      resourceId: 'all_organizations',
+      metadata: {
+        scope: body.scope,
+        actorKind: actor.actorKind,
+        affectedOrganizations: rows.length,
+      },
+    });
+    return rows.length;
+  });
 
-  return NextResponse.json({ ok: true, scope: body.scope });
+  return NextResponse.json({ ok: true, scope: body.scope, affectedOrganizations });
 }

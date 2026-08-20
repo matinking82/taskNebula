@@ -18,19 +18,17 @@
  * Slack API call so a forged event can't side-effect the system.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { db, eq, and } from '@tasknebula/db';
-import {
-  slackChannelRoutes,
-  integrationConnections,
-} from '@tasknebula/db';
+import { slackChannelRoutes, integrationConnections } from '@tasknebula/db';
+import { getTranslations } from 'next-intl/server';
 import {
   callSlackApi,
   getSlackSigningSecret,
   verifySlackSignature,
 } from '@/lib/integrations/slack';
 import { createIssueFromSlackMessage } from '@/lib/integrations/slack-issue-bridge';
-import { resolveSlackOrg } from '@/lib/integrations/slack-commands';
+import { lookupTaskNebulaUserBySlackId, resolveSlackOrg } from '@/lib/integrations/slack-commands';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,24 +91,22 @@ export async function POST(request: NextRequest) {
   if (payload.type === 'event_callback') {
     const event = payload.event;
     if (event && event.type === 'reaction_added') {
-      // Fire-and-forget so the 3-second Slack ack window is met regardless of
-      // how long the issue creation takes.
-      void handleReactionAdded(
-        payload.team_id,
-        event as ReactionAddedEvent
-      ).catch((err) =>
-        console.warn('[slack-events] reaction_added handler failed', err)
-      );
+      // Acknowledge inside Slack's three-second window while keeping the work
+      // attached to the request lifecycle on serverless runtimes.
+      after(async () => {
+        try {
+          await handleReactionAdded(payload.team_id, event as ReactionAddedEvent);
+        } catch (err) {
+          console.warn('[slack-events] reaction_added handler failed', err);
+        }
+      });
     }
   }
 
   return NextResponse.json({ ok: true });
 }
 
-async function handleReactionAdded(
-  teamId: string,
-  event: ReactionAddedEvent
-): Promise<void> {
+async function handleReactionAdded(teamId: string, event: ReactionAddedEvent): Promise<void> {
   if (event.item?.type !== 'message') return;
 
   const org = await resolveSlackOrg(teamId);
@@ -150,11 +146,19 @@ async function handleReactionAdded(
     .where(
       and(
         eq(integrationConnections.organizationId, org.organizationId),
-        eq(integrationConnections.provider, 'slack')
+        eq(integrationConnections.provider, 'slack'),
+        eq(integrationConnections.externalAccountId, teamId)
       )
     )
     .limit(1);
   if (!conn) return;
+
+  const reporterUserId = await lookupTaskNebulaUserBySlackId(
+    org.organizationId,
+    event.user,
+    teamId
+  );
+  if (!reporterUserId) return;
 
   const history = await callSlackApi<{
     messages?: Array<{ ts: string; text?: string; user?: string }>;
@@ -183,6 +187,8 @@ async function handleReactionAdded(
     /* permalink is best-effort */
   }
 
+  const t = await getTranslations({ locale: org.locale, namespace: 'slackCommands' });
+  const messageTitle = (message.text ?? '').trim().slice(0, 80) || t('untitledSlackMessage');
   await createIssueFromSlackMessage({
     organizationId: org.organizationId,
     slackTeamId: teamId,
@@ -190,12 +196,12 @@ async function handleReactionAdded(
     slackMessageTs: event.item.ts,
     slackAuthorId: message.user ?? event.user,
     permalink,
-    title: `:${event.reaction}: ${(message.text ?? '').slice(0, 80) || 'Untitled Slack message'}`,
+    title: t('reactionIssueTitle', { reaction: event.reaction, message: messageTitle }),
     description: null,
     projectId: route.projectId,
     messageText: message.text ?? '',
     channelName: null,
-    reporterUserId: conn.connectedById ?? '',
+    reporterUserId,
     extraLabels: route.defaultLabel ? [route.defaultLabel] : [],
   });
 }

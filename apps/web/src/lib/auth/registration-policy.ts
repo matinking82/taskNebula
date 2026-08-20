@@ -1,6 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
 import { db, eq, systemSettings } from '@tasknebula/db';
 
+type RegistrationPolicyDbClient = Pick<typeof db, 'select' | 'insert'>;
+
 export const REGISTRATION_POLICY_KEY = 'registration_policy';
 
 export const REGISTRATION_MODES = [
@@ -36,8 +38,10 @@ export function normalizeRegistrationPolicy(value: unknown): RegistrationPolicy 
   };
 }
 
-export async function getRegistrationPolicy(): Promise<RegistrationPolicy> {
-  const [setting] = await db
+export async function getRegistrationPolicy(
+  client: RegistrationPolicyDbClient = db
+): Promise<RegistrationPolicy> {
+  const [setting] = await client
     .select({ value: systemSettings.value })
     .from(systemSettings)
     .where(eq(systemSettings.key, REGISTRATION_POLICY_KEY))
@@ -48,7 +52,8 @@ export async function getRegistrationPolicy(): Promise<RegistrationPolicy> {
 
 export async function upsertRegistrationPolicy(
   mode: RegistrationMode,
-  userId: string
+  userId: string,
+  client: RegistrationPolicyDbClient = db
 ): Promise<RegistrationPolicy> {
   const next: RegistrationPolicy = {
     mode,
@@ -56,28 +61,20 @@ export async function upsertRegistrationPolicy(
     updatedBy: userId,
   };
 
-  const [existing] = await db
-    .select({ id: systemSettings.id })
-    .from(systemSettings)
-    .where(eq(systemSettings.key, REGISTRATION_POLICY_KEY))
-    .limit(1);
-
-  if (!existing) {
-    await db.insert(systemSettings).values({
+  await client
+    .insert(systemSettings)
+    .values({
       id: createId(),
       key: REGISTRATION_POLICY_KEY,
       category: 'security',
       description: 'Controls who can create TaskNebula accounts through public signup.',
       value: next,
       updatedBy: userId,
+    })
+    .onConflictDoUpdate({
+      target: systemSettings.key,
+      set: { value: next, updatedAt: new Date(), updatedBy: userId },
     });
-    return next;
-  }
-
-  await db
-    .update(systemSettings)
-    .set({ value: next, updatedAt: new Date(), updatedBy: userId })
-    .where(eq(systemSettings.id, existing.id));
 
   return next;
 }

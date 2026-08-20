@@ -117,28 +117,30 @@ export function ProjectLayoutClient({
   return (
     <TooltipProvider delayDuration={80}>
       <div className="flex h-full flex-col">
-        <div className="bg-surface-dark border-border-strong shrink-0 border-b text-white shadow-none">
+        <div className="bg-chrome text-chrome-foreground border-border shrink-0 border-b shadow-none">
           <div className="flex items-center gap-1.5 px-3 py-1 sm:gap-2 sm:px-4">
             <nav aria-label={t('breadcrumb')} className="flex min-w-0 items-center gap-1 text-xs">
               <Link
                 href="/projects"
-                className="inline-flex min-h-10 items-center text-white/80 transition-colors hover:text-white sm:min-h-8"
+                className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center transition-colors sm:min-h-8"
               >
                 {t('title')}
               </Link>
               <ChevronRight
                 aria-hidden="true"
-                className="h-3 w-3 shrink-0 text-white/55 rtl:rotate-180"
+                className="text-muted-foreground h-3 w-3 shrink-0 rtl:rotate-180"
               />
             </nav>
-            <span className="min-w-0 truncate text-xs font-medium text-white">{projectName}</span>
+            <span className="text-foreground min-w-0 truncate text-xs font-semibold">
+              {projectName}
+            </span>
             {project?.key ? (
-              <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-white/75 sm:inline">
+              <span className="text-muted-foreground hidden font-mono text-[10px] uppercase tracking-[0.12em] sm:inline">
                 {project.key}
               </span>
             ) : null}
 
-            <div className="h-4 w-px bg-white/25" aria-hidden="true" />
+            <div className="bg-border h-4 w-px" aria-hidden="true" />
 
             <nav
               aria-label={t('sections')}
@@ -157,8 +159,9 @@ export function ProjectLayoutClient({
                           aria-label={tabLabel}
                           aria-current={isActive ? 'page' : undefined}
                           className={cn(
-                            'inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-md px-0 text-white/80 transition-colors hover:bg-white/10 hover:text-white sm:h-8 sm:w-8 lg:w-auto lg:px-2.5',
-                            isActive && 'bg-primary text-primary-foreground'
+                            'text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 border-b border-transparent px-0 transition-[background-color,color,border-color] sm:h-8 sm:w-8 lg:w-auto lg:px-2.5',
+                            isActive &&
+                              'border-primary bg-primary/[0.07] text-foreground hover:bg-primary/10'
                           )}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
@@ -180,7 +183,7 @@ export function ProjectLayoutClient({
                   <TooltipTrigger asChild>
                     <Link
                       href={`/projects/${projectId}/sprints/${activeSprint.id}`}
-                      className="live-pill live-pill-on-dark inline-flex min-h-10 max-w-24 items-center gap-1 text-[10px] sm:min-h-8 sm:max-w-40"
+                      className="live-pill inline-flex min-h-10 max-w-24 items-center gap-1 text-[10px] sm:min-h-8 sm:max-w-40"
                     >
                       <span className="truncate font-medium">{activeSprint.name}</span>
                     </Link>
@@ -200,7 +203,7 @@ export function ProjectLayoutClient({
                       size="icon"
                       aria-label={t('projectSettings')}
                       onClick={() => setIsSettingsOpen(true)}
-                      className="h-10 w-10 text-white/80 hover:bg-white/10 hover:text-white sm:h-8 sm:w-8"
+                      className="text-muted-foreground hover:bg-accent hover:text-foreground h-10 w-10 sm:h-8 sm:w-8"
                     >
                       <Settings className="h-4 w-4" />
                     </Button>

@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, organizationMembers } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
-import { requirePermission } from '@/lib/auth/permissions';
+import { getPermittedOrganizationIds } from '@/lib/auth/permissions';
 
 export default async function MembersRedirectPage() {
   const session = await auth();
@@ -10,19 +8,11 @@ export default async function MembersRedirectPage() {
     redirect('/auth/signin?callbackUrl=/settings/members');
   }
 
-  const [primaryOrg] = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    )
-    .limit(1);
+  const [organizationId] = await getPermittedOrganizationIds(session.user.id, 'member:view');
 
-  if (!primaryOrg) {
+  if (!organizationId) {
     redirect('/dashboard?error=insufficient-permission');
   }
-
-  await requirePermission(primaryOrg.organizationId, 'member:view');
 
   redirect('/settings?tab=members');
 }

@@ -101,7 +101,9 @@ jest.mock('@tasknebula/db', () => ({
     organizationId: 'teams.organizationId',
   },
   organizations: {
+    id: 'organizations.id',
     name: 'organizations.name',
+    status: 'organizations.status',
   },
   ROLE_DEFAULT_PERMISSIONS: {
     product_owner: {},
@@ -123,20 +125,24 @@ jest.mock('drizzle-orm', () => ({
 }));
 
 function limitBuilder(result: unknown) {
-  return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue(result),
-      }),
+  const chain = {
+    innerJoin: jest.fn(() => chain),
+    where: jest.fn().mockReturnValue({
+      limit: jest.fn().mockResolvedValue(result),
     }),
+  };
+  return {
+    from: jest.fn().mockReturnValue(chain),
   };
 }
 
 function whereBuilder(result: unknown) {
+  const chain = {
+    innerJoin: jest.fn(() => chain),
+    where: jest.fn().mockResolvedValue(result),
+  };
   return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockResolvedValue(result),
-    }),
+    from: jest.fn().mockReturnValue(chain),
   };
 }
 

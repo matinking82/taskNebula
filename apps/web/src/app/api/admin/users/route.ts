@@ -23,11 +23,27 @@ import { createId } from '@paralleldrive/cuid2';
 import bcrypt from 'bcryptjs';
 
 const createUserSchema = z.object({
-  name: z.string().min(1).max(255),
-  email: z.string().email(),
+  name: z.string().trim().min(1).max(255),
+  email: z
+    .string()
+    .trim()
+    .email()
+    .transform((value) => value.toLowerCase()),
   password: z.string().min(8).max(255),
   isSuperAdmin: z.boolean().optional().default(false),
 });
+
+const listUsersSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().max(255).optional(),
+  status: z.enum(['active', 'inactive', 'invited']).optional(),
+});
+
+function isUniqueViolation(error: unknown) {
+  const candidate = error as { code?: string; cause?: { code?: string } };
+  return candidate?.code === '23505' || candidate?.cause?.code === '23505';
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,14 +58,23 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const search = searchParams.get('search');
-    const status = searchParams.get('status'); // 'active', 'inactive', 'invited'
+    const query = listUsersSchema.safeParse({
+      page: searchParams.get('page') || undefined,
+      limit: searchParams.get('limit') || undefined,
+      search: searchParams.get('search') || undefined,
+      status: searchParams.get('status') || undefined,
+    });
+    if (!query.success) {
+      return NextResponse.json(
+        { error: 'Invalid query', details: query.error.errors },
+        { status: 400 }
+      );
+    }
+    const { page, limit, search, status } = query.data;
 
     const conditions = [];
     if (status) {
-      conditions.push(eq(users.status, status as any));
+      conditions.push(eq(users.status, status));
     }
     if (search) {
       conditions.push(or(ilike(users.name, `%${search}%`), ilike(users.email, `%${search}%`))!);
@@ -254,55 +279,45 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, password, isSuperAdmin: makeSuperAdmin } = createUserSchema.parse(body);
 
-    // Check if user already exists
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-
-    if (existingUser) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
-    }
-
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user
-    const [newUser] = await db
-      .insert(users)
-      .values({
+    const newUser = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(users)
+        .values({
+          id: createId(),
+          name,
+          email,
+          password: passwordHash,
+          status: 'active',
+          isSuperAdmin: makeSuperAdmin,
+          superAdminGrantedAt: makeSuperAdmin ? new Date() : null,
+          superAdminGrantedBy: makeSuperAdmin ? session.user.id : null,
+          settings: {},
+        })
+        .returning();
+      if (!created) throw new Error('admin_user_create_failed');
+
+      await tx.insert(systemAuditLogs).values({
         id: createId(),
-        name,
-        email,
-        password: passwordHash,
-        status: 'active',
-        isSuperAdmin: makeSuperAdmin || false,
-        superAdminGrantedAt: makeSuperAdmin ? new Date() : null,
-        superAdminGrantedBy: makeSuperAdmin ? session.user.id : null,
-        settings: {},
-      })
-      .returning();
-
-    if (!newUser) {
-      throw new Error('Failed to create user');
-    }
-
-    await db.insert(systemAuditLogs).values({
-      id: createId(),
-      userId: session.user.id,
-      action: makeSuperAdmin ? 'user.created_super_admin' : 'user.created',
-      resourceType: 'user',
-      resourceId: newUser.id,
-      changes: {
-        status: { from: null, to: newUser.status },
-        isSuperAdmin: { from: null, to: newUser.isSuperAdmin },
-      },
-      metadata: {
-        email: newUser.email,
-        name: newUser.name,
-      },
-      ipAddress:
-        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
+        userId: session.user.id,
+        action: makeSuperAdmin ? 'user.created_super_admin' : 'user.created',
+        resourceType: 'user',
+        resourceId: created.id,
+        changes: {
+          status: { from: null, to: created.status },
+          isSuperAdmin: { from: null, to: created.isSuperAdmin },
+        },
+        metadata: {
+          email: created.email,
+          name: created.name,
+        },
+        ipAddress:
+          request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        userAgent: request.headers.get('user-agent') || undefined,
+      });
+      return created;
     });
 
     return NextResponse.json({
@@ -321,6 +336,10 @@ export async function POST(request: NextRequest) {
         { error: 'Validation failed', details: error.errors },
         { status: 400 }
       );
+    }
+
+    if (isUniqueViolation(error)) {
+      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }
 
     console.error('Failed to create user:', error);

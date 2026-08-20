@@ -12,34 +12,26 @@
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
-import { db, users, organizationMembers } from '@tasknebula/db';
-import { eq, and, inArray } from 'drizzle-orm';
+import { db, users } from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
 import { ApiDocsClient } from './api-docs-client';
+import { PageHeader } from '@/components/ui/page-header';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
 async function isWorkspaceAdmin(userId: string): Promise<boolean> {
   const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
+    .select({ isSuperAdmin: users.isSuperAdmin, status: users.status })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
 
-  if (user?.isSuperAdmin) return true;
+  if (user?.status !== 'active') return false;
+  if (user.isSuperAdmin) return true;
 
-  const [adminMembership] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.status, 'active'),
-        inArray(organizationMembers.role, ['owner', 'admin'])
-      )
-    )
-    .limit(1);
-
-  return !!adminMembership;
+  const memberships = await listActiveOrganizationMemberships(userId);
+  return memberships.some((membership) => ['owner', 'admin'].includes(membership.role));
 }
 
 export default async function ApiDocsPage() {
@@ -56,17 +48,25 @@ export default async function ApiDocsPage() {
 
   return (
     <div className="bg-background min-h-full">
-      <div className="border-border bg-card border-b px-6 py-4">
-        <h1 className="text-2xl font-semibold">{t('apiDocs.title')}</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {t.rich('apiDocs.description', {
-            link: (chunks) => (
-              <a href="/openapi.json" className="underline" target="_blank" rel="noreferrer">
-                {chunks}
-              </a>
-            ),
-          })}
-        </p>
+      <div className="border-border bg-card border-b px-4 py-4 sm:px-5 lg:px-6">
+        <div className="mx-auto w-full max-w-[1480px]">
+          <PageHeader
+            className="border-b-0 pb-0"
+            title={t('apiDocs.title')}
+            description={t.rich('apiDocs.description', {
+              link: (chunks) => (
+                <a
+                  href="/openapi.json"
+                  className="focus-visible:ring-ring rounded-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
+          />
+        </div>
       </div>
       <ApiDocsClient specUrl="/openapi.json" />
     </div>

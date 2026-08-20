@@ -125,7 +125,7 @@ export function IssueDetailView({
       >
         <h1 className="sr-only">{t('triage.loading')}</h1>
         {/* Header skeleton */}
-        <div className="border-border bg-background shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
+        <div className="command-header shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
           <div className="space-y-2">
             <div className="shimmer h-3 w-24 rounded-sm" />
             <div className="shimmer h-6 w-2/3 rounded-md" />
@@ -220,7 +220,7 @@ export function IssueDetailView({
       <ViewTransition name={`issue-${issue.id}`}>
         <div
           className={cn(
-            'border-border bg-background shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4',
+            'command-header shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4',
             // In modal mode the Dialog's absolute close (X) sits at top-right;
             // pad the header so the title row / action buttons never slip
             // underneath it. Full-page view (no onClose) keeps the normal inset.

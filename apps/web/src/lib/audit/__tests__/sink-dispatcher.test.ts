@@ -20,6 +20,21 @@
 
 import crypto from 'crypto';
 
+const mockPostPublicEndpoint = jest.fn(
+  async (url: string, options: { headers: Record<string, string>; body: string }) => {
+    const response = await global.fetch(url, {
+      method: 'POST',
+      headers: options.headers,
+      body: options.body,
+    });
+    return { ok: response.ok, status: response.status };
+  }
+);
+
+jest.mock('@/lib/agents/provider-endpoint', () => ({
+  postPublicEndpoint: (...args: unknown[]) => mockPostPublicEndpoint(...(args as [any, any, any])),
+}));
+
 // ---------------------------------------------------------------------------
 // In-memory db mock
 // ---------------------------------------------------------------------------
@@ -49,10 +64,20 @@ const state: {
 };
 
 jest.mock('@tasknebula/db', () => {
-  const auditLogSinksTable = { __name: 'audit_log_sinks' };
+  const auditLogSinksTable = {
+    __name: 'audit_log_sinks',
+    id: 'audit_log_sinks.id',
+    successCount: 'audit_log_sinks.success_count',
+    failureCount: 'audit_log_sinks.failure_count',
+  };
 
   const eq = (col: unknown, value: unknown) => ({ op: 'eq', col, value });
   const and = (...args: unknown[]) => ({ op: 'and', args });
+  const sql = (strings: TemplateStringsArray, ...values: unknown[]) => ({
+    op: 'sql',
+    text: strings.join('?'),
+    values,
+  });
 
   const db = {
     select() {
@@ -62,9 +87,7 @@ jest.mock('@tasknebula/db', () => {
             where(_cond: unknown) {
               if (table.__name === 'audit_log_sinks') {
                 const wsId = state.selectWorkspaceId;
-                const rows = state.sinks.filter(
-                  (s) => s.workspaceId === wsId && s.enabled
-                );
+                const rows = state.sinks.filter((s) => s.workspaceId === wsId && s.enabled);
                 return Promise.resolve(rows);
               }
               return Promise.resolve([]);
@@ -79,12 +102,18 @@ jest.mock('@tasknebula/db', () => {
           return {
             where(cond: unknown) {
               const id =
-                cond &&
-                typeof cond === 'object' &&
-                'value' in (cond as Record<string, unknown>)
+                cond && typeof cond === 'object' && 'value' in (cond as Record<string, unknown>)
                   ? ((cond as { value: unknown }).value as string)
                   : '__unknown__';
-              state.updates.push({ id, set: values });
+              const sink = state.sinks.find((candidate) => candidate.id === id);
+              const captured = { ...values };
+              if (sink && 'successCount' in values) {
+                captured.successCount = String(Number(sink.successCount) + 1);
+              }
+              if (sink && 'failureCount' in values) {
+                captured.failureCount = String(Number(sink.failureCount) + 1);
+              }
+              state.updates.push({ id, set: captured });
               return Promise.resolve();
             },
           };
@@ -98,6 +127,7 @@ jest.mock('@tasknebula/db', () => {
     auditLogSinks: auditLogSinksTable,
     eq,
     and,
+    sql,
   };
 });
 
@@ -129,10 +159,7 @@ function makeEvent(workspaceId: string, overrides: Partial<Record<string, unknow
 }
 
 // Import after jest.mock so the dispatcher picks up the mocked db.
-import {
-  dispatchAuditLogToSinks,
-  signSinkPayload,
-} from '../sink-dispatcher';
+import { dispatchAuditLogToSinks, signSinkPayload } from '../sink-dispatcher';
 
 // ---------------------------------------------------------------------------
 // fetch mock
@@ -140,6 +167,7 @@ import {
 
 const originalFetch = global.fetch;
 beforeEach(() => {
+  mockPostPublicEndpoint.mockClear();
   (global as unknown as { fetch: jest.Mock }).fetch = jest.fn();
 });
 afterAll(() => {
@@ -152,10 +180,7 @@ afterAll(() => {
 
 describe('signSinkPayload', () => {
   it('produces stable HMAC-SHA256 hex output', () => {
-    const expected = crypto
-      .createHmac('sha256', 'k')
-      .update('hello')
-      .digest('hex');
+    const expected = crypto.createHmac('sha256', 'k').update('hello').digest('hex');
     expect(signSinkPayload('hello', 'k')).toBe(expected);
   });
 
@@ -223,7 +248,7 @@ describe('dispatchAuditLogToSinks — single sink', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: 'sink-1',
-          set: expect.objectContaining({ successCount: '4', failureCount: '1' }),
+          set: expect.objectContaining({ successCount: '4' }),
         }),
       ])
     );
@@ -377,12 +402,11 @@ describe('dispatchAuditLogToSinks — failure isolation', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: 'sink-good',
-          set: expect.objectContaining({ successCount: '1', failureCount: '0' }),
+          set: expect.objectContaining({ successCount: '1' }),
         }),
         expect.objectContaining({
           id: 'sink-bad',
           set: expect.objectContaining({
-            successCount: '0',
             failureCount: '1',
             lastError: expect.stringContaining('econnrefused'),
           }),
@@ -429,12 +453,16 @@ describe('dispatchAuditLogToSinks — replay protection', () => {
     await dispatchAuditLogToSinks(makeEvent('org-4', { id: 'log-B' }));
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    const nonceA = ((global.fetch as jest.Mock).mock.calls[0][1] as {
-      headers: Record<string, string>;
-    }).headers['X-TaskNebula-Nonce'];
-    const nonceB = ((global.fetch as jest.Mock).mock.calls[1][1] as {
-      headers: Record<string, string>;
-    }).headers['X-TaskNebula-Nonce'];
+    const nonceA = (
+      (global.fetch as jest.Mock).mock.calls[0][1] as {
+        headers: Record<string, string>;
+      }
+    ).headers['X-TaskNebula-Nonce'];
+    const nonceB = (
+      (global.fetch as jest.Mock).mock.calls[1][1] as {
+        headers: Record<string, string>;
+      }
+    ).headers['X-TaskNebula-Nonce'];
     expect(nonceA).toMatch(/^[a-f0-9]{32}$/);
     expect(nonceB).toMatch(/^[a-f0-9]{32}$/);
     expect(nonceA).not.toBe(nonceB);

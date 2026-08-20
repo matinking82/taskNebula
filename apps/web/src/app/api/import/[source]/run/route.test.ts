@@ -9,6 +9,7 @@ const dbSelectMock = jest.fn();
 const dbInsertMock = jest.fn();
 const executeImportJobMock = jest.fn();
 const roleHasPermissionMock = jest.fn();
+const resolveProjectCapabilityAccessMock = jest.fn();
 
 class MockNextRequest {
   constructor(
@@ -54,6 +55,11 @@ jest.mock('@/lib/importers/runner', () => ({
   executeImportJob: (...args: unknown[]) => executeImportJobMock(...args),
 }));
 
+jest.mock('@/lib/auth/project-access', () => ({
+  resolveProjectCapabilityAccess: (...args: unknown[]) =>
+    resolveProjectCapabilityAccessMock(...args),
+}));
+
 jest.mock('@tasknebula/db', () => ({
   and: (...args: unknown[]) => ({ type: 'and', args }),
   eq: (left: unknown, right: unknown) => ({ type: 'eq', left, right }),
@@ -96,16 +102,6 @@ jest.mock('@tasknebula/db', () => ({
   },
 }));
 
-function limitBuilder(rows: unknown[]) {
-  return {
-    from: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        limit: jest.fn().mockResolvedValue(rows),
-      }),
-    }),
-  };
-}
-
 function insertBuilder(capture: (values: unknown) => void) {
   return {
     values: jest.fn((values) => {
@@ -131,6 +127,12 @@ describe('POST /api/import/[source]/run', () => {
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
     roleHasPermissionMock.mockReturnValue(true);
     executeImportJobMock.mockResolvedValue(undefined);
+    resolveProjectCapabilityAccessMock.mockResolvedValue({
+      project: { id: 'project-1', organizationId: 'org-1' },
+      canRead: true,
+      canManage: true,
+      permissions: { canCreateIssues: true },
+    });
   });
 
   function callPost(source: string, body: Record<string, unknown>) {
@@ -143,11 +145,6 @@ describe('POST /api/import/[source]/run', () => {
   }
 
   it('stores sanitized mapping but passes upstream credentials to the in-memory runner', async () => {
-    dbSelectMock
-      .mockReturnValueOnce(limitBuilder([{ id: 'project-1', organizationId: 'org-1' }]))
-      .mockReturnValueOnce(limitBuilder([{ isSuperAdmin: false }]))
-      .mockReturnValueOnce(limitBuilder([{ role: 'admin' }]));
-
     let insertedValues: unknown;
     dbInsertMock.mockReturnValue(
       insertBuilder((values) => {
@@ -193,7 +190,12 @@ describe('POST /api/import/[source]/run', () => {
   });
 
   it('rejects a target project outside the requested workspace', async () => {
-    dbSelectMock.mockReturnValueOnce(limitBuilder([]));
+    resolveProjectCapabilityAccessMock.mockResolvedValue({
+      project: { id: 'other-project', organizationId: 'org-other' },
+      canRead: true,
+      canManage: true,
+      permissions: { canCreateIssues: true },
+    });
 
     const response = await callPost('github', {
       workspaceId: 'org-1',

@@ -503,7 +503,8 @@
         "invalid_target": "The selected target version is not valid for this install.",
         "active_job": "Another update request is already active. Wait for it to finish before starting a new one.",
         "missing_digest": "Docker Hub did not return an immutable image digest. Wait for tag metadata to settle, then check again.",
-        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request."
+        "backup_unavailable": "Backup preflight is not ready, so the app will not dispatch an update request.",
+        "weak_secret": "TASKNEBULA_SELF_UPDATE_WEBHOOK_SECRET must contain at least 32 bytes of unpredictable secret material."
       },
       "jobStatus": {
         "queued": "Queued",
@@ -575,7 +576,8 @@
     "createFailed": "Nie udało się utworzyć podzgłoszenia. Spróbuj ponownie.",
     "noSubtasks": "Brak podzadań",
     "markComplete": "Oznacz jako ukończone",
-    "markIncomplete": "Oznacz jako nieukończone"
+    "markIncomplete": "Oznacz jako nieukończone",
+    "transitionFailed": "Nie udało się zaktualizować stanu podzadania. Spróbuj ponownie."
   },
   "issueRelations": {
     "dialogTitle": "Powiąż zgłoszenie",
@@ -1937,7 +1939,55 @@
       "token_created": "Utworzono {date}",
       "token_last_used": "Ostatnio użyto {date}",
       "token_revoked": "Unieważniony",
-      "revoke": "Unieważnij"
+      "revoke": "Unieważnij",
+      "token_scopes_label": "Access scopes",
+      "token_scopes_desc": "Grant only the operations this identity provider needs. At least one scope is required.",
+      "scope_users_read": "Read users",
+      "scope_users_read_desc": "List and inspect workspace users.",
+      "scope_users_write": "Manage users",
+      "scope_users_write_desc": "Provision, update, activate, and deactivate users.",
+      "scope_groups_read": "Read groups",
+      "scope_groups_read_desc": "List groups and their members.",
+      "scope_groups_write": "Manage groups",
+      "scope_groups_write_desc": "Create, update, and remove provisioned groups.",
+      "token_scope_required": "Select at least one access scope.",
+      "copy_token": "Copy token",
+      "token_copied_desc": "The SCIM token is now on your clipboard and has been hidden from this page.",
+      "token_copy_failed": "Token could not be copied",
+      "token_copy_failed_desc": "Copy the visible token manually before leaving this page.",
+      "token_created_toast": "SCIM token created",
+      "token_created_toast_desc": "Copy the secret now; only its hash will remain after you leave.",
+      "token_revoked_toast": "SCIM token revoked",
+      "token_revoked_toast_desc": "Requests using this token are no longer accepted.",
+      "tokens_loading": "Loading provisioning tokens…",
+      "token_active": "Active",
+      "token_legacy": "Rotate recommended",
+      "token_legacy_full_access": "Legacy token · full access until rotated",
+      "token_revoke_confirm": "Revoke the SCIM token “{name}”? This cannot be undone.",
+      "token_revoke_aria": "Revoke SCIM token {name}",
+      "idp_metadata_placeholder": "Paste an IdP EntityDescriptor XML document…",
+      "idp_metadata_file_label": "Or choose a metadata XML file",
+      "metadata_invalid": "Metadata could not be parsed",
+      "metadata_invalid_desc": "Provide a valid SAML IdP EntityDescriptor containing an issuer, SSO service, or signing certificate.",
+      "metadata_too_large": "Metadata XML must be smaller than 2 MB.",
+      "config_loading": "Loading SSO configuration…",
+      "cert_placeholder": "-----BEGIN CERTIFICATE-----",
+      "cert_invalid": "The IdP signing certificate is not a valid X.509 certificate.",
+      "entry_point_invalid": "Use an HTTPS IdP SSO URL without credentials or a fragment.",
+      "private_key_label": "SP request-signing private key (optional)",
+      "private_key_desc": "Used only to sign AuthnRequests. New keys are encrypted at rest and are never returned by the API.",
+      "private_key_configured": "Configured",
+      "private_key_placeholder": "-----BEGIN PRIVATE KEY-----",
+      "private_key_keep_placeholder": "Leave blank to keep the encrypted key already configured",
+      "private_key_remove": "Remove the configured request-signing key when saving",
+      "private_key_invalid": "The request-signing private key is not a valid PEM private key.",
+      "test_sso": "Test SSO in a new tab",
+      "delete_config": "Delete configuration",
+      "config_delete_confirm": "Delete this SSO configuration? Workspace SSO sign-in will stop immediately.",
+      "config_deleted": "SSO configuration deleted",
+      "config_deleted_desc": "Workspace SSO sign-in is no longer available.",
+      "config_delete_failed": "SSO configuration could not be deleted",
+      "config_delete_failed_desc": "No changes were applied. Try again or inspect the server logs."
     },
     "notifications": {
       "fetch_failed": "Nie udało się pobrać preferencji",
@@ -3709,7 +3759,7 @@
       },
       "localRunners": {
         "title": "Claude Code / Codex",
-        "description": "Status w czasie rzeczywistym i logi z każdego uruchomienia agenta odbywającego się teraz.",
+        "description": "Manage the Claude Code or Codex CLI runner on this server for the selected workspace.",
         "loading": "Ładowanie kontroli agentów...",
         "loadError": "Nie udało się załadować kontroli agentów.",
         "updated": "Kontrola agentów zaktualizowana",
@@ -3725,9 +3775,9 @@
           "codex": "Codex CLI"
         },
         "reason": {
-          "disabled": "Nie udało się zaktualizować kontroli agentów: TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true",
-          "cwd_missing": "Nie udało się załadować kontroli agentów: {value}",
-          "command_missing": "Nie udało się załadować kontroli agentów: {value}"
+          "disabled": "Local CLI dispatch is off. Turn on this provider here, or set TASKNEBULA_LOCAL_AGENT_RUNNER_ENABLED=true as a server-wide default.",
+          "cwd_missing": "Working directory does not exist: {value}",
+          "command_missing": "Command is not available on PATH: {value}"
         }
       }
     },
@@ -3761,6 +3811,22 @@
       "optional": "(opcjonalnie)",
       "cancel": "Anuluj",
       "saveCredentials": "Zapisz poświadczenia",
+      "redirectHint": "https://your-domain{path}",
+      "providerLabel": {
+        "slack": "Slack",
+        "gitlab": "GitLab",
+        "jira": "Jira (Atlassian)",
+        "github": "GitHub",
+        "google": "Google",
+        "sentry": "Sentry"
+      },
+      "scopeHint": {
+        "slack": "channels:read,chat:write",
+        "gitlab": "read_api read_repository",
+        "jira": "read:jira-user read:jira-work write:jira-work offline_access",
+        "github": "repo read:user",
+        "sentry": "org:read project:read event:read"
+      },
       "providerDescription": {
         "slack": "Poświadczenia aplikacji OAuth do łączenia obszarów roboczych Slack z TaskNebula.",
         "gitlab": "Aplikacja OAuth do dublowania merge requestów i pipeline'ów.",
@@ -3832,6 +3898,8 @@
         "testError": "Nie udało się wysłać testowego e-maila",
         "testSent": "Testowy e-mail wysłany",
         "testSentDescription": "Dostarczono do {recipient} za pomocą konfiguracji {source}.",
+        "testEmailSubject": "TaskNebula SMTP test email",
+        "testEmailText": "This is a TaskNebula SMTP test sent through the {source} configuration. If you received it, outbound email is working.",
         "host": "Host",
         "port": "Port",
         "username": "Nazwa użytkownika",
@@ -3857,6 +3925,11 @@
         "testError": "Nie udało się wygenerować tokena LiveKit",
         "tokenMinted": "Token LiveKit wygenerowany",
         "tokenMintedDescription": "Pokój {roomName} · konfiguracja {source}.",
+        "connectionTestError": "LiveKit connection or credentials could not be verified",
+        "connectionVerified": "LiveKit connection verified",
+        "connectionVerifiedDescription": "Authenticated with the {source} configuration; {roomCount} active rooms are visible.",
+        "verifyTitle": "Verify server reachability and API credentials",
+        "verify": "Verify LiveKit",
         "secretPreview": "sekret {preview}",
         "serverUrl": "URL serwera",
         "apiKey": "Klucz API",
@@ -3886,7 +3959,20 @@
         "uploadsDirPlaceholder": "/var/tasknebula/uploads",
         "s3BucketPlaceholder": "tasknebula-prod",
         "s3RegionPlaceholder": "us-east-1",
-        "s3AccessKeyPlaceholder": "AKIA…"
+        "s3AccessKeyPlaceholder": "AKIA…",
+        "s3Endpoint": "Niestandardowy punkt końcowy S3",
+        "s3EndpointPlaceholder": "https://s3.example.com",
+        "s3ForcePathStyle": "Adresy URL bucketu w stylu ścieżki",
+        "s3ForcePathStyleDescription": "Użyj adresów URL bucketu w stylu ścieżki dla dostawców, którzy tego wymagają.",
+        "backendChangeBlocked": "Nie można zmienić lokalizacji pamięci, dopóki istnieją załączniki. Najpierw przenieś lub usuń istniejące załączniki.",
+        "s3Incomplete": "Przed włączeniem S3 uzupełnij nazwę zasobnika, region, klucz dostępu i klucz tajny.",
+        "localRootForbidden": "Katalog główny systemu plików nie może być używany jako katalog przesyłania.",
+        "testPassed": "Test pamięci zakończył się pomyślnie",
+        "testPassedDescription": "Pamięć {mode} umożliwia odczyt i zapis przy użyciu konfiguracji {source}.",
+        "testError": "Test zapisu, odczytu i usuwania nie powiódł się. Sprawdź konfigurację i dzienniki serwera.",
+        "saveFirst": "Najpierw zapisz pełną konfigurację pamięci",
+        "testTitle": "Zapisz, odczytaj i usuń tymczasowy plik testowy",
+        "test": "Testuj pamięć"
       },
       "registration": {
         "title": "Rejestracja",
@@ -3967,6 +4053,12 @@
       "missingFields": "Brakujące pola",
       "somethingWentWrong": "Coś poszło nie tak."
     },
+    "userGovernance": {
+      "admin_self_super_admin_revocation_forbidden": "You cannot remove your own super admin access.",
+      "admin_self_deactivation_forbidden": "You cannot deactivate your own administrator account.",
+      "admin_last_active_super_admin_required": "At least one active super admin must remain.",
+      "admin_self_deletion_forbidden": "You cannot delete your own administrator account."
+    },
     "createFlag": {
       "trigger": "Nowa flaga",
       "title": "Utwórz flagę funkcji",
@@ -4011,7 +4103,11 @@
       "missingFieldsDescription": "Nazwa, slug i właściciel są wymagane.",
       "toastCreatedTitle": "Organizacja utworzona",
       "toastCreatedDescription": "Organizacja została pomyślnie utworzona.",
-      "toastFailedTitle": "Nie udało się utworzyć organizacji"
+      "toastFailedTitle": "Nie udało się utworzyć organizacji",
+      "ownerLoading": "Loading active users…",
+      "ownerSearchPlaceholder": "Search active users…",
+      "ownerEmpty": "No active users found.",
+      "ownerRetry": "Try again"
     },
     "editOrg": {
       "title": "Edytuj organizację",
@@ -4024,6 +4120,8 @@
       "toastUpdatedTitle": "Organizacja zaktualizowana",
       "toastUpdatedDescription": "Zmiany zostały pomyślnie zapisane.",
       "toastFailedTitle": "Nie udało się zaktualizować organizacji",
+      "loadFailed": "Failed to load organization details.",
+      "retry": "Try again",
       "domainPlaceholder": "example.com"
     },
     "orgForm": {
@@ -4063,7 +4161,9 @@
       "superAdminWarning": "Ten użytkownik będzie miał pełny dostęp do wszystkich organizacji i ustawień systemowych.",
       "toastUpdatedTitle": "Użytkownik zaktualizowany",
       "toastUpdatedDescription": "Użytkownik został pomyślnie zaktualizowany.",
-      "toastFailedTitle": "Nie udało się zaktualizować użytkownika"
+      "toastFailedTitle": "Nie udało się zaktualizować użytkownika",
+      "loadFailed": "Failed to load user details.",
+      "retry": "Try again"
     },
     "userForm": {
       "superAdmin": "Super administrator",
@@ -7029,6 +7129,33 @@
     "assignmentSuccess": "Ponownie przypisano *{issueKey}* do <@{slackUserId}> (na prośbę <@{requestedBy}>).",
     "statusSuccess": "Przeniesiono *{issueKey}* do *{statusName}* (na prośbę <@{requestedBy}>).",
     "newUsage": "Użycie: `/tn new tytuł` — otwiera okno nowego zgłoszenia.",
-    "newOpening": "Otwieranie okna nowego zgłoszenia dla: _{title}_"
+    "newOpening": "Otwieranie okna nowego zgłoszenia dla: _{title}_",
+    "bridgeFromSlack": "From Slack",
+    "bridgePermalink": "Permalink: {url}",
+    "bridgeAuthorInChannel": "Author: <@{author}> in #{channel}",
+    "bridgeAuthor": "Author: <@{author}>",
+    "bridgeEmptyMessage": "(no message text)",
+    "bridgeFallbackTitle": "Slack: {message}",
+    "untitledSlackMessage": "Untitled Slack message",
+    "bridgeConfirmationText": "Created TaskNebula issue *{issueKey}* — {issueUrl}",
+    "bridgeConfirmationBlock": ":white_check_mark: Created TaskNebula issue *<{issueUrl}|{issueKey}>*",
+    "reactionIssueTitle": ":{reaction}: {message}",
+    "modalTitle": "New issue from Slack",
+    "modalSubmit": "Create",
+    "modalCancel": "Cancel",
+    "modalContext": "Create an issue from <@{author}> in <#{channel}>",
+    "modalTitleLabel": "Title",
+    "modalDescriptionLabel": "Description (extra context)",
+    "modalProjectLabel": "Project key (overrides channel mapping)",
+    "titleRequired": "Title is required.",
+    "workspaceDisconnected": "This Slack workspace is no longer connected.",
+    "reporterUnmapped": "No TaskNebula user is mapped to this Slack profile.",
+    "projectResolutionFailed": "No project could be resolved. Enter a project key or configure a channel mapping.",
+    "standaloneProjectRequired": "A project key is required when creating from /tn new.",
+    "issueCreateFailed": "The issue could not be created.",
+    "projectKeyNotFound": "No active project matches `{projectKey}` in this workspace.",
+    "modalOpenFailed": "The new-issue modal could not be opened. Try again.",
+    "modalDescriptionStandaloneLabel": "Description",
+    "modalStandaloneProjectLabel": "Project key (required, e.g. TN)"
   }
 }

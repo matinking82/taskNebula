@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { loadSsoForSlug } from '@/lib/sso/workspace';
 import { parseLoginResponse, getBaseUrl, type SamlContext } from '@/lib/sso/saml';
 import { resolveUserAttributes } from '@/lib/sso/attribute-map';
-import { jitProvisionUser } from '@/lib/sso/jit';
+import { JitProvisionError, jitProvisionUser } from '@/lib/sso/jit';
 import { mintSamlExchangeToken } from '@/lib/sso/session';
 import {
   getMobileRelayStateCallbackUrl,
@@ -105,13 +105,23 @@ export async function POST(
     );
   }
 
-  const jit = await jitProvisionUser({
-    email: internalUser.email,
-    firstName: internalUser.firstName,
-    lastName: internalUser.lastName,
-    workspaceId: workspace.workspaceId,
-    groups: internalUser.groups,
-  });
+  let jit;
+  try {
+    jit = await jitProvisionUser({
+      email: internalUser.email,
+      firstName: internalUser.firstName,
+      lastName: internalUser.lastName,
+      workspaceId: workspace.workspaceId,
+      groups: internalUser.groups,
+    });
+  } catch (error) {
+    if (error instanceof JitProvisionError) {
+      console.warn(`SAML provisioning rejected (${error.code})`);
+      return NextResponse.json({ error: 'Unable to sign in to this workspace' }, { status: 403 });
+    }
+    console.error('SAML provisioning failed:', error);
+    return NextResponse.json({ error: 'Unable to complete SSO sign-in' }, { status: 500 });
+  }
 
   // Mint a short-lived exchange token. The matching Credentials provider in
   // auth.ts redeems it and returns a User object, which Auth.js then turns

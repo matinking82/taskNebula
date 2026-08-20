@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  db,
-  automationRules,
-  organizationMembers,
-  projectMembers,
-  users,
-  hasPermission as roleHasPermission,
-} from '@tasknebula/db';
-import { and, eq, sql } from 'drizzle-orm';
+import { db, automationRules, hasPermission as roleHasPermission } from '@tasknebula/db';
+import { eq, sql } from 'drizzle-orm';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
+import { resolveProjectAccess } from '@/lib/auth/project-access';
 
 // Local stub type for the automation_executions row.
 // The dedicated `automationExecutions` table is defined in the db package
@@ -82,43 +77,18 @@ export async function GET(
     }
 
     // Super admin bypass.
-    const [user] = await db
-      .select({ isSuperAdmin: users.isSuperAdmin })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+    const orgAccess = await resolveOrganizationAccess(userId, rule.organizationId);
+    let allowed =
+      orgAccess.allowed &&
+      roleHasPermission(orgAccess.role || '', 'org:manage', orgAccess.isSuperAdmin);
 
-    let allowed = Boolean(user?.isSuperAdmin);
-
-    if (!allowed) {
-      const [orgMember] = await db
-        .select({ role: organizationMembers.role })
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.userId, userId),
-            eq(organizationMembers.organizationId, rule.organizationId),
-            eq(organizationMembers.status, 'active')
-          )
-        )
-        .limit(1);
-
-      if (roleHasPermission(orgMember?.role || '', 'org:manage')) {
-        allowed = true;
-      } else if (rule.projectId) {
-        // Rule scoped to a project — check project membership.
-        const [projectMember] = await db
-          .select({ role: projectMembers.role })
-          .from(projectMembers)
-          .where(
-            and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, rule.projectId))
-          )
-          .limit(1);
-        allowed = Boolean(projectMember);
-      } else {
-        // Org-wide rule executions require organization management permission.
-        allowed = false;
-      }
+    if (!allowed && orgAccess.allowed && rule.projectId) {
+      const projectAccess = await resolveProjectAccess(userId, rule.projectId);
+      allowed = Boolean(
+        projectAccess.project &&
+          projectAccess.project.organizationId === rule.organizationId &&
+          projectAccess.canRead
+      );
     }
 
     if (!allowed) {

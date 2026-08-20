@@ -127,7 +127,7 @@ export default function SprintDetailPage({
   return (
     <div className="animate-fade-in flex h-full flex-col overflow-hidden">
       {/* Sprint Header */}
-      <div className="border-border bg-background shrink-0 border-b px-3 py-2.5 sm:px-5 sm:py-3">
+      <div className="command-header shrink-0 border-b px-3 py-2.5 sm:px-5 sm:py-3">
         <div className="space-y-2.5">
           {/* Back Button */}
           <Button asChild variant="ghost" size="sm" className="h-10 sm:h-8">

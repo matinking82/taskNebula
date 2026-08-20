@@ -159,9 +159,7 @@ export function AiQuickSetup({
   return (
     <div className="border-primary/30 bg-primary/[0.03] space-y-4 rounded-lg border p-5">
       <div className="flex items-start gap-3">
-        <span className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-          <Wand2 className="h-4 w-4" />
-        </span>
+        <Wand2 className="text-primary mt-0.5 h-4 w-4 shrink-0" />
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold">{t('aiQuickSetup.title')}</h3>

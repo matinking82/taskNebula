@@ -22,9 +22,14 @@ jest.mock('@/lib/server/redis', () => ({
 // Captcha helper: by default not configured -> verify returns true.
 const isCaptchaConfiguredMock = jest.fn().mockReturnValue(false);
 const verifyCaptchaMock = jest.fn().mockResolvedValue(true);
+const resolveOrganizationAccessMock = jest.fn();
 jest.mock('@/lib/intake/captcha', () => ({
   isCaptchaConfigured: () => isCaptchaConfiguredMock(),
   verifyCaptcha: (...args: unknown[]) => verifyCaptchaMock(...args),
+}));
+
+jest.mock('@/lib/auth/access-control', () => ({
+  resolveOrganizationAccess: (...args: unknown[]) => resolveOrganizationAccessMock(...args),
 }));
 
 // In-memory data the mocked `db` will surface. Tests mutate these
@@ -68,30 +73,35 @@ jest.mock('@tasknebula/db', () => {
     selectCallIndex = 0;
   };
 
+  const db: any = {
+    select: jest.fn(() => {
+      const rows = selectQueue[selectCallIndex] ?? [];
+      selectCallIndex += 1;
+      return chain(rows);
+    }),
+    insert: jest.fn((table: any) => ({
+      values: jest.fn((vals: any) => {
+        // Discriminate by the property bag the schema export carries.
+        // Reference identity isn't stable through the mock because the
+        // route module gets its own copy of the mocked module exports.
+        if (table?.__kind === 'intake_forms') state.forms.push(vals);
+        else if (table?.__kind === 'intake_submissions') state.insertedSubmissions.push(vals);
+        else if (table?.__kind === 'issues') state.insertedIssues.push(vals);
+        return { returning: jest.fn().mockResolvedValue([vals]) };
+      }),
+    })),
+    execute: jest.fn().mockResolvedValue(undefined),
+  };
+  db.transaction = jest.fn((callback: (tx: typeof db) => unknown) => callback(db));
+
   return {
     __setSelectQueue: setQueue,
-    db: {
-      select: jest.fn(() => {
-        const rows = selectQueue[selectCallIndex] ?? [];
-        selectCallIndex += 1;
-        return chain(rows);
-      }),
-      insert: jest.fn((table: any) => ({
-        values: jest.fn((vals: any) => {
-          // Discriminate by the property bag the schema export carries.
-          // Reference identity isn't stable through the mock because the
-          // route module gets its own copy of the mocked module exports.
-          if (table?.__kind === 'intake_forms') state.forms.push(vals);
-          else if (table?.__kind === 'intake_submissions') state.insertedSubmissions.push(vals);
-          else if (table?.__kind === 'issues') state.insertedIssues.push(vals);
-          return { returning: jest.fn().mockResolvedValue([vals]) };
-        }),
-      })),
-    },
+    db,
     intakeForms: { __kind: 'intake_forms', id: 'id', slug: 'slug', isPublic: 'isPublic' },
     intakeSubmissions: { __kind: 'intake_submissions', id: 'id', intakeFormId: 'intakeFormId' },
     issues: { __kind: 'issues', id: 'id', projectId: 'projectId', number: 'number' },
     projects: { id: 'id', organizationId: 'organizationId' },
+    organizations: { id: 'id', status: 'status' },
     workflows: { id: 'id', organizationId: 'organizationId', isDefault: 'isDefault' },
     workflowStatuses: { workflowId: 'workflowId', category: 'category', position: 'position' },
   };
@@ -102,6 +112,7 @@ jest.mock('drizzle-orm', () => ({
   and: jest.fn(),
   desc: jest.fn(),
   inArray: jest.fn(),
+  sql: jest.fn(),
 }));
 
 // ---- Helpers ----
@@ -139,7 +150,10 @@ const projectFixture = {
   defaultWorkflowId: 'wf_1',
   leadId: 'user_lead',
   createdBy: 'user_creator',
+  status: 'active',
 };
+
+const organizationFixture = { id: 'org_1', status: 'active' };
 
 const workflowStatusFixture = {
   id: 'status_backlog',
@@ -151,10 +165,11 @@ const workflowStatusFixture = {
 function queueHappyPath() {
   const db = require('@tasknebula/db');
   db.__setSelectQueue([
-    [formFixture],                                  // form lookup
-    [projectFixture],                               // project lookup
-    [workflowStatusFixture],                        // statuses
-    [{ number: 0 }],                                // last issue (for next number)
+    [formFixture], // form lookup
+    [projectFixture], // project lookup
+    [organizationFixture], // active workspace
+    [workflowStatusFixture], // statuses
+    [{ number: 0 }], // last issue (for next number)
   ]);
 }
 
@@ -167,6 +182,12 @@ describe('POST /api/public/intake/[slug]', () => {
     state.insertedSubmissions.length = 0;
     isCaptchaConfiguredMock.mockReturnValue(false);
     verifyCaptchaMock.mockResolvedValue(true);
+    resolveOrganizationAccessMock.mockResolvedValue({
+      allowed: true,
+      isSuperAdmin: false,
+      role: 'member',
+      membershipId: 'member_1',
+    });
   });
 
   it('rejects 404 when slug is unknown', async () => {
@@ -185,7 +206,7 @@ describe('POST /api/public/intake/[slug]', () => {
     const { POST } = await import('../route');
     const res = await POST(
       makeRequest({ payload: { email: 'a@b.com' } }), // summary missing
-      { params: Promise.resolve({ slug: 'feedback' }) },
+      { params: Promise.resolve({ slug: 'feedback' }) }
     );
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -198,13 +219,14 @@ describe('POST /api/public/intake/[slug]', () => {
     db.__setSelectQueue([
       [{ ...formFixture, requiresCaptcha: true }],
       [projectFixture],
+      [organizationFixture],
       [workflowStatusFixture],
       [{ number: 0 }],
     ]);
     const { POST } = await import('../route');
     const res = await POST(
       makeRequest({ payload: { summary: 'Bug report', email: 'q@example.com' } }),
-      { params: Promise.resolve({ slug: 'feedback' }) },
+      { params: Promise.resolve({ slug: 'feedback' }) }
     );
     expect(res.status).toBe(201);
     expect(verifyCaptchaMock).not.toHaveBeenCalled();
@@ -215,7 +237,7 @@ describe('POST /api/public/intake/[slug]', () => {
     const { POST } = await import('../route');
     const res = await POST(
       makeRequest({ payload: { summary: 'Login broken', email: 'user@example.com' } }),
-      { params: Promise.resolve({ slug: 'feedback' }) },
+      { params: Promise.resolve({ slug: 'feedback' }) }
     );
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -227,6 +249,23 @@ describe('POST /api/public/intake/[slug]', () => {
     expect(state.insertedSubmissions[0].status).toBe('converted');
   });
 
+  it('hides public forms while their workspace is suspended', async () => {
+    const db = require('@tasknebula/db');
+    db.__setSelectQueue([
+      [formFixture],
+      [projectFixture],
+      [{ ...organizationFixture, status: 'suspended' }],
+    ]);
+    const { POST } = await import('../route');
+    const response = await POST(makeRequest({ payload: { summary: 'Should not create' } }), {
+      params: Promise.resolve({ slug: 'feedback' }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(state.insertedIssues).toHaveLength(0);
+    expect(state.insertedSubmissions).toHaveLength(0);
+  });
+
   it('rate limits repeated submissions from the same ip', async () => {
     // The in-memory limiter (used when Redis is null) allows 5 hits per
     // minute keyed by (formId, ipHash). Re-queue the form lookup so the
@@ -235,7 +274,13 @@ describe('POST /api/public/intake/[slug]', () => {
     const buildQueue = () => {
       const q: unknown[][] = [];
       for (let i = 0; i < 5; i += 1) {
-        q.push([formFixture], [projectFixture], [workflowStatusFixture], [{ number: i }]);
+        q.push(
+          [formFixture],
+          [projectFixture],
+          [organizationFixture],
+          [workflowStatusFixture],
+          [{ number: i }]
+        );
       }
       q.push([formFixture]); // 6th request: only form lookup runs before 429
       return q;
@@ -247,11 +292,8 @@ describe('POST /api/public/intake/[slug]', () => {
     let lastStatus = 200;
     for (let i = 0; i < 6; i += 1) {
       const res = await POST(
-        makeRequest(
-          { payload: { summary: `Test ${i}` } },
-          { 'x-forwarded-for': '203.0.113.10' },
-        ),
-        { params: Promise.resolve({ slug: 'feedback' }) },
+        makeRequest({ payload: { summary: `Test ${i}` } }, { 'x-forwarded-for': '203.0.113.10' }),
+        { params: Promise.resolve({ slug: 'feedback' }) }
       );
       lastStatus = res.status;
     }

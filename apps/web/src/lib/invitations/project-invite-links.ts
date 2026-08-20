@@ -65,6 +65,8 @@ type ProjectInviteRecord = {
   projectKey: string;
   projectName: string;
   organizationName: string;
+  projectStatus: typeof projects.$inferSelect.status;
+  organizationStatus: typeof organizations.$inferSelect.status;
 };
 
 export type AcceptedProjectInvite = {
@@ -131,6 +133,8 @@ export async function findProjectInviteLinkByToken(
       projectKey: projects.key,
       projectName: projects.name,
       organizationName: organizations.name,
+      projectStatus: projects.status,
+      organizationStatus: organizations.status,
     })
     .from(projectInviteLinks)
     .innerJoin(projects, eq(projects.id, projectInviteLinks.projectId))
@@ -146,6 +150,9 @@ export function assertProjectInviteLinkUsable(
 ): asserts invite is ProjectInviteRecord {
   if (!invite) {
     throw new ProjectInviteLinkError('invalid', 'Invalid project invitation link');
+  }
+  if (invite.organizationStatus === 'suspended' || invite.projectStatus !== 'active') {
+    throw new ProjectInviteLinkError('project_missing', 'Project invitation is unavailable');
   }
   if (invite.revokedAt) {
     throw new ProjectInviteLinkError('revoked', 'Project invitation link was revoked');
@@ -270,19 +277,60 @@ export async function acceptProjectInviteLink({
     const invite = await findProjectInviteLinkByToken(token, tx);
     assertProjectInviteLinkUsable(invite);
 
-    const [existingProjectMember] = await tx
-      .select({ id: projectMembers.id })
-      .from(projectMembers)
-      .where(and(eq(projectMembers.projectId, invite.projectId), eq(projectMembers.userId, userId)))
+    const [user] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.status, 'active')))
       .limit(1);
+    if (!user) {
+      throw new ProjectInviteLinkError('invalid', 'Invalid project invitation link');
+    }
 
-    if (existingProjectMember) {
-      await ensureOrganizationMembership(tx, invite.organizationId, userId);
+    const [[existingProjectMember], [existingOrganizationMember]] = await Promise.all([
+      tx
+        .select({ id: projectMembers.id })
+        .from(projectMembers)
+        .where(
+          and(eq(projectMembers.projectId, invite.projectId), eq(projectMembers.userId, userId))
+        )
+        .limit(1),
+      tx
+        .select({ id: organizationMembers.id, status: organizationMembers.status })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, invite.organizationId),
+            eq(organizationMembers.userId, userId)
+          )
+        )
+        .limit(1),
+    ]);
+
+    if (existingProjectMember && existingOrganizationMember?.status === 'active') {
       return toAcceptedProjectInvite(invite, true);
     }
 
     await claimProjectInviteUse(tx, invite.id);
     await ensureOrganizationMembership(tx, invite.organizationId, userId);
+
+    if (existingProjectMember) {
+      await tx.insert(auditLogs).values({
+        id: createId(),
+        organizationId: invite.organizationId,
+        userId,
+        action: 'project.invite_link_accepted',
+        resourceType: 'project_invite_link',
+        resourceId: invite.id,
+        metadata: {
+          projectId: invite.projectId,
+          role: invite.role,
+          alreadyProjectMember: true,
+          organizationMembershipReactivated: true,
+        },
+      });
+      return toAcceptedProjectInvite(invite, true);
+    }
+
     await ensureProjectMembership(tx, invite, userId);
 
     await tx.insert(auditLogs).values({

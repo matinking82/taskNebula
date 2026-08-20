@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createId } from '@paralleldrive/cuid2';
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import { db, systemAuditLogs } from '@tasknebula/db';
@@ -29,15 +29,32 @@ export async function POST() {
     return NextResponse.json(
       {
         success: false,
-        error:
-          'LiveKit is not configured. Save a LiveKit config first or set LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET in the environment.',
+        error: 'livekit_not_configured',
+        code: 'livekit_not_configured',
       },
       { status: 400 }
     );
   }
 
+  const testId = createId();
+  const testRoomName = `tn-admin-test-${createId()}`;
+  await db.insert(systemAuditLogs).values({
+    id: testId,
+    userId: authz.userId,
+    action: 'system.livekit_test_requested',
+    resourceType: 'system_setting',
+    resourceId: 'livekit_config',
+    metadata: { testId, source: cfg.source, roomName: testRoomName },
+  });
+
+  let activeRoomCount: number;
   try {
-    const testRoomName = `tn-admin-test-${createId()}`;
+    const roomService = new RoomServiceClient(cfg.url, cfg.apiKey, cfg.apiSecret, {
+      requestTimeout: 5,
+    });
+    const rooms = await roomService.listRooms();
+    activeRoomCount = rooms.length;
+
     const token = new AccessToken(cfg.apiKey, cfg.apiSecret, {
       identity: `admin-test-${authz.userId}`,
       name: 'Admin test',
@@ -48,34 +65,70 @@ export async function POST() {
       canPublish: false,
       canSubscribe: true,
     });
-    const jwt = await token.toJwt();
+    await token.toJwt();
+  } catch (err) {
+    const message = (err instanceof Error ? err.message : String(err)).slice(0, 500);
+    try {
+      await db.insert(systemAuditLogs).values({
+        id: createId(),
+        userId: authz.userId,
+        action: 'system.livekit_test_failed',
+        resourceType: 'system_setting',
+        resourceId: 'livekit_config',
+        metadata: { testId, source: cfg.source, error: message },
+      });
+    } catch (auditError) {
+      console.error('[livekit-test] failed verification outcome could not be recorded', {
+        testId,
+        error: auditError instanceof Error ? auditError.message : String(auditError),
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'livekit_test_outcome_unrecorded',
+          code: 'livekit_test_outcome_unrecorded',
+          testId,
+        },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: 'livekit_test_failed', code: 'livekit_test_failed' },
+      { status: 502 }
+    );
+  }
 
+  try {
     await db.insert(systemAuditLogs).values({
       id: createId(),
       userId: authz.userId,
       action: 'system.livekit_test_ok',
       resourceType: 'system_setting',
       resourceId: 'livekit_config',
-      metadata: { source: cfg.source, roomName: testRoomName },
+      metadata: { testId, source: cfg.source, roomName: testRoomName, activeRoomCount },
     });
-
-    return NextResponse.json({
-      success: true,
-      source: cfg.source,
-      url: cfg.url,
-      roomName: testRoomName,
-      tokenPreview: jwt.slice(0, 20) + '…',
+  } catch (error) {
+    console.error('[livekit-test] verification succeeded but outcome audit could not be recorded', {
+      testId,
+      error: error instanceof Error ? error.message : String(error),
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await db.insert(systemAuditLogs).values({
-      id: createId(),
-      userId: authz.userId,
-      action: 'system.livekit_test_failed',
-      resourceType: 'system_setting',
-      resourceId: 'livekit_config',
-      metadata: { source: cfg.source, error: message },
-    });
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'livekit_test_outcome_unrecorded',
+        code: 'livekit_test_outcome_unrecorded',
+        testId,
+      },
+      { status: 503 }
+    );
   }
+
+  return NextResponse.json({
+    success: true,
+    source: cfg.source,
+    url: cfg.url,
+    roomName: testRoomName,
+    activeRoomCount,
+    testId,
+  });
 }

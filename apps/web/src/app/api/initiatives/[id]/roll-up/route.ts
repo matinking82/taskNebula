@@ -4,17 +4,17 @@ import {
   db,
   initiatives,
   initiativeProjects,
-  organizationMembers,
   projects,
   issues,
   workflowStatuses,
 } from '@tasknebula/db';
-import { eq, and, inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import {
   collectInitiativeAndDescendants,
   rollUpProgress,
   type ProjectIssueCounts,
 } from '@/lib/initiatives/rollup';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 /**
  * GET /api/initiatives/[id]/roll-up
@@ -39,18 +39,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const [member] = await db
-    .select()
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, session.user.id),
-        eq(organizationMembers.organizationId, root.workspaceId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  if (!member) {
+  if (!(await resolveOrganizationAccess(session.user.id, root.workspaceId)).allowed) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

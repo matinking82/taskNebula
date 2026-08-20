@@ -8,15 +8,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  db,
-  organizationMembers,
-  users,
-  Permission,
-  SUPER_ADMIN_PERMISSIONS,
-  getRolePermissions,
-} from '@tasknebula/db';
-import { eq, and } from 'drizzle-orm';
+import { Permission, SUPER_ADMIN_PERMISSIONS, getRolePermissions } from '@tasknebula/db';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,36 +27,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Look up super admin status
-    const [user] = await db
-      .select({
-        isSuperAdmin: users.isSuperAdmin,
-      })
-      .from(users)
-      .where(eq(users.id, session.user.id))
-      .limit(1);
-
-    const isSuperAdmin = user?.isSuperAdmin || false;
-
-    // Look up organization role
-    const [member] = await db
-      .select({
-        role: organizationMembers.role,
-      })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.status, 'active')
-        )
-      )
-      .limit(1);
-
-    const role = member?.role ?? null;
+    const access = await resolveOrganizationAccess(session.user.id, organizationId);
+    const role = access.role;
+    const isSuperAdmin = access.allowed && access.isSuperAdmin;
 
     // Not a member and not a super admin — return a "no permissions" shape.
-    if (!role && !isSuperAdmin) {
+    if (!access.allowed) {
       return NextResponse.json({
         organizationId,
         role: null,

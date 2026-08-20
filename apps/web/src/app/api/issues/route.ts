@@ -10,11 +10,6 @@ import {
   workflows,
   sprints,
   users,
-  projectMembers,
-  organizationMembers,
-  ROLE_DEFAULT_PERMISSIONS,
-  hasPermission as roleHasPermission,
-  type ProjectRole,
 } from '@tasknebula/db';
 import { createId } from '@paralleldrive/cuid2';
 import { eq, and, desc, sql, inArray, or } from 'drizzle-orm';
@@ -30,8 +25,8 @@ import {
   stripAgentPolicyMarker,
 } from '@/lib/agent-policy/guard';
 import { apiActorCanAccessOrganization, resolveApiActor } from '@/lib/auth/api-actor';
-import { canReadProject } from '@/lib/auth/access-control';
-import { resolveProjectMemberPermission } from '@/lib/projects/member-permissions';
+import { canReadProject, resolveOrganizationAccess } from '@/lib/auth/access-control';
+import { resolveProjectCapabilityAccess } from '@/lib/auth/project-access';
 
 // Permission check helper for issues
 async function checkIssuePermission(
@@ -39,99 +34,23 @@ async function checkIssuePermission(
   projectId: string,
   action: 'view' | 'create' | 'edit' | 'delete'
 ): Promise<{ allowed: boolean; reason?: string }> {
-  // Get user super admin status
-  const [user] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (user?.isSuperAdmin) {
-    return { allowed: true };
-  }
-
-  // Get project with organization
-  const [project] = await db
-    .select({
-      id: projects.id,
-      organizationId: projects.organizationId,
-    })
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
-
-  if (!project) {
+  const access = await resolveProjectCapabilityAccess(userId, projectId);
+  if (!access.project) {
     return { allowed: false, reason: 'Project not found' };
   }
-
-  // Check organization membership
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, project.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  // Org roles with project:manage have full access
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) {
-    return { allowed: true };
-  }
-  if (!orgMember) {
-    return { allowed: false, reason: 'Not an active organization member' };
-  }
-
-  // Get project membership
-  const [projectMember] = await db
-    .select({
-      role: projectMembers.role,
-      canCreateIssues: projectMembers.canCreateIssues,
-      canEditIssues: projectMembers.canEditIssues,
-      canDeleteIssues: projectMembers.canDeleteIssues,
-    })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)))
-    .limit(1);
-
-  if (!projectMember) {
-    return { allowed: false, reason: 'Not a project member' };
-  }
-
-  // Check role defaults and explicit overrides
-  const roleDefaults =
-    ROLE_DEFAULT_PERMISSIONS[projectMember.role as ProjectRole] || ROLE_DEFAULT_PERMISSIONS.viewer;
   if (action === 'view') {
-    return { allowed: true };
+    return access.canRead
+      ? { allowed: true }
+      : { allowed: false, reason: 'Not an active project member' };
   }
-
-  if (action === 'create' || action === 'edit') {
-    const canModify =
-      action === 'create'
-        ? resolveProjectMemberPermission(
-            projectMember.canCreateIssues,
-            roleDefaults.canCreateIssues
-          )
-        : resolveProjectMemberPermission(projectMember.canEditIssues, roleDefaults.canEditIssues);
-    if (canModify) {
-      return { allowed: true };
-    }
-    return { allowed: false, reason: 'Insufficient permissions to create/edit issues' };
-  }
-
-  if (action === 'delete') {
-    if (
-      resolveProjectMemberPermission(projectMember.canDeleteIssues, roleDefaults.canDeleteIssues)
-    ) {
-      return { allowed: true };
-    }
-    return { allowed: false, reason: 'Insufficient permissions to delete issues' };
-  }
-
-  return { allowed: false, reason: 'Unknown action' };
+  const allowed = {
+    create: access.permissions.canCreateIssues,
+    edit: access.permissions.canEditIssues,
+    delete: access.permissions.canDeleteIssues,
+  }[action];
+  return allowed
+    ? { allowed: true }
+    : { allowed: false, reason: `Insufficient permissions to ${action} issues` };
 }
 
 // Validation schema for creating an issue
@@ -416,18 +335,12 @@ export const POST = withValidation({ body: createIssueSchema })(async (
     }
 
     if (issueInput.assigneeId) {
-      const [assigneeMembership] = await db
-        .select({ userId: organizationMembers.userId })
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.userId, issueInput.assigneeId),
-            eq(organizationMembers.organizationId, project.organizationId),
-            eq(organizationMembers.status, 'active')
-          )
-        )
-        .limit(1);
-      if (!assigneeMembership) {
+      const assigneeAccess = await resolveOrganizationAccess(
+        issueInput.assigneeId,
+        project.organizationId,
+        { allowSuperAdmin: false }
+      );
+      if (!assigneeAccess.allowed) {
         return NextResponse.json({ error: 'invalid_assignee' }, { status: 400 });
       }
     }

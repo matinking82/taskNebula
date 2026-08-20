@@ -6,10 +6,10 @@
  */
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, organizationMembers } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { db, organizations } from '@tasknebula/db';
+import { eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
-import { requirePermission } from '@/lib/auth/permissions';
+import { getPermittedOrganizationIds } from '@/lib/auth/permissions';
 import { SsoSettingsClient } from '@/components/settings/sso-settings-client';
 import { PageFrame } from '@/components/ui/page-frame';
 import { PageHeader } from '@/components/ui/page-header';
@@ -24,24 +24,26 @@ export default async function SsoSettingsPage() {
   if (!session?.user?.id) {
     redirect('/auth/signin?callbackUrl=/settings/sso');
   }
-  const [primaryOrg] = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    )
-    .limit(1);
-  if (!primaryOrg) {
+  const [organizationId] = await getPermittedOrganizationIds(session.user.id, 'org:settings');
+  if (!organizationId) {
     redirect('/dashboard?error=insufficient-permission');
   }
-  await requirePermission(primaryOrg.organizationId, 'org:settings');
+
+  const [organization] = await db
+    .select({ slug: organizations.slug })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+  if (!organization) {
+    redirect('/dashboard?error=insufficient-permission');
+  }
 
   const t = await getTranslations('pagesSettings');
 
   return (
     <PageFrame contentClassName="max-w-5xl">
       <PageHeader title={t('sso.title')} description={t('sso.subtitle')} />
-      <SsoSettingsClient organizationId={primaryOrg.organizationId} />
+      <SsoSettingsClient organizationId={organizationId} organizationSlug={organization.slug} />
     </PageFrame>
   );
 }

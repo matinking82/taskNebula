@@ -9,7 +9,7 @@ import {
   users,
 } from '@tasknebula/db';
 import { auth } from '@/auth';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 
 // GET /api/organizations - Get user's organizations
@@ -37,7 +37,8 @@ export async function GET() {
       .where(
         and(
           eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.status, 'active')
+          eq(organizationMembers.status, 'active'),
+          ne(organizations.status, 'suspended')
         )
       );
 

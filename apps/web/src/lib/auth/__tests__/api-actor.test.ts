@@ -6,6 +6,7 @@ const authMock = jest.fn();
 const selectMock = jest.fn();
 const updateMock = jest.fn();
 const eqMock = jest.fn((left: unknown, right: unknown) => ({ type: 'eq', left, right }));
+const neMock = jest.fn((left: unknown, right: unknown) => ({ type: 'ne', left, right }));
 
 jest.mock('@/auth', () => ({
   auth: (...args: unknown[]) => authMock(...args),
@@ -31,6 +32,10 @@ jest.mock('@tasknebula/db', () => ({
     organizationId: 'organizationMembers.organizationId',
     status: 'organizationMembers.status',
   },
+  organizations: {
+    id: 'organizations.id',
+    status: 'organizations.status',
+  },
   db: {
     select: (...args: unknown[]) => selectMock(...args),
     update: (...args: unknown[]) => updateMock(...args),
@@ -42,6 +47,7 @@ jest.mock('drizzle-orm', () => ({
   eq: (...args: unknown[]) => eqMock(...args),
   gt: (left: unknown, right: unknown) => ({ type: 'gt', left, right }),
   isNull: (value: unknown) => ({ type: 'isNull', value }),
+  ne: (...args: unknown[]) => neMock(...args),
   or: (...args: unknown[]) => ({ type: 'or', args }),
 }));
 
@@ -103,6 +109,7 @@ describe('resolveApiActor', () => {
 
     const expectedHash = crypto.createHash('sha256').update('sk_live_secret').digest('hex');
     expect(eqMock).toHaveBeenCalledWith('apiKeys.key', expectedHash);
+    expect(neMock).toHaveBeenCalledWith('organizations.status', 'suspended');
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ id: 'apiKeys.id' }));
     expect(updateBuilder.set).toHaveBeenCalledWith({ lastUsedAt: expect.any(Date) });
     expect(authMock).not.toHaveBeenCalled();

@@ -7,10 +7,9 @@
  */
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { db, organizationMembers } from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { LabelsSettingsClient } from '@/components/settings/labels-settings-client';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export async function generateMetadata() {
   const t = await getTranslations('pagesSettings');
@@ -23,13 +22,7 @@ export default async function LabelsSettingsPage() {
     redirect('/auth/signin?callbackUrl=/settings/labels');
   }
 
-  const [membership] = await db
-    .select({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(eq(organizationMembers.userId, session.user.id), eq(organizationMembers.status, 'active'))
-    )
-    .limit(1);
+  const [membership] = await listActiveOrganizationMemberships(session.user.id);
 
   if (!membership) {
     redirect('/dashboard?error=insufficient-permission');

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { sql } from 'drizzle-orm';
 import { db, users } from '@tasknebula/db';
 import { passwordResetTokens } from '@tasknebula/db/src/schema/password-reset-tokens';
 import { eq } from 'drizzle-orm';
@@ -38,21 +39,14 @@ export async function POST(request: NextRequest) {
 
   const payload = body as { token?: unknown; newPassword?: unknown } | null;
   const token = typeof payload?.token === 'string' ? payload.token : '';
-  const newPassword =
-    typeof payload?.newPassword === 'string' ? payload.newPassword : '';
+  const newPassword = typeof payload?.newPassword === 'string' ? payload.newPassword : '';
 
   if (!token || !newPassword) {
-    return NextResponse.json(
-      { error: 'Token and new password are required' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Token and new password are required' }, { status: 400 });
   }
 
   if (newPassword.length < 8) {
-    return NextResponse.json(
-      { error: 'Password must be at least 8 characters' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
   }
 
   try {
@@ -80,7 +74,11 @@ export async function POST(request: NextRequest) {
 
     await db
       .update(users)
-      .set({ password: hashedPassword, updatedAt: new Date() })
+      .set({
+        password: hashedPassword,
+        sessionVersion: sql`${users.sessionVersion} + 1`,
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, record.userId));
 
     await db
@@ -88,15 +86,9 @@ export async function POST(request: NextRequest) {
       .set({ usedAt: new Date() })
       .where(eq(passwordResetTokens.id, record.id));
 
-    return NextResponse.json(
-      { message: 'Password updated successfully' },
-      { status: 200 }
-    );
+    return NextResponse.json({ message: 'Password updated successfully' }, { status: 200 });
   } catch (error) {
     console.error('[reset-password] unexpected error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

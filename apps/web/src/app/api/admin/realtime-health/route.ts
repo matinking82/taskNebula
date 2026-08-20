@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  conversationRooms,
-  db,
-  projectChannels,
-  roomReadStates,
-} from '@tasknebula/db';
+import { conversationRooms, db, projectChannels, roomReadStates } from '@tasknebula/db';
 import { count } from 'drizzle-orm';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import { countResolvedActiveCalls } from '@/lib/chat/server';
-import { getLivekitStatus } from '@/lib/chat/livekit';
+import { resolveLivekitStatus } from '@/lib/chat/livekit';
 import { isRedisConfigured } from '@/lib/server/redis';
 
 export async function GET() {
@@ -24,12 +19,14 @@ export async function GET() {
   }
 
   try {
-    const [[channelCount], [roomCount], activeCallCount, [readStateCount]] = await Promise.all([
-      db.select({ count: count() }).from(projectChannels),
-      db.select({ count: count() }).from(conversationRooms),
-      countResolvedActiveCalls(),
-      db.select({ count: count() }).from(roomReadStates),
-    ]);
+    const [[channelCount], [roomCount], activeCallCount, [readStateCount], livekitStatus] =
+      await Promise.all([
+        db.select({ count: count() }).from(projectChannels),
+        db.select({ count: count() }).from(conversationRooms),
+        countResolvedActiveCalls(),
+        db.select({ count: count() }).from(roomReadStates),
+        resolveLivekitStatus(),
+      ]);
 
     return NextResponse.json({
       services: {
@@ -37,7 +34,7 @@ export async function GET() {
           ready: isRedisConfigured(),
           mode: isRedisConfigured() ? 'redis_pubsub' : 'in_memory_fallback',
         },
-        livekit: getLivekitStatus(),
+        livekit: livekitStatus,
       },
       stats: {
         channels: Number(channelCount?.count || 0),

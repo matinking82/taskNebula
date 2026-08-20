@@ -49,8 +49,14 @@ export function EditOrganizationDialog({
     status: 'active' as OrganizationStatus,
     domain: '',
   });
+  const [hydratedOrganizationId, setHydratedOrganizationId] = useState<string | null>(null);
 
-  const { data: org, isLoading } = useQuery({
+  const {
+    data: org,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['admin-organization', organizationId],
     queryFn: async () => {
       const response = await fetch(`/api/admin/organizations/${organizationId}`);
@@ -61,6 +67,11 @@ export function EditOrganizationDialog({
   });
 
   useEffect(() => {
+    if (!open) {
+      setHydratedOrganizationId(null);
+      return;
+    }
+
     if (org) {
       setFormData({
         name: org.name || '',
@@ -69,8 +80,9 @@ export function EditOrganizationDialog({
         status: org.status || 'active',
         domain: org.domain || '',
       });
+      setHydratedOrganizationId(organizationId);
     }
-  }, [org]);
+  }, [open, org, organizationId]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -114,9 +126,16 @@ export function EditOrganizationDialog({
           <DialogDescription>{t('editOrg.description')}</DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
+        {isLoading || (!isError && hydratedOrganizationId !== organizationId) ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+          </div>
+        ) : isError ? (
+          <div className="space-y-3 py-8 text-center">
+            <p className="text-muted-foreground text-sm">{t('editOrg.loadFailed')}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+              {t('editOrg.retry')}
+            </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
@@ -150,7 +169,7 @@ export function EditOrganizationDialog({
                     setFormData({ ...formData, plan: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="plan" aria-label={t('orgForm.plan')}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -170,7 +189,7 @@ export function EditOrganizationDialog({
                     setFormData({ ...formData, status: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="status" aria-label={t('editOrg.status')}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

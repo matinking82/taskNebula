@@ -8,13 +8,16 @@ import {
   eq,
   hasPermission as roleHasPermission,
   inArray,
-  organizationMembers,
   or,
   projectTemplates,
   users,
 } from '@tasknebula/db';
 import { auth } from '@/auth';
 import { getTemplateAuthz } from '@/lib/templates/authz';
+import {
+  listActiveOrganizationMemberships,
+  resolveOrganizationAccess,
+} from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,17 +56,12 @@ export async function GET(request: NextRequest) {
       .where(eq(users.id, userId))
       .limit(1);
 
-    const orgMemberships = await db
-      .select({
-        organizationId: organizationMembers.organizationId,
-        role: organizationMembers.role,
-      })
-      .from(organizationMembers)
-      .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active')));
+    const orgMemberships = await listActiveOrganizationMemberships(userId);
 
     let orgIds = orgMemberships.map((m) => m.organizationId);
     if (organizationIdParam) {
-      if (!user?.isSuperAdmin && !orgIds.includes(organizationIdParam)) {
+      const access = await resolveOrganizationAccess(userId, organizationIdParam);
+      if (!access.allowed) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
       orgIds = [organizationIdParam];
@@ -156,15 +154,7 @@ export async function POST(request: NextRequest) {
     // Resolve organization: explicit or the caller's first admin org.
     let organizationId = data.organizationId ?? null;
     if (!organizationId) {
-      const memberships = await db
-        .select({
-          organizationId: organizationMembers.organizationId,
-          role: organizationMembers.role,
-        })
-        .from(organizationMembers)
-        .where(
-          and(eq(organizationMembers.userId, userId), eq(organizationMembers.status, 'active'))
-        );
+      const memberships = await listActiveOrganizationMemberships(userId);
       const adminMembership = memberships.find((membership) =>
         roleHasPermission(membership.role || '', 'org:settings')
       );

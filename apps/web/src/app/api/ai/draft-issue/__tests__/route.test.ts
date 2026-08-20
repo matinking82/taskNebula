@@ -17,6 +17,22 @@ jest.mock('@/lib/env', () => ({
 const authMock = jest.fn();
 jest.mock('@/auth', () => ({ auth: (...args: any[]) => authMock(...args) }));
 
+const resolveProjectMock = jest.fn();
+jest.mock('@/lib/projects/server', () => ({
+  resolveProjectByIdOrKey: (...args: any[]) => resolveProjectMock(...args),
+}));
+
+const canReadProjectMock = jest.fn();
+jest.mock('@/lib/auth/access-control', () => ({
+  canReadProject: (...args: any[]) => canReadProjectMock(...args),
+}));
+
+const productFeatureMock = jest.fn();
+jest.mock('@/lib/feature-flags', () => ({
+  PRODUCT_FEATURE_FLAGS: { AI_ISSUE_DRAFTING: 'ai_issue_drafting' },
+  isProductFeatureEnabled: (...args: any[]) => productFeatureMock(...args),
+}));
+
 const createAuditLogMock = jest.fn().mockResolvedValue(undefined);
 jest.mock('@tasknebula/db', () => {
   const makeSelectChain = () => {
@@ -45,7 +61,13 @@ jest.mock('@tasknebula/db', () => {
     users: { id: 'id', isSuperAdmin: 'isSuperAdmin' },
     issues: { projectId: 'projectId', labels: 'labels' },
     organizations: { id: 'id', settings: 'settings' },
-    notifications: { userId: 'userId', type: 'type', title: 'title', message: 'message', projectId: 'projectId' },
+    notifications: {
+      userId: 'userId',
+      type: 'type',
+      title: 'title',
+      message: 'message',
+      projectId: 'projectId',
+    },
   };
 });
 
@@ -62,7 +84,10 @@ jest.mock('@/lib/ai/feature-gate', () => ({
 const draftMock = jest.fn();
 jest.mock('@/lib/ai/draft-issue', () => {
   class AiDraftError extends Error {
-    constructor(public code: string, message: string) {
+    constructor(
+      public code: string,
+      message: string
+    ) {
       super(message);
     }
   }
@@ -135,24 +160,28 @@ describe('POST /api/ai/draft-issue', () => {
     jest.clearAllMocks();
     gateMock.mockResolvedValue(true);
     authMock.mockResolvedValue({ user: { id: 'user-1' } });
+    resolveProjectMock.mockResolvedValue({
+      id: 'p-1',
+      name: 'Acme',
+      key: 'ACME',
+      organizationId: 'org-1',
+    });
+    canReadProjectMock.mockResolvedValue(true);
+    productFeatureMock.mockResolvedValue(true);
     mockWorkspaceAssistant(true);
   });
 
   it('returns 404 when platform AI is disabled', async () => {
     gateMock.mockResolvedValueOnce(false);
     const { POST } = await import('../route');
-    const response = await POST(
-      buildRequest({ projectId: 'p-1', prompt: 'test prompt' })
-    );
+    const response = await POST(buildRequest({ projectId: 'p-1', prompt: 'test prompt' }));
     expect(response.status).toBe(404);
   });
 
   it('returns 401 when unauthenticated', async () => {
     authMock.mockResolvedValueOnce(null);
     const { POST } = await import('../route');
-    const response = await POST(
-      buildRequest({ projectId: 'p-1', prompt: 'test prompt' })
-    );
+    const response = await POST(buildRequest({ projectId: 'p-1', prompt: 'test prompt' }));
     expect(response.status).toBe(401);
   });
 
@@ -163,31 +192,28 @@ describe('POST /api/ai/draft-issue', () => {
   });
 
   it('returns 404 when user is not a member of the project org', async () => {
-    mockDbSelect(
-      [{ isSuperAdmin: false }],                         // user
-      [{ organizationId: 'org-1' }],                     // project for access check
-      []                                                 // orgMember — empty → no access
-    );
+    canReadProjectMock.mockResolvedValueOnce(false);
     const { POST } = await import('../route');
-    const response = await POST(
-      buildRequest({ projectId: 'p-1', prompt: 'a valid prompt' })
-    );
+    const response = await POST(buildRequest({ projectId: 'p-1', prompt: 'a valid prompt' }));
     expect(response.status).toBe(404);
+  });
+
+  it('returns 404 when the admin rollout flag disables issue drafting', async () => {
+    productFeatureMock.mockResolvedValueOnce(false);
+    const { POST } = await import('../route');
+    const response = await POST(buildRequest({ projectId: 'p-1', prompt: 'a valid prompt' }));
+
+    expect(response.status).toBe(404);
+    expect(productFeatureMock).toHaveBeenCalledWith('ai_issue_drafting', 'org-1');
   });
 
   it('returns 412 when workspace AI Assistant toggle is off', async () => {
     mockWorkspaceAssistant(false);
     mockDbSelect(
-      [{ isSuperAdmin: false }],                                                // user
-      [{ organizationId: 'org-1' }],                                            // project access
-      [{ role: 'member' }],                                                     // orgMember
-      [{ id: 'p-1', name: 'Acme', key: 'ACME', organizationId: 'org-1' }],      // project detail
-      [{ settings: { aiAgents: { enabled: false } } }]                          // org settings for workspace check
+      [{ settings: { aiAgents: { enabled: false } } }] // org settings for workspace check
     );
     const { POST } = await import('../route');
-    const response = await POST(
-      buildRequest({ projectId: 'p-1', prompt: 'a valid prompt' })
-    );
+    const response = await POST(buildRequest({ projectId: 'p-1', prompt: 'a valid prompt' }));
     expect(response.status).toBe(412);
     const body = await response.json();
     expect(body.code).toBe('assistant_disabled');
@@ -195,13 +221,9 @@ describe('POST /api/ai/draft-issue', () => {
 
   it('returns draft on happy path and writes an audit log', async () => {
     mockDbSelect(
-      [{ isSuperAdmin: false }],                                                // user
-      [{ organizationId: 'org-1' }],                                            // project access
-      [{ role: 'member' }],                                                     // orgMember
-      [{ id: 'p-1', name: 'Acme', key: 'ACME', organizationId: 'org-1' }],      // project detail
-      [{ settings: { aiAgents: { enabled: true } } }],                          // org settings for workspace check
-      [{ labels: ['backend'] }, { labels: ['frontend'] }],                      // issue labels
-      [{ settings: { aiAgents: { enabled: true, provider: 'native' } } }]       // org settings for resolveProviderAndKey
+      [{ settings: { aiAgents: { enabled: true } } }], // org settings for workspace check
+      [{ labels: ['backend'] }, { labels: ['frontend'] }], // issue labels
+      [{ settings: { aiAgents: { enabled: true, provider: 'native' } } }] // provider config
     );
 
     draftMock.mockResolvedValueOnce({
@@ -214,9 +236,7 @@ describe('POST /api/ai/draft-issue', () => {
     });
 
     const { POST } = await import('../route');
-    const response = await POST(
-      buildRequest({ projectId: 'p-1', prompt: 'Ship the thing' })
-    );
+    const response = await POST(buildRequest({ projectId: 'p-1', prompt: 'Ship the thing' }));
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.draft.type).toBe('task');
@@ -228,10 +248,6 @@ describe('POST /api/ai/draft-issue', () => {
 
   it('returns 502 on provider errors and audits failure', async () => {
     mockDbSelect(
-      [{ isSuperAdmin: false }],
-      [{ organizationId: 'org-1' }],
-      [{ role: 'member' }],
-      [{ id: 'p-1', name: 'Acme', key: 'ACME', organizationId: 'org-1' }],
       [{ settings: { aiAgents: { enabled: true } } }],
       [],
       [{ settings: { aiAgents: { enabled: true, provider: 'native' } } }]
@@ -241,9 +257,7 @@ describe('POST /api/ai/draft-issue', () => {
     draftMock.mockRejectedValueOnce(new AiDraftError('provider_error', 'Boom'));
 
     const { POST } = await import('../route');
-    const response = await POST(
-      buildRequest({ projectId: 'p-1', prompt: 'Test prompt' })
-    );
+    const response = await POST(buildRequest({ projectId: 'p-1', prompt: 'Test prompt' }));
     expect(response.status).toBe(502);
     expect(createAuditLogMock).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'agent.run_failed' })

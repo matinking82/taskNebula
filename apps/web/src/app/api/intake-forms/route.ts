@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { db, intakeForms, organizationMembers, projects } from '@tasknebula/db';
+import { db, intakeForms, projects } from '@tasknebula/db';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { intakeFieldsArraySchema } from '@/lib/intake/schema';
 import { hasPermission } from '@/lib/auth/permissions';
+import { listActiveOrganizationMemberships } from '@/lib/auth/access-control';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,15 +46,7 @@ export async function GET(request: NextRequest) {
 
     const projectIdParam = request.nextUrl.searchParams.get('projectId');
 
-    const orgMemberships = await db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.userId, session.user.id),
-          eq(organizationMembers.status, 'active')
-        )
-      );
+    const orgMemberships = await listActiveOrganizationMemberships(session.user.id);
 
     const accessibleOrgIds = (
       await Promise.all(

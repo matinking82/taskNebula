@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { isSuperAdmin } from '@/lib/auth/permissions';
 import {
   getSystemAgentControlSettingsFromDb,
+  SYSTEM_AGENT_CONTROL_ADVISORY_LOCK,
   upsertSystemAgentControlSettings,
 } from '@/lib/agents/system';
 import {
@@ -16,7 +17,15 @@ import {
   extractWorkspaceModelConfigId,
   listAgentModelConfigsByIds,
 } from '@/lib/agents/model-configs';
-import { db, agentRuns, organizations, projects, systemAuditLogs, users } from '@tasknebula/db';
+import {
+  db,
+  agentRuns,
+  organizations,
+  projects,
+  sql,
+  systemAuditLogs,
+  users,
+} from '@tasknebula/db';
 import { desc, eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { invalidateAiFeatureCache } from '@/lib/ai/feature-gate';
@@ -218,31 +227,19 @@ export async function GET() {
   const serviceStatus = [
     {
       key: 'control-plane',
-      label: 'Control plane',
       state: settings.globalEnabled ? 'ready' : 'disabled',
-      detail: settings.globalEnabled
-        ? 'Workspace and project agent policies can execute when local settings allow it.'
-        : 'All agent execution is paused globally.',
     },
     {
       key: 'live-monitoring',
-      label: 'Live monitoring',
       state: 'ready',
-      detail: 'Project and admin AI panels can subscribe to live run streams.',
     },
     {
       key: 'write-pipeline',
-      label: 'Write pipeline',
       state: settings.allowWriteActions ? 'ready' : 'preview',
-      detail: settings.allowWriteActions
-        ? 'Live writes are allowed when workspace and project policy also permit them.'
-        : 'All writes are forced back into preview mode.',
     },
     {
       key: 'provider-coverage',
-      label: 'Provider coverage',
       state: blockedWorkspaceCount > 0 ? 'blocked' : 'ready',
-      detail: `${readyWorkspaceCount}/${enabledWorkspaceCount} enabled workspaces currently have runnable provider access.`,
     },
   ];
 
@@ -286,31 +283,33 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const updates = agentControlSchema.parse(body);
-    const currentSettings = await getSystemAgentControlSettingsFromDb();
-    const nextSettings = {
-      ...currentSettings,
-      ...updates,
-    };
+    const nextSettings = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${SYSTEM_AGENT_CONTROL_ADVISORY_LOCK}))`
+      );
+      const currentSettings = await getSystemAgentControlSettingsFromDb(tx);
+      const next = { ...currentSettings, ...updates };
+      await upsertSystemAgentControlSettings(next, session.user.id, tx);
 
-    await upsertSystemAgentControlSettings(nextSettings, session.user.id);
-    invalidateAiFeatureCache();
-
-    await db.insert(systemAuditLogs).values({
-      id: createId(),
-      userId: session.user.id,
-      action: 'agent.control.updated',
-      resourceType: 'system_setting',
-      resourceId: 'agent_control_center',
-      changes: {
-        agentControl: { from: currentSettings, to: nextSettings },
-      },
-      metadata: {
-        updatedFields: Object.keys(updates),
-      },
-      ipAddress:
-        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
-      userAgent: request.headers.get('user-agent') || undefined,
+      await tx.insert(systemAuditLogs).values({
+        id: createId(),
+        userId: session.user.id,
+        action: 'agent.control.updated',
+        resourceType: 'system_setting',
+        resourceId: 'agent_control_center',
+        changes: {
+          agentControl: { from: currentSettings, to: next },
+        },
+        metadata: {
+          updatedFields: Object.keys(updates),
+        },
+        ipAddress:
+          request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
+        userAgent: request.headers.get('user-agent') || undefined,
+      });
+      return next;
     });
+    invalidateAiFeatureCache();
 
     return NextResponse.json({ settings: nextSettings });
   } catch (error) {

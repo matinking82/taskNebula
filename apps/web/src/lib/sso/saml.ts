@@ -96,7 +96,7 @@ function registerValidator() {
  */
 function verifyAssertionConstraints(ctx: SamlContext, extract: Record<string, unknown>): void {
   const wantAcs = acsUrl(ctx.baseUrl, ctx.workspaceSlug);
-  const wantAudience = spEntityId(ctx.baseUrl, ctx.workspaceSlug);
+  const wantAudience = ctx.config.audience || spEntityId(ctx.baseUrl, ctx.workspaceSlug);
 
   // Subject confirmation Recipient. samlify exposes it as
   // `subjectConfirmation.subjectConfirmationData.recipient` (lowercase
@@ -189,7 +189,7 @@ export function buildServiceProvider(ctx: SamlContext) {
   const { baseUrl, workspaceSlug, config } = ctx;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (ServiceProvider as any)({
-    entityID: spEntityId(baseUrl, workspaceSlug),
+    entityID: config.audience || spEntityId(baseUrl, workspaceSlug),
     authnRequestsSigned: !!config.privateKey,
     wantAssertionsSigned: true,
     wantMessageSigned: false,

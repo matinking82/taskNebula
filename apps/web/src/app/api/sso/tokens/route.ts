@@ -8,16 +8,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { db, scimTokens, eq, desc, isNull } from '@tasknebula/db';
+import { auditLogs, db, scimTokens, eq, desc, sql } from '@tasknebula/db';
 import { hasPermission } from '@/lib/auth/permissions';
-import { generateScimToken, hashScimToken } from '@/lib/sso/tokens';
+import { digestScimToken, generateScimToken, hashScimToken } from '@/lib/sso/tokens';
+import { SCIM_SCOPES } from '@/lib/scim/scopes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const createSchema = z.object({
   organizationId: z.string().min(1),
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120),
+  scopes: z
+    .array(z.enum(SCIM_SCOPES))
+    .min(1)
+    .max(SCIM_SCOPES.length)
+    .default([...SCIM_SCOPES]),
 });
 
 export async function GET(request: NextRequest) {
@@ -27,10 +33,7 @@ export async function GET(request: NextRequest) {
   }
   const orgId = new URL(request.url).searchParams.get('organizationId');
   if (!orgId) {
-    return NextResponse.json(
-      { error: 'organizationId is required' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
   }
   if (!(await hasPermission(orgId, 'org:settings'))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -39,6 +42,8 @@ export async function GET(request: NextRequest) {
     .select({
       id: scimTokens.id,
       name: scimTokens.name,
+      tokenPrefix: scimTokens.tokenPrefix,
+      scopes: scimTokens.scopes,
       createdAt: scimTokens.createdAt,
       lastUsedAt: scimTokens.lastUsedAt,
       revokedAt: scimTokens.revokedAt,
@@ -70,38 +75,55 @@ export async function POST(request: NextRequest) {
   if (!(await hasPermission(parsed.data.organizationId, 'org:settings'))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { token } = generateScimToken();
+  const scopes = [...new Set(parsed.data.scopes)];
+  const { token, prefix } = generateScimToken();
   const tokenHash = await hashScimToken(token);
-  const inserted = await db
-    .insert(scimTokens)
-    .values({
-      workspaceId: parsed.data.organizationId,
-      name: parsed.data.name,
-      tokenHash,
-    })
-    .returning({
-      id: scimTokens.id,
-      name: scimTokens.name,
-      createdAt: scimTokens.createdAt,
-    });
-  const row = inserted[0];
-  if (!row) {
-    return NextResponse.json(
-      { error: 'Failed to persist SCIM token' },
-      { status: 500 }
+  const row = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`scim-token:${parsed.data.organizationId}`}))`
     );
+    const [created] = await tx
+      .insert(scimTokens)
+      .values({
+        workspaceId: parsed.data.organizationId,
+        name: parsed.data.name,
+        tokenHash,
+        tokenDigest: digestScimToken(token),
+        tokenPrefix: prefix,
+        scopes,
+        createdBy: session.user.id,
+      })
+      .returning({
+        id: scimTokens.id,
+        name: scimTokens.name,
+        tokenPrefix: scimTokens.tokenPrefix,
+        scopes: scimTokens.scopes,
+        createdAt: scimTokens.createdAt,
+      });
+    if (!created) throw new Error('scim_token_create_failed');
+    await tx.insert(auditLogs).values({
+      userId: session.user.id,
+      organizationId: parsed.data.organizationId,
+      action: 'scim_token.created',
+      resourceType: 'scim_token',
+      resourceId: created.id,
+      changes: { scopes: { from: null, to: scopes } },
+      metadata: { name: created.name, tokenPrefix: prefix },
+    });
+    return created;
+  });
+  if (!row) {
+    return NextResponse.json({ error: 'Failed to persist SCIM token' }, { status: 500 });
   }
   return NextResponse.json(
     {
       token, // shown only once
       id: row.id,
       name: row.name,
+      tokenPrefix: row.tokenPrefix,
+      scopes: row.scopes,
       createdAt: row.createdAt,
     },
     { status: 201 }
   );
 }
-
-// Mark referenced symbols used so unused-import linting stays quiet on this
-// barrel — `isNull` is reserved for future "only list active tokens" filter.
-void isNull;

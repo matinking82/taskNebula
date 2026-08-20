@@ -140,6 +140,7 @@ function setSearchParams(params: Record<string, string> = {}) {
 describe('AppSidebar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
     setSearchParams();
 
     mockUseSession.mockReturnValue({
@@ -399,6 +400,7 @@ describe('AppSidebar', () => {
     );
     expect(screen.queryByRole('link', { name: /feature flags/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /agent control/i })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/admin?tab=integrations"]')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^system$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /audit logs/i })).not.toBeInTheDocument();
   });
@@ -510,7 +512,7 @@ describe('AppSidebar', () => {
     expect(screen.queryByRole('link', { name: /pending invites/i })).not.toBeInTheDocument();
   });
 
-  it('hides the dashboard teamspace switcher when the user lacks team:view', () => {
+  it('keeps the dashboard context focused on overview tools when the user lacks team:view', () => {
     setPathname('/dashboard');
     mockUseOrganizationPermissions.mockReturnValue({
       permissions: [],
@@ -530,11 +532,11 @@ describe('AppSidebar', () => {
 
     expect(screen.queryByTestId('teamspace-switcher')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /teamspaces/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/no projects yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no projects yet/i)).not.toBeInTheDocument();
   });
 
-  it('shows the dashboard teamspace switcher when the user has team:view', () => {
-    setPathname('/dashboard');
+  it('shows the teamspace switcher in project context when the user has team:view', () => {
+    setPathname('/projects');
     mockUseOrganizationPermissions.mockReturnValue({
       permissions: ['team:view'],
       isSuperAdmin: false,
@@ -621,6 +623,10 @@ describe('AppSidebar', () => {
     expect(screen.getByRole('link', { name: /agent control/i })).toHaveAttribute(
       'href',
       '/admin?tab=agents'
+    );
+    expect(screen.getByRole('link', { name: /^integrations$/i })).toHaveAttribute(
+      'href',
+      '/admin?tab=integrations'
     );
     expect(screen.getByRole('link', { name: /^system$/i })).toHaveAttribute(
       'href',

@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import {
-  db,
-  hasPermission as roleHasPermission,
-  issues,
-  organizationMembers,
-  projectMembers,
-  users,
-} from '@tasknebula/db';
-import { and, eq } from 'drizzle-orm';
+import { canReadIssue } from '@/lib/auth/access-control';
 
 // In-memory store for presence (in production, use Redis)
 const presenceStore = new Map<
@@ -26,43 +18,9 @@ async function userCanAccessIssue(
   userId: string,
   issueId: string
 ): Promise<'ok' | 'not_found' | 'forbidden'> {
-  const [issue] = await db
-    .select({ projectId: issues.projectId, organizationId: issues.organizationId })
-    .from(issues)
-    .where(eq(issues.id, issueId))
-    .limit(1);
-
-  if (!issue) return 'not_found';
-
-  const [currentUser] = await db
-    .select({ isSuperAdmin: users.isSuperAdmin })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  if (currentUser?.isSuperAdmin) return 'ok';
-
-  const [orgMember] = await db
-    .select({ role: organizationMembers.role })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, issue.organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-
-  if (roleHasPermission(orgMember?.role || '', 'project:manage')) return 'ok';
-
-  const [projectMember] = await db
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, issue.projectId)))
-    .limit(1);
-
-  return projectMember ? 'ok' : 'forbidden';
+  const access = await canReadIssue(userId, issueId);
+  if (!access.issue) return 'not_found';
+  return access.allowed ? 'ok' : 'forbidden';
 }
 
 export async function GET(
@@ -161,6 +119,14 @@ export async function DELETE(
     }
 
     const { issueId } = await params;
+
+    const access = await userCanAccessIssue(session.user.id, issueId);
+    if (access === 'not_found') {
+      return NextResponse.json({ error: 'Issue not found' }, { status: 404 });
+    }
+    if (access === 'forbidden') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Remove user from presence
     const issuePresence = presenceStore.get(issueId);

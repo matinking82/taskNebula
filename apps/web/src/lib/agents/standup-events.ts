@@ -13,13 +13,13 @@ import {
   issueActivities,
   issueComments,
   workflowStatuses,
-  organizationMembers,
   and,
   eq,
   gte,
   inArray,
   desc,
 } from '@tasknebula/db';
+import { resolveOrganizationAccess } from '@/lib/auth/access-control';
 
 import type { StandupEvent } from './standup';
 
@@ -39,18 +39,7 @@ const DEFAULT_MAX_EVENTS = 60;
  * Returns true if a row exists in organization_members.
  */
 export async function isOrgMember(userId: string, organizationId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: organizationMembers.id })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.status, 'active')
-      )
-    )
-    .limit(1);
-  return !!row;
+  return (await resolveOrganizationAccess(userId, organizationId)).allowed;
 }
 
 /**

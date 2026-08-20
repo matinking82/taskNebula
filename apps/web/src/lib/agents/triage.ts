@@ -32,14 +32,14 @@ import {
   and,
   desc,
   eq,
-  inArray,
   issues,
   organizationMembers,
-  projectMembers,
+  organizations,
   projects,
   teams,
   teamMembers,
   users,
+  ne,
 } from '@tasknebula/db';
 import { AiDraftError } from '@/lib/ai/draft-issue';
 import {
@@ -150,7 +150,8 @@ async function loadTriageContext(issueId: string): Promise<TriageContext | null>
       assigneeId: issues.assigneeId,
     })
     .from(issues)
-    .where(eq(issues.id, issueId))
+    .innerJoin(organizations, eq(organizations.id, issues.organizationId))
+    .where(and(eq(issues.id, issueId), ne(organizations.status, 'suspended')))
     .limit(1);
   if (!issue) return null;
 
@@ -195,33 +196,21 @@ async function loadTriageContext(issueId: string): Promise<TriageContext | null>
     .where(eq(teams.organizationId, issue.organizationId))
     .limit(40);
 
-  // Candidate assignees: project members + team members for any team in
-  // this org. We dedupe and cap at 30 to keep the prompt tight.
-  const projectMemberRows = await db
-    .select({ userId: projectMembers.userId })
-    .from(projectMembers)
-    .where(eq(projectMembers.projectId, issue.projectId))
-    .limit(60);
-  const orgMemberRows = await db
-    .select({ userId: organizationMembers.userId })
+  // Candidate assignees must still be active users with active workspace
+  // membership when the suggestion is generated. Stale project-membership
+  // rows are intentionally not treated as an independent access grant.
+  const memberUsers = await db
+    .select({ id: users.id, name: users.name })
     .from(organizationMembers)
+    .innerJoin(users, eq(users.id, organizationMembers.userId))
     .where(
       and(
         eq(organizationMembers.organizationId, issue.organizationId),
-        eq(organizationMembers.status, 'active')
+        eq(organizationMembers.status, 'active'),
+        eq(users.status, 'active')
       )
     )
-    .limit(60);
-  const memberIds = Array.from(
-    new Set([...projectMemberRows.map((r) => r.userId), ...orgMemberRows.map((r) => r.userId)])
-  ).slice(0, 30);
-
-  const memberUsers = memberIds.length
-    ? await db
-        .select({ id: users.id, name: users.name })
-        .from(users)
-        .where(inArray(users.id, memberIds))
-    : [];
+    .limit(30);
 
   return {
     issue: {

@@ -6,8 +6,10 @@ import {
   db,
   eq,
   organizationMembers,
+  organizations,
   projectMembers,
   users,
+  ne,
   type GranularPermissions,
   type ProjectRole,
 } from '@tasknebula/db';
@@ -90,18 +92,20 @@ export async function resolveProjectCapabilityAccess(
 
   const [[user], [orgMember], [projectMember]] = await Promise.all([
     db
-      .select({ isSuperAdmin: users.isSuperAdmin })
+      .select({ isSuperAdmin: users.isSuperAdmin, status: users.status })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1),
     db
       .select({ role: organizationMembers.role })
       .from(organizationMembers)
+      .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
       .where(
         and(
           eq(organizationMembers.userId, userId),
           eq(organizationMembers.organizationId, project.organizationId),
-          eq(organizationMembers.status, 'active')
+          eq(organizationMembers.status, 'active'),
+          ne(organizations.status, 'suspended')
         )
       )
       .limit(1),
@@ -112,9 +116,23 @@ export async function resolveProjectCapabilityAccess(
       .limit(1),
   ]);
 
-  const isSuperAdmin = Boolean(user?.isSuperAdmin);
+  const isActiveUser = user?.status === 'active';
+  const isSuperAdmin = Boolean(isActiveUser && user.isSuperAdmin);
   const isOrgOwner = orgMember?.role === 'owner';
   const isOrgAdmin = orgMember?.role === 'admin';
+
+  if (!isActiveUser) {
+    return {
+      project,
+      canRead: false,
+      canManage: false,
+      isSuperAdmin: false,
+      isOrgOwner: false,
+      isOrgAdmin: false,
+      role: null,
+      permissions: emptyPermissions,
+    };
+  }
 
   if (isSuperAdmin || isOrgOwner || isOrgAdmin) {
     return {
@@ -129,7 +147,7 @@ export async function resolveProjectCapabilityAccess(
     };
   }
 
-  if (!projectMember) {
+  if (!orgMember || !projectMember) {
     return {
       project,
       canRead: false,

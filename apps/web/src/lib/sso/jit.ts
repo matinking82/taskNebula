@@ -5,7 +5,28 @@
  * ensures we have a TaskNebula user + organization membership for the
  * incoming subject. It is also reused by SCIM `POST /Users`.
  */
-import { db, users, organizationMembers, eq, and } from '@tasknebula/db';
+import {
+  db,
+  users,
+  organizations,
+  organizationMembers,
+  systemAuditLogs,
+  eq,
+  and,
+  ne,
+} from '@tasknebula/db';
+
+export type JitProvisionErrorCode = 'workspace_unavailable' | 'user_inactive' | 'provision_failed';
+
+export class JitProvisionError extends Error {
+  constructor(
+    public readonly code: JitProvisionErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = 'JitProvisionError';
+  }
+}
 
 export type JitInput = {
   email: string;
@@ -18,6 +39,7 @@ export type JitInput = {
    * scaffolding milestone but the data is preserved.
    */
   groups?: string[];
+  audit?: { tokenId: string };
 };
 
 export type JitResult = {
@@ -40,24 +62,23 @@ function displayName(input: JitInput): string {
 export async function jitProvisionUser(input: JitInput): Promise<JitResult> {
   const email = input.email.trim().toLowerCase();
 
-  // 1. Resolve or create the user row.
-  const existing = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
-
-  let userId: string;
-  let created = false;
-  if (existing) {
-    userId = existing.id;
-    // Update name fields if we currently have nothing.
-    if (!existing.name) {
-      await db
-        .update(users)
-        .set({ name: displayName(input), updatedAt: new Date() })
-        .where(eq(users.id, existing.id));
+  return db.transaction(async (tx) => {
+    // Keep the organization in a usable state for the full provisioning
+    // transaction. A concurrent suspension waits for this shared row lock.
+    const [workspace] = await tx
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(and(eq(organizations.id, input.workspaceId), ne(organizations.status, 'suspended')))
+      .limit(1)
+      .for('share');
+    if (!workspace) {
+      throw new JitProvisionError('workspace_unavailable', 'Workspace is unavailable');
     }
-  } else {
-    const insertedRows = await db
+
+    // Insert first with conflict protection. If another IdP request created
+    // the same email concurrently, re-read that canonical row in this
+    // transaction instead of surfacing a unique-constraint error.
+    const insertedRows = await tx
       .insert(users)
       .values({
         email,
@@ -68,38 +89,78 @@ export async function jitProvisionUser(input: JitInput): Promise<JitResult> {
           ? ({ ssoGroups: input.groups } as Record<string, unknown>)
           : {},
       })
+      .onConflictDoNothing()
       .returning({ id: users.id });
+
     const inserted = insertedRows[0];
-    if (!inserted) {
-      throw new Error('Failed to provision user');
+    const existing = inserted
+      ? null
+      : await tx.query.users.findFirst({ where: eq(users.email, email) });
+    if (!inserted && !existing) {
+      throw new JitProvisionError('provision_failed', 'Failed to provision user');
     }
-    userId = inserted.id;
-    created = true;
-  }
+    if (existing?.status === 'inactive') {
+      throw new JitProvisionError('user_inactive', 'User is inactive');
+    }
 
-  // 2. Ensure membership in the workspace.
-  const member = await db.query.organizationMembers.findFirst({
-    where: and(
-      eq(organizationMembers.userId, userId),
-      eq(organizationMembers.organizationId, input.workspaceId)
-    ),
+    const userId = inserted?.id ?? existing!.id;
+    const created = Boolean(inserted);
+
+    // An invited account may complete activation through a verified
+    // enterprise identity. A platform-deactivated account is rejected above.
+    if (existing && (!existing.name || existing.status === 'invited')) {
+      await tx
+        .update(users)
+        .set({
+          ...(!existing.name ? { name: displayName(input) } : {}),
+          ...(existing.status === 'invited'
+            ? { status: 'active' as const, emailVerified: new Date() }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existing.id));
+    }
+
+    const insertedMemberships = await tx
+      .insert(organizationMembers)
+      .values({
+        userId,
+        organizationId: input.workspaceId,
+        role: 'member',
+        status: 'active',
+      })
+      .onConflictDoNothing()
+      .returning({ id: organizationMembers.id });
+    const membershipCreated = insertedMemberships.length > 0;
+
+    if (!membershipCreated) {
+      await tx
+        .update(organizationMembers)
+        .set({ status: 'active', updatedAt: new Date() })
+        .where(
+          and(
+            eq(organizationMembers.userId, userId),
+            eq(organizationMembers.organizationId, input.workspaceId)
+          )
+        );
+    }
+
+    if (input.audit) {
+      await tx.insert(systemAuditLogs).values({
+        userId: `scim:${input.audit.tokenId}`,
+        action: 'scim.user.provisioned',
+        resourceType: 'user',
+        resourceId: userId,
+        organizationId: input.workspaceId,
+        changes: {
+          created: { from: false, to: created },
+          membershipCreated: { from: false, to: membershipCreated },
+          active: { from: null, to: true },
+        },
+        metadata: { actorType: 'scim_token', tokenId: input.audit.tokenId },
+      });
+    }
+
+    return { userId, created, membershipCreated };
   });
-
-  let membershipCreated = false;
-  if (!member) {
-    await db.insert(organizationMembers).values({
-      userId,
-      organizationId: input.workspaceId,
-      role: 'member',
-      status: 'active',
-    });
-    membershipCreated = true;
-  } else if (member.status !== 'active') {
-    await db
-      .update(organizationMembers)
-      .set({ status: 'active', updatedAt: new Date() })
-      .where(eq(organizationMembers.id, member.id));
-  }
-
-  return { userId, created, membershipCreated };
 }

@@ -20,6 +20,7 @@
 
 import crypto from 'crypto';
 import {
+  auditLogs,
   db,
   webhooks,
   webhookDeliveries,
@@ -27,7 +28,10 @@ import {
   eq,
   or,
   isNull,
+  sql,
 } from '@tasknebula/db';
+import { postPublicEndpoint } from '@/lib/agents/provider-endpoint';
+import { webhookEndpointPolicy } from '@/lib/webhooks/url-policy';
 
 // Mirrors the values defined in webhookEventEnum (packages/db/src/schema/webhooks.ts).
 // Keep this in sync whenever the enum is extended.
@@ -43,7 +47,7 @@ export type WebhookEvent =
   | 'project.created'
   | 'project.updated';
 
-export const WEBHOOK_EVENTS: readonly WebhookEvent[] = [
+export const WEBHOOK_EVENTS = [
   'issue.created',
   'issue.updated',
   'issue.deleted',
@@ -54,7 +58,7 @@ export const WEBHOOK_EVENTS: readonly WebhookEvent[] = [
   'sprint.completed',
   'project.created',
   'project.updated',
-] as const;
+] as const satisfies readonly WebhookEvent[];
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -80,8 +84,6 @@ interface MatchedWebhook {
   id: string;
   url: string;
   secret: string;
-  successCount: number;
-  failureCount: number;
 }
 
 /**
@@ -114,8 +116,6 @@ async function loadMatchingWebhooks(
       url: webhooks.url,
       secret: webhooks.secret,
       events: webhooks.events,
-      successCount: webhooks.successCount,
-      failureCount: webhooks.failureCount,
     })
     .from(webhooks)
     .where(
@@ -131,16 +131,14 @@ async function loadMatchingWebhooks(
 
   return rows
     .filter((row) => eventMatches(row.events, event))
-    .map(({ id, url, secret, successCount, failureCount }) => ({
+    .map(({ id, url, secret }) => ({
       id,
       url,
       secret,
-      successCount,
-      failureCount,
     }));
 }
 
-interface DeliveryAttempt {
+export interface WebhookDeliveryAttempt {
   statusCode: number | null;
   responseBody: string;
   ok: boolean;
@@ -148,13 +146,14 @@ interface DeliveryAttempt {
   durationMs: number;
 }
 
-async function deliverOnce(
-  webhook: MatchedWebhook,
-  event: WebhookEvent,
-  bodyString: string,
-  signature: string,
-  deliveryId: string
-): Promise<DeliveryAttempt> {
+export async function deliverWebhookRequest(params: {
+  webhookId: string;
+  url: string;
+  event: string;
+  body: string;
+  signature: string;
+  deliveryId: string;
+}): Promise<WebhookDeliveryAttempt> {
   const startedAt = Date.now();
   try {
     const controller = new AbortController();
@@ -164,21 +163,25 @@ async function deliverOnce(
     let ok = false;
     let errorMessage: string | null = null;
     try {
-      const response = await fetch(webhook.url, {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-TaskNebula-Event': event,
-          'X-TaskNebula-Signature': `sha256=${signature}`,
-          'X-TaskNebula-Delivery': deliveryId,
-          'X-Webhook-Signature': signature,
-          'X-Webhook-ID': webhook.id,
+      const response = await postPublicEndpoint(
+        params.url,
+        {
+          signal: controller.signal,
+          maxResponseBytes: 1000,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-TaskNebula-Event': params.event,
+            'X-TaskNebula-Signature': `sha256=${params.signature}`,
+            'X-TaskNebula-Delivery': params.deliveryId,
+            'X-Webhook-Signature': params.signature,
+            'X-Webhook-ID': params.webhookId,
+          },
+          body: params.body,
         },
-        body: bodyString,
-      });
+        webhookEndpointPolicy()
+      );
       statusCode = response.status;
-      responseBody = (await response.text()).slice(0, 1000);
+      responseBody = response.body;
       ok = response.ok;
       if (!ok) errorMessage = `HTTP ${response.status}`;
     } finally {
@@ -208,50 +211,71 @@ async function deliverOnce(
   }
 }
 
-async function recordDelivery(
-  webhook: MatchedWebhook,
-  event: WebhookEvent,
-  payload: unknown,
-  attempt: DeliveryAttempt
-): Promise<void> {
-  try {
-    await db.insert(webhookDeliveries).values({
-      webhookId: webhook.id,
-      event: event as never,
-      payload: payload as never,
-      status: attempt.ok ? 'success' : 'failed',
-      statusCode: attempt.statusCode ?? undefined,
-      responseBody: attempt.responseBody || undefined,
-      errorMessage: attempt.errorMessage ?? undefined,
-      attemptCount: 1,
-      deliveredAt: attempt.statusCode !== null ? new Date() : undefined,
-    });
-  } catch (err) {
-    console.error('[webhook] failed to record delivery', {
-      webhookId: webhook.id,
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
+interface WebhookAttemptAudit {
+  userId: string;
+  organizationId: string;
+  projectId?: string | null;
 }
 
-async function updateWebhookStats(
-  webhook: MatchedWebhook,
-  attempt: DeliveryAttempt
-): Promise<void> {
+/** Persist the delivery, monotonic counters, and optional actor audit together. */
+export async function recordWebhookAttempt(params: {
+  deliveryId: string;
+  webhookId: string;
+  event: WebhookEvent;
+  payload: unknown;
+  attempt: WebhookDeliveryAttempt;
+  audit?: WebhookAttemptAudit;
+}): Promise<boolean> {
   try {
-    await db
-      .update(webhooks)
-      .set({
-        successCount: webhook.successCount + (attempt.ok ? 1 : 0),
-        failureCount: webhook.failureCount + (attempt.ok ? 0 : 1),
-        lastTriggeredAt: new Date(),
-      })
-      .where(eq(webhooks.id, webhook.id));
+    await db.transaction(async (tx) => {
+      await tx.insert(webhookDeliveries).values({
+        id: params.deliveryId,
+        webhookId: params.webhookId,
+        event: params.event as never,
+        payload: params.payload as never,
+        status: params.attempt.ok ? 'success' : 'failed',
+        statusCode: params.attempt.statusCode ?? undefined,
+        responseBody: params.attempt.responseBody || undefined,
+        errorMessage: params.attempt.errorMessage ?? undefined,
+        attemptCount: 1,
+        deliveredAt: params.attempt.statusCode !== null ? new Date() : undefined,
+      });
+
+      await tx
+        .update(webhooks)
+        .set({
+          ...(params.attempt.ok
+            ? { successCount: sql<number>`${webhooks.successCount} + 1` }
+            : { failureCount: sql<number>`${webhooks.failureCount} + 1` }),
+          lastTriggeredAt: new Date(),
+        })
+        .where(eq(webhooks.id, params.webhookId));
+
+      if (params.audit) {
+        await tx.insert(auditLogs).values({
+          userId: params.audit.userId,
+          organizationId: params.audit.organizationId,
+          action: 'webhook.triggered',
+          resourceType: 'webhook',
+          resourceId: params.webhookId,
+          projectId: params.audit.projectId ?? undefined,
+          metadata: {
+            event: params.event,
+            deliveryId: params.deliveryId,
+            status: params.attempt.ok ? 'success' : 'failed',
+            statusCode: params.attempt.statusCode,
+            durationMs: params.attempt.durationMs,
+          },
+        });
+      }
+    });
+    return true;
   } catch (err) {
-    console.error('[webhook] failed to update stats', {
-      webhookId: webhook.id,
+    console.error('[webhook] failed to record delivery outcome', {
+      webhookId: params.webhookId,
       err: err instanceof Error ? err.message : String(err),
     });
+    return false;
   }
 }
 
@@ -265,11 +289,7 @@ async function updateWebhookStats(
  * - HMAC signature is computed over the *exact* serialized body the receiver
  *   will get, so the signature header always validates.
  */
-export async function triggerWebhooks(
-  params: TriggerWebhooksParams
-): Promise<DeliveryOutcome[]> {
-  const outcomes: DeliveryOutcome[] = [];
-
+export async function triggerWebhooks(params: TriggerWebhooksParams): Promise<DeliveryOutcome[]> {
   let matched: MatchedWebhook[];
   try {
     matched = await loadMatchingWebhooks(
@@ -283,10 +303,10 @@ export async function triggerWebhooks(
       event: params.event,
       err: err instanceof Error ? err.message : String(err),
     });
-    return outcomes;
+    return [];
   }
 
-  if (matched.length === 0) return outcomes;
+  if (matched.length === 0) return [];
 
   const envelope = {
     event: params.event,
@@ -302,31 +322,42 @@ export async function triggerWebhooks(
   // platform's outbound fetch pool — for typical org sizes (< 50 webhooks
   // per event) this is fine and keeps latency for the originating mutation
   // negligible since the caller uses `void triggerWebhooks(...)`.
-  await Promise.all(
+  return Promise.all(
     matched.map(async (webhook) => {
       const signature = signWebhookPayload(bodyString, webhook.secret);
       const deliveryId = crypto.randomBytes(12).toString('hex');
-      const attempt = await deliverOnce(
-        webhook,
-        params.event,
-        bodyString,
+      const attempt = await deliverWebhookRequest({
+        webhookId: webhook.id,
+        url: webhook.url,
+        event: params.event,
+        body: bodyString,
         signature,
-        deliveryId
-      );
-      await Promise.all([
-        recordDelivery(webhook, params.event, envelope, attempt),
-        updateWebhookStats(webhook, attempt),
-      ]);
-      outcomes.push({
+        deliveryId,
+      });
+      await recordWebhookAttempt({
+        deliveryId,
+        webhookId: webhook.id,
+        event: params.event,
+        payload: envelope,
+        attempt,
+        ...(params.actorUserId
+          ? {
+              audit: {
+                userId: params.actorUserId,
+                organizationId: params.organizationId,
+                projectId: params.projectId,
+              },
+            }
+          : {}),
+      });
+      return {
         webhookId: webhook.id,
         url: webhook.url,
         status: attempt.ok ? 'success' : 'failed',
         statusCode: attempt.statusCode,
         durationMs: attempt.durationMs,
         error: attempt.errorMessage,
-      });
+      } satisfies DeliveryOutcome;
     })
   );
-
-  return outcomes;
 }
