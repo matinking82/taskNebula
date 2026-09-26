@@ -1,7 +1,8 @@
 # TaskNebula project status
 
-**Verified:** 2026-08-20 · **Version:** 0.17.2 · **Lifecycle:** beta,
-self-hostable
+**Verified:** 2026-08-20 · **Version:** 0.17.3 · **Lifecycle:** final
+open-source release; development continues as
+[N-Task](https://n-n.io/products/n-task)
 
 This is the only live capability snapshot. Future work belongs in
 [`ROADMAP_2026.md`](ROADMAP_2026.md); released history belongs in

@@ -7,6 +7,7 @@
 [![N-Task](https://img.shields.io/badge/N--Task-n--n.io-254AD4?style=for-the-badge)](https://n-n.io/products/n-task)
 [![Cloud](https://img.shields.io/badge/Cloud-available-1D2025?style=for-the-badge)](https://n-n.io/products/n-task)
 [![Offline](https://img.shields.io/badge/Offline%20%2F%20on--prem-available-1D2025?style=for-the-badge)](https://n-n.io/products/n-task)
+[![Web and mobile](https://img.shields.io/badge/Web%20%2B%20mobile-apps-1D2025?style=for-the-badge)](https://n-n.io/products/n-task)
 [![Open-source support](https://img.shields.io/badge/open--source%20support-ended-6b7280?style=for-the-badge)](#open-source-support-has-ended)
 
 **TaskNebula has moved.** Development continues as **N-Task** on
@@ -41,11 +42,25 @@ one workspace and is developed as a powerful **agentic** product.
 
 - **Agentic by design.** N-Task is built around AI agents that work alongside
   your team, not bolted on as a sidebar feature.
+- **Web and mobile.** Work from the browser or the N-Task mobile app, so
+  projects and tasks stay with your team wherever they are.
 - **Part of an enterprise suite.** N-Task is developed together with the other
-  N-N enterprise applications, including N-Workbench, N-CRM, N-Case, N-People,
-  and N-Procure. See [n-n.io/products](https://n-n.io/products).
+  N-N enterprise applications below.
 - **Built for organizations.** Deployment, licensing, and support are offered
   for teams that need a product they can depend on.
+
+## The N-N Product Family
+
+| Product                                                | What it does                                                                            |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| **[N-Task](https://n-n.io/products/n-task)**           | Projects, tasks, and team documentation in one agentic workspace, on web and mobile     |
+| **[N-Workbench](https://n-n.io/products/n-workbench)** | Persistent coding sessions, project management, and coordinated agent work, self-hosted |
+| **[N-CRM](https://n-n.io/products/n-crm)**             | Accounts, contacts, sales opportunities, and team activities in separate workspaces     |
+| **[N-Case](https://n-n.io/products/n-case)**           | Projects, documents, reviews, and signing processes in one workspace                    |
+| **[N-People](https://n-n.io/products/n-people)**       | Employee records, onboarding tasks, and reviewed leave requests                         |
+| **[N-Procure](https://n-n.io/products/n-procure)**     | Supplier records and independently reviewed purchase requests                           |
+
+Explore them all at [n-n.io/products](https://n-n.io/products).
 
 ## Deploy It Your Way
 
@@ -53,6 +68,7 @@ one workspace and is developed as a powerful **agentic** product.
 | ------------------------ | --------------------------------------------------------------------------- |
 | **Cloud**                | Managed N-Task, ready to use without running your own infrastructure        |
 | **Offline / on-premise** | N-Task inside your own network, including isolated and offline setups       |
+| **Web and mobile**       | The same workspace in the browser and in the N-Task mobile app              |
 | **Flexible licensing**   | Every kind of license, from subscriptions to tailored enterprise agreements |
 
 See installation and licensing details on the
@@ -64,8 +80,8 @@ organization.
 
 What this means for this repository:
 
-- No new features, bug fixes, security updates, releases, or Docker images will
-  be published here.
+- **v0.17.3 is the final TaskNebula release.** No further features, bug fixes,
+  security updates, releases, or Docker images will be published here.
 - Issues and pull requests are no longer reviewed or answered.
 - The existing source code and previously published images stay available
   **as-is** under the [MIT License](LICENSE), without warranty or support.
@@ -91,16 +107,17 @@ PostgreSQL 16 with `pgvector`, Redis 7, an `approval-reconciler`, and optional
 | Item            | Value                                                                     |
 | --------------- | ------------------------------------------------------------------------- |
 | Image           | [`neuraparse/tasknebula`](https://hub.docker.com/r/neuraparse/tasknebula) |
+| Final release   | `0.17.3`                                                                  |
 | Platform        | `linux/amd64`                                                             |
 | Runtime port    | `3000`                                                                    |
 | Health endpoint | `GET /api/health`                                                         |
 
-Back up before touching an existing installation, and pin a release tag
-instead of `latest`:
+Back up before touching an existing installation, and pin the final release
+tag instead of `latest`:
 
 ```bash
 ./scripts/tasknebula-backup.sh
-TASKNEBULA_IMAGE=neuraparse/tasknebula:<tag> docker compose up -d
+TASKNEBULA_IMAGE=neuraparse/tasknebula:0.17.3 docker compose up -d
 docker compose ps
 curl -fsS http://localhost:3000/api/health
 ```

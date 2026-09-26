@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-09-26
+
+This is the final open-source TaskNebula release. TaskNebula continues as
+**N-Task** at [n-n.io](https://n-n.io/products/n-task), developed as an agentic
+product together with the other N-N enterprise applications, with web and
+mobile apps, cloud and offline/on-premise deployment, and flexible licensing.
+
+### Changed
+
+- Rewrote the README to announce the move to N-Task, link to
+  [n-n.io](https://n-n.io), summarize the N-N product family, and keep a
+  condensed legacy reference for existing self-hosted installations.
+- Open-source support has ended: no further features, fixes, security updates,
+  releases, or Docker images will be published from this repository. The code
+  remains available as-is under the MIT License.
+
 ## [0.17.2] - 2026-08-20
 
 ### Changed
