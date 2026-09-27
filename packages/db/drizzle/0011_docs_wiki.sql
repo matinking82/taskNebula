@@ -149,7 +149,7 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
-CREATE TABLE "document_spaces" (
+CREATE TABLE IF NOT EXISTS "document_spaces" (
   "id" text PRIMARY KEY NOT NULL,
   "organization_id" text NOT NULL REFERENCES "organizations"("id") ON DELETE cascade,
   "project_id" text REFERENCES "projects"("id") ON DELETE cascade,
@@ -164,7 +164,7 @@ CREATE TABLE "document_spaces" (
   "updated_by" text NOT NULL REFERENCES "users"("id")
 );
 
-CREATE TABLE "document_pages" (
+CREATE TABLE IF NOT EXISTS "document_pages" (
   "id" text PRIMARY KEY NOT NULL,
   "space_id" text NOT NULL REFERENCES "document_spaces"("id") ON DELETE cascade,
   "organization_id" text NOT NULL REFERENCES "organizations"("id") ON DELETE cascade,
@@ -185,7 +185,7 @@ CREATE TABLE "document_pages" (
   "updated_by" text NOT NULL REFERENCES "users"("id")
 );
 
-CREATE TABLE "document_page_revisions" (
+CREATE TABLE IF NOT EXISTS "document_page_revisions" (
   "id" text PRIMARY KEY NOT NULL,
   "page_id" text NOT NULL REFERENCES "document_pages"("id") ON DELETE cascade,
   "revision" integer NOT NULL,
@@ -198,7 +198,7 @@ CREATE TABLE "document_page_revisions" (
   "created_by" text NOT NULL REFERENCES "users"("id")
 );
 
-CREATE TABLE "document_page_links" (
+CREATE TABLE IF NOT EXISTS "document_page_links" (
   "id" text PRIMARY KEY NOT NULL,
   "source_page_id" text NOT NULL REFERENCES "document_pages"("id") ON DELETE cascade,
   "target_page_id" text NOT NULL REFERENCES "document_pages"("id") ON DELETE cascade,
@@ -208,7 +208,7 @@ CREATE TABLE "document_page_links" (
   "updated_by" text NOT NULL REFERENCES "users"("id")
 );
 
-CREATE TABLE "issue_document_links" (
+CREATE TABLE IF NOT EXISTS "issue_document_links" (
   "id" text PRIMARY KEY NOT NULL,
   "issue_id" text NOT NULL REFERENCES "issues"("id") ON DELETE cascade,
   "page_id" text NOT NULL REFERENCES "document_pages"("id") ON DELETE cascade,
@@ -218,7 +218,7 @@ CREATE TABLE "issue_document_links" (
   "updated_by" text NOT NULL REFERENCES "users"("id")
 );
 
-CREATE TABLE "document_page_attachments" (
+CREATE TABLE IF NOT EXISTS "document_page_attachments" (
   "id" text PRIMARY KEY NOT NULL,
   "page_id" text NOT NULL REFERENCES "document_pages"("id") ON DELETE cascade,
   "file_name" varchar(255) NOT NULL,
@@ -230,32 +230,32 @@ CREATE TABLE "document_page_attachments" (
 );
 
 ALTER TABLE "document_pages"
-ADD COLUMN "search_vector" tsvector GENERATED ALWAYS AS (
+ADD COLUMN IF NOT EXISTS "search_vector" tsvector GENERATED ALWAYS AS (
   setweight(to_tsvector('simple', coalesce("title", '')), 'A') ||
   setweight(to_tsvector('simple', coalesce("content_text", '')), 'B')
 ) STORED;
 
-CREATE UNIQUE INDEX "document_space_org_scope_slug_idx" ON "document_spaces" ("organization_id", "scope", "slug");
-CREATE INDEX "document_space_project_idx" ON "document_spaces" ("project_id");
-CREATE INDEX "document_space_organization_idx" ON "document_spaces" ("organization_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "document_space_org_scope_slug_idx" ON "document_spaces" ("organization_id", "scope", "slug");
+CREATE INDEX IF NOT EXISTS "document_space_project_idx" ON "document_spaces" ("project_id");
+CREATE INDEX IF NOT EXISTS "document_space_organization_idx" ON "document_spaces" ("organization_id");
 
-CREATE UNIQUE INDEX "document_page_space_parent_slug_idx" ON "document_pages" ("space_id", "parent_id", "slug");
-CREATE INDEX "document_page_space_idx" ON "document_pages" ("space_id");
-CREATE INDEX "document_page_parent_idx" ON "document_pages" ("parent_id");
-CREATE INDEX "document_page_project_idx" ON "document_pages" ("project_id");
-CREATE INDEX "document_page_organization_idx" ON "document_pages" ("organization_id");
-CREATE INDEX "document_page_archived_idx" ON "document_pages" ("is_archived");
-CREATE INDEX "document_page_search_vector_idx" ON "document_pages" USING gin ("search_vector");
+CREATE UNIQUE INDEX IF NOT EXISTS "document_page_space_parent_slug_idx" ON "document_pages" ("space_id", "parent_id", "slug");
+CREATE INDEX IF NOT EXISTS "document_page_space_idx" ON "document_pages" ("space_id");
+CREATE INDEX IF NOT EXISTS "document_page_parent_idx" ON "document_pages" ("parent_id");
+CREATE INDEX IF NOT EXISTS "document_page_project_idx" ON "document_pages" ("project_id");
+CREATE INDEX IF NOT EXISTS "document_page_organization_idx" ON "document_pages" ("organization_id");
+CREATE INDEX IF NOT EXISTS "document_page_archived_idx" ON "document_pages" ("is_archived");
+CREATE INDEX IF NOT EXISTS "document_page_search_vector_idx" ON "document_pages" USING gin ("search_vector");
 
-CREATE UNIQUE INDEX "document_page_revision_page_revision_idx" ON "document_page_revisions" ("page_id", "revision");
-CREATE INDEX "document_page_revision_page_idx" ON "document_page_revisions" ("page_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "document_page_revision_page_revision_idx" ON "document_page_revisions" ("page_id", "revision");
+CREATE INDEX IF NOT EXISTS "document_page_revision_page_idx" ON "document_page_revisions" ("page_id");
 
-CREATE UNIQUE INDEX "document_page_link_source_target_idx" ON "document_page_links" ("source_page_id", "target_page_id");
-CREATE INDEX "document_page_link_source_idx" ON "document_page_links" ("source_page_id");
-CREATE INDEX "document_page_link_target_idx" ON "document_page_links" ("target_page_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "document_page_link_source_target_idx" ON "document_page_links" ("source_page_id", "target_page_id");
+CREATE INDEX IF NOT EXISTS "document_page_link_source_idx" ON "document_page_links" ("source_page_id");
+CREATE INDEX IF NOT EXISTS "document_page_link_target_idx" ON "document_page_links" ("target_page_id");
 
-CREATE UNIQUE INDEX "issue_document_link_issue_page_idx" ON "issue_document_links" ("issue_id", "page_id");
-CREATE INDEX "issue_document_link_issue_idx" ON "issue_document_links" ("issue_id");
-CREATE INDEX "issue_document_link_page_idx" ON "issue_document_links" ("page_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "issue_document_link_issue_page_idx" ON "issue_document_links" ("issue_id", "page_id");
+CREATE INDEX IF NOT EXISTS "issue_document_link_issue_idx" ON "issue_document_links" ("issue_id");
+CREATE INDEX IF NOT EXISTS "issue_document_link_page_idx" ON "issue_document_links" ("page_id");
 
-CREATE INDEX "document_page_attachment_page_idx" ON "document_page_attachments" ("page_id");
+CREATE INDEX IF NOT EXISTS "document_page_attachment_page_idx" ON "document_page_attachments" ("page_id");
