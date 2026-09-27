@@ -143,6 +143,17 @@ not provision the Postgres, collaboration, voice, worker, or deployment
 secrets automatically. Validate long-running/streaming behavior against the
 chosen platform limits.
 
+For `apps/web`, the build now runs `packages/db` migrations automatically on
+Vercel (`VERCEL=1`) before `next build`. Ensure `DATABASE_URL` points to the
+target Postgres database at build time. Optional flags:
+
+- `SKIP_DB_MIGRATIONS=true` — skip build-time migrations.
+- `RUN_DB_MIGRATIONS_ON_BUILD=true` — force the same migration step outside
+  Vercel environments.
+
+If you need a manual SQL bootstrap, use the repository root `db.sql` (ordered
+from `packages/db/drizzle/*.sql`) against an empty PostgreSQL database.
+
 ## Database safety
 
 - Migrations live in `packages/db/drizzle` and are applied by

@@ -3,7 +3,7 @@
   "version": "0.17.3",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "node scripts/run-vercel-migrations.mjs && next build",
     "dev": "next dev",
     "lint": "eslint src e2e playwright.config.ts --ext .js,.jsx,.ts,.tsx --no-error-on-unmatched-pattern",
     "openapi:check": "tsx scripts/generate-openapi.ts && git diff --exit-code -- public/openapi.json",
